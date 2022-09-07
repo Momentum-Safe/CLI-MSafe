@@ -5,21 +5,6 @@ import {Ed25519Signature, SigningMessage,} from "aptos/dist/transaction_builder/
 import {Buffer} from "buffer/"; // the trailing slash is important!
 
 
-export interface Account {
-  address(): HexString;
-
-  publicKey(): HexString;
-
-  publicKeyBytes(): Bytes;
-
-  sign(txn: Transaction): Bytes;
-
-  getSigData(
-    txn: Transaction
-  ): [signing: SigningMessage, signature: Ed25519Signature[]];
-}
-
-
 export class Transaction {
   raw: TxnBuilderTypes.RawTransaction;
 
