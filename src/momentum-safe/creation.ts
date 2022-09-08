@@ -1,5 +1,5 @@
 import {AptosClient, BCS, HexString, TxnBuilderTypes} from 'aptos';
-import {SimpleMap, DEPLOYER, DEPLOYER_HS, assembleSignatures} from './common';
+import {SimpleMap, DEPLOYER, DEPLOYER_HS, assembleSignatures, checkDuplicatePubKeys} from './common';
 import {Transaction} from "../common/types";
 import * as Aptos from "../web3/global";
 import {AptosEntryTxnBuilder} from "../web3/txnBuilder";
@@ -40,10 +40,13 @@ export class CreationHelper {
   constructor(
     readonly ownerPubKeys: HexString[],
     readonly threshold: number,
-    private nonce: number,
+    readonly nonce: number,
     readonly initBalance?: bigint,
     ){
-
+    checkDuplicatePubKeys(ownerPubKeys);
+    if (threshold > ownerPubKeys.length) {
+      throw new Error("threshold is bigger than number of owners");
+    }
     [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, nonce);
   }
 

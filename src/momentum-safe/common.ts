@@ -2,7 +2,7 @@ import {HexString, TxnBuilderTypes,} from "aptos";
 import {Account} from "../web3/account";
 import {Buffer} from "buffer/";
 
-export const DEPLOYER = 'f9399f083d60ff754c63571fd47b0014fffbec92d646e913cccbc633c0094818';
+export const DEPLOYER = '0xb52f33337edb1408711b0240291b9e5500d00f17e78dc2df17d0fd582ef9e4ab';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export type vector<T> = T[]
@@ -47,4 +47,14 @@ export function assembleSignatures(
 
 export function HexBuffer(hex: string): Buffer {
   return Buffer.from(hex.startsWith('0x') ? hex.slice(2) : hex, 'hex');
+}
+
+export function checkDuplicatePubKeys(pks: HexString[]) {
+  const s = new Set();
+  pks.forEach( pk => {
+    if (s.has(pk.hex())) {
+      throw new Error("duplicate public key found");
+    }
+    s.add(pk.hex());
+  });
 }

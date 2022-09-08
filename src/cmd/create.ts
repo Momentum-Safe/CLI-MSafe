@@ -1,34 +1,43 @@
-import {printSeparator, promptUntilNumber, promptUntilString} from "./helper";
+import {printSeparator, prompt, promptUntilNumber, promptUntilString} from "./helper";
 import {TxnBuilderTypes, HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
 import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";
+import {printMyMessage} from "./common";
+import {registerState, State} from "./state";
 
 const MAX_OWNERS = 32;
 
+
+export function registerCreation() {
+  registerState(State.Create, () => initCreateMSafe());
+}
+
+
 export async function initCreateMSafe() {
   console.clear();
+  await printMyMessage();
 
   console.log("Creating a new MSafe wallet.");
   printSeparator();
 
   const numOwners = await promptUntilNumber(
-    "What is the number of owners? (2-32)\t\t\t",
-    "\tPlease input a valid number (2-32):\t",
-    (v: number) => v >= 2 && v <= 32
+    `What is the number of owners? (2-${MAX_OWNERS})\t\t\t`,
+    `\tPlease input a valid number (2-${MAX_OWNERS}):\t`,
+    (v: number) => v >= 2 && v <= MAX_OWNERS
   );
 
   // TODO: currently 1/x is not allowed. Extend the functionality later
   const threshold = await promptUntilNumber(
-    `What is the confirmation threshold? (1-${numOwners})\t\t`,
-    `\tPlease input a valid number (1-${numOwners}):\t`,
+    `What is the confirmation threshold? (2-${numOwners})\t\t`,
+    `\tPlease input a valid number (2-${numOwners}):\t`,
     (v: number) => v >= 2 && v <= numOwners
   );
 
   const initialBalance = await promptUntilNumber(
-    "What's the amount of initial fund of MSafe?\t\t",
-    "\tPlease input a valid number (>20000)\t",
-    v => v > 20000,
+    "What's the amount of initial fund of MSafe? (>=20000)\t",
+    "\tPlease input a valid number (>=20000)\t",
+    v => v >= 20000,
   );
 
   const ownerPubKeys: HexString[] = [MY_ACCOUNT.publicKey()];
@@ -37,7 +46,7 @@ export async function initCreateMSafe() {
   for (let i = 1; i < numOwners; i++) {
     const publicKeyStr = await promptUntilString(
       `\t${i + 1} th public key: \t\t`,
-      `\tPlease provide a valid public key`,
+      `\tPlease provide a valid public key\t\t`,
       isStringPublicKey
     );
     ownerPubKeys.push(HexString.ensure(publicKeyStr));
@@ -48,8 +57,9 @@ export async function initCreateMSafe() {
   const nonce = await CreationHelper.getNonce(MY_ACCOUNT.address());
   const creation = new CreationHelper(ownerPubKeys, threshold, nonce, BigInt(initialBalance));
 
-  console.log(`Creating ${threshold} / ${numOwners} Momentum Safe wallet`);
+  console.log(`Creating ${creation.threshold} / ${creation.ownerPubKeys.length} Momentum Safe wallet`);
   console.log(`\tAddress:\t${creation.address}`);
+  console.log(`\tNonce:\t${creation.nonce}`);
 
   printSeparator();
   await prompt("Initiate wallet creation?");
@@ -65,7 +75,12 @@ export async function initCreateMSafe() {
 }
 
 function isStringPublicKey(s: string): boolean {
-  const byteLength = HexString.ensure(s).toUint8Array().length;
+  let byteLength;
+  try {
+    byteLength = HexString.ensure(s).toUint8Array().length;
+  } catch (e) {
+    return false;
+  }
   return byteLength == TxnBuilderTypes.Ed25519PublicKey.LENGTH;
 }
 

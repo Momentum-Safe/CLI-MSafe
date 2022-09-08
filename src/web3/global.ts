@@ -1,11 +1,13 @@
-import {AptosClient, FaucetClient, HexString, BCS} from 'aptos';
+import {AptosClient, FaucetClient, HexString, BCS, ApiError} from 'aptos';
 import * as Gen from 'aptos/src/generated';
 import {Account} from "./account";
+import {AccountData} from "aptos/dist/generated";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
 export let MY_ACCOUNT: Account;
 
+const APTOS_COIN_RESOURCE_TYPE = '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>';
 
 interface Config {
   nodeURL: string;
@@ -31,7 +33,15 @@ export function setMyAccount(privateKey: string, address: string) {
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<number> {
-  const res = await APTOS.getAccount(address instanceof HexString ? address : HexString.ensure(address));
+  let res: AccountData;
+  try {
+    res = await APTOS.getAccount(address instanceof HexString ? address : HexString.ensure(address));
+  } catch (e) {
+    if (e instanceof ApiError && e.message.includes("Resource not found")) {
+      return 0;
+    }
+    throw e;
+  }
   return parseInt(res.sequence_number);
 }
 
@@ -58,4 +68,11 @@ export async function waitForTransaction(txnHash: string): Promise<Gen.Transacti
 
 export async function getAccountResource(addr: HexString, resourceTag: string): Promise<Gen.MoveResource> {
   return APTOS.getAccountResource(addr, resourceTag);
+}
+
+export async function getBalance(addr: string | HexString): Promise<number> {
+  const address = addr instanceof HexString ? addr : HexString.ensure(addr);
+  const resources = await APTOS.getAccountResources(address);
+  const coinResource = resources.find((r) => r.type == APTOS_COIN_RESOURCE_TYPE);
+  return parseInt((coinResource?.data as any).coin.value);
 }

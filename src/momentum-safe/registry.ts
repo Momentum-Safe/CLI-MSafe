@@ -1,4 +1,4 @@
-import {AptosClient, HexString} from "aptos";
+import {ApiError, AptosClient, HexString} from "aptos";
 import * as Aptos from "../web3/global";
 import {DEPLOYER, DEPLOYER_HS, HexStr, vector} from "./common";
 import {Account} from "../web3/account";
@@ -19,7 +19,7 @@ export class Registry {
 
   constructor() {}
 
-  async getOwnedMomentumSafes(address: HexString): Promise<{pendings: HexString[], msafes: HexString[]}> {
+  static async getOwnedMomentumSafes(address: HexString): Promise<{pendings: HexString[], msafes: HexString[]}> {
     const res = await Aptos.getAccountResource(address, RegistryResourceType);
     if (!res) {
       throw new Error("not registered");
@@ -31,14 +31,27 @@ export class Registry {
     };
   }
 
-  async register(signer: Account): Promise<string> {
+  static async isRegistered(address: HexString): Promise<boolean> {
+    let res: any;
+    try {
+      res = await Aptos.getAccountResource(address, RegistryResourceType);
+    } catch (e) {
+      if (e instanceof ApiError && e.message.includes("Resource not found")) {
+        return false;
+      }
+      throw e;
+    }
+    return res != undefined;
+  }
+
+  static async register(signer: Account): Promise<string> {
     const tx = await this.getRegisterTx(signer);
     const signedTx = signer.sign(tx);
     const res = await Aptos.sendSignedTransactionAsync(signedTx);
     return res.hash;
   }
 
-  async getRegisterTx(signer: Account) {
+  private static async getRegisterTx(signer: Account) {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txBuilder = new AptosEntryTxnBuilder();
