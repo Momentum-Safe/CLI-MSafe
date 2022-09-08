@@ -1,10 +1,15 @@
 import {loadDefault, ConfigYaml} from './load';
 import * as Aptos from '../web3/global';
 import {printMyMessage} from "./common";
+import {initCreateMSafe} from "./create";
 
 async function main() {
+  console.clear();
+
   await loadDefaultConfig();
   printMyMessage();
+
+  await initCreateMSafe();
 }
 
 async function loadDefaultConfig() {
@@ -22,7 +27,7 @@ async function loadDefaultConfig() {
     privateKey: profile.private_key,
     address: profile.account,
   });
-  console.log("profile loaded successfully");
+  console.log("Aptos yaml loaded successfully");
 }
 
 function printSetupWalletMsg() {
@@ -30,6 +35,13 @@ function printSetupWalletMsg() {
   console.log("Have you set up your Aptos address? Run the following command to setup your wallet\n");
   console.log("\taptos init\n");
   process.exit(1);
+}
+
+function printTasks() {
+  console.log("What do you want to do?");
+  console.log("1. View my MSafes");
+  console.log("2. Create a new MSafe");
+  console.log("3. View my pending transactions");
 }
 
 (async () => main())();
