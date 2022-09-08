@@ -1,25 +1,33 @@
 import {AptosClient, FaucetClient, HexString, BCS} from 'aptos';
 import * as Gen from 'aptos/src/generated';
-import {Account} from "../common/types";
+import {Account} from "./account";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
+export let MY_ACCOUNT: Account;
 
 
 interface Config {
   nodeURL: string;
   faucetURL?: string;
+  privateKey: string,
+  address: string,
 }
 
 export async function fundAddress(address: string, amount: number) {
   await FAUCET!.fundAccount(address, amount);
 }
 
-export function setProvider(c: Config) {
+export function setGlobal(c: Config) {
   APTOS = new AptosClient(c.nodeURL);
   if (c.faucetURL) {
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
+  MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
+}
+
+export function setMyAccount(privateKey: string, address: string) {
+  MY_ACCOUNT = new Account(HexString.ensure(privateKey).toUint8Array(), address);
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<number> {

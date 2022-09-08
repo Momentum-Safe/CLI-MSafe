@@ -1,5 +1,6 @@
 import {TxnBuilderTypes, HexString, BCS} from "aptos";
 import {Buffer} from "buffer/"; // the trailing slash is important!
+import * as SHA3 from "js-sha3";
 
 
 // MomentumSafe public key is a blend of owners and a nonce (as address)
@@ -41,4 +42,16 @@ function noncePubKey(nonce: number) {
   const pubKey = Buffer.alloc(TxnBuilderTypes.Ed25519PublicKey.LENGTH);
   pubKey.writeUInt32LE(nonce, 0);
   return new TxnBuilderTypes.Ed25519PublicKey(pubKey);
+}
+
+
+export function deriveAuthKey(publicKey: HexString): HexString {
+  const hash = SHA3.sha3_256.create();
+  hash.update(publicKey.toUint8Array());
+  hash.update("\x00");
+  return new HexString(hash.hex());
+}
+
+export function deriveAddress(publicKey: HexString): HexString {
+  return deriveAuthKey(publicKey);
 }
