@@ -44,11 +44,10 @@ export class Registry {
     return res != undefined;
   }
 
-  static async register(signer: Account): Promise<string> {
+  static async register(signer: Account) {
     const tx = await this.getRegisterTx(signer);
     const signedTx = signer.sign(tx);
-    const res = await Aptos.sendSignedTransactionAsync(signedTx);
-    return res.hash;
+    return await Aptos.sendSignedTransactionAsync(signedTx);
   }
 
   private static async getRegisterTx(signer: Account) {

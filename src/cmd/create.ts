@@ -1,10 +1,10 @@
-import {printSeparator, prompt, promptUntilNumber, promptUntilString} from "./helper";
+import {printSeparator, prompt, promptForYN, promptUntilNumber, promptUntilString} from "./helper";
 import {TxnBuilderTypes, HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
 import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";
 import {printMyMessage} from "./common";
-import {registerState, State} from "./state";
+import {registerState, setState, State} from "./state";
 
 const MAX_OWNERS = 32;
 
@@ -14,7 +14,7 @@ export function registerCreation() {
 }
 
 
-export async function initCreateMSafe() {
+async function initCreateMSafe() {
   console.clear();
   await printMyMessage();
 
@@ -59,10 +59,14 @@ export async function initCreateMSafe() {
 
   console.log(`Creating ${creation.threshold} / ${creation.ownerPubKeys.length} Momentum Safe wallet`);
   console.log(`\tAddress:\t${creation.address}`);
-  console.log(`\tNonce:\t${creation.nonce}`);
+  console.log(`\tNonce:\t\t${creation.nonce}`);
 
   printSeparator();
-  await prompt("Initiate wallet creation?");
+  const userContinue = await promptForYN("Initiate wallet creation?", true);
+  if (!userContinue) {
+    setState(State.Entry);
+  }
+
   console.log();
   const tx = await creation.initCreation(MY_ACCOUNT);
   console.log(`\tWallet creation transaction sent:\t${tx.hash}`);
@@ -71,7 +75,17 @@ export async function initCreateMSafe() {
 
   printSeparator();
 
-  console.log("Waiting for confirmation from other wallets...");
+  console.log('\td) view details');
+  console.log('\tb) back');
+  console.log();
+
+  const next = await promptUntilString('Choose your next step', 'Please input a valid option',
+    s => s === 'b' || s === 'd');
+  if (next === 'b') {
+    setState(State.Entry);
+  } else if (next === 'd') {
+    setState(State.PendingCreate, {address: creation.address});
+  }
 }
 
 function isStringPublicKey(s: string): boolean {

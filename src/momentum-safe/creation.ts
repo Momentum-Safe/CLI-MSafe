@@ -50,7 +50,7 @@ export class CreationHelper {
     [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, nonce);
   }
 
-  static async fromPendingCreation(addr: HexString, initBalance: number): Promise<CreationHelper> {
+  static async fromPendingCreation(addr: HexString): Promise<CreationHelper> {
     const creation = await CreationHelper.getMSafeCreation(addr);
     if (!creation) {
       throw new Error("cannot get creation data");
@@ -76,9 +76,15 @@ export class CreationHelper {
     return await Aptos.sendSignedTransactionAsync(signedTx2);
   }
 
+  async collectedSignatures(): Promise<HexString[]> {
+    const creation = await CreationHelper.getMSafeCreation(this.address);
+    const sigs = creation.txn.signatures.data;
+
+    return sigs.map( entry => HexString.ensure(entry.key));
+  }
+
   async isReadyToSubmit(extraPubKey: HexString) {
     const creation = await CreationHelper.getMSafeCreation(this.address);
-    const payload = creation.txn.payload;
     const sigs = creation.txn.signatures;
 
     const found = sigs.data.find( entry => entry.key === extraPubKey.hex()) !== undefined;
@@ -101,6 +107,7 @@ export class CreationHelper {
     const creation = await CreationHelper.getMSafeCreation(this.address);
     const signatures = creation.txn.signatures.data;
     const payload = creation.txn.payload;
+
     const selfSignature = this.signPendingCreation(acc, creation);
 
     const multiSignature = assembleSignatures(this.ownerPubKeys, signatures, acc, selfSignature);
@@ -108,6 +115,7 @@ export class CreationHelper {
     const signingTx = Transaction.deserialize(HexBuffer(payload));
     const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);
     const bcsTx = BCS.bcsToBytes(signedTx);
+
     return await Aptos.sendSignedTransactionAsync(bcsTx);
   }
 
@@ -158,7 +166,6 @@ export class CreationHelper {
       .from(from)
       .chainId(chainID)
       .sequenceNumber(sn)
-      .expiration(600)
       .args([BCS.bcsSerializeStr(metadata)])
       .build();
   }

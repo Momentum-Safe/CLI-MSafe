@@ -56,7 +56,12 @@ async function list() {
   } else if (selection === 'r'){
     setState(State.List);
   } else {
-    // enter wallet details
+    const selectID = Number(selection) - 1;
+    if (selectID < msafes.pendings.length) {
+      setState(State.PendingCreate, {address: msafes.pendings[selectID]});
+    } else if (selectID < msafes.pendings.length + msafes.msafes.length) {
+      // Replace here
+    }
   }
 
 }

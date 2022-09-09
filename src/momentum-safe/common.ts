@@ -18,6 +18,7 @@ export type SimpleMap<V> = {
   data: Element<V>[]
 }
 
+// TODO: Refactor this.
 export function assembleSignatures(
   ownerPubKeys: HexString[],
   existingSigs: Element<string>[],

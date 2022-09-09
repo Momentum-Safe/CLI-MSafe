@@ -1,7 +1,7 @@
 import {loadAptosYaml, defaultPath} from './load';
 import * as Aptos from '../web3/global';
 import {printMyMessage, shortString} from "./common";
-import {initCreateMSafe, registerCreation} from "./create";
+import {registerCreation} from "./create";
 import {Command} from "commander";
 import {printSeparator, prompt, promptForYN} from "./helper";
 import {Registry} from "../momentum-safe/registry";
@@ -10,6 +10,7 @@ import {HexString} from 'aptos';
 import {setState, State} from "./state";
 import {registerEntry} from "./entry";
 import {registerList} from "./list";
+import {registerCreationDetails} from "./creation-details";
 
 const program = new Command();
 
@@ -37,6 +38,7 @@ function registerAllStates() {
   registerEntry();
   registerList();
   registerCreation();
+  registerCreationDetails();
 }
 
 async function loadConfigAndApply() {
@@ -82,8 +84,8 @@ async function registerIfNotRegistered() {
     printSeparator();
     console.log("\tRegistering...");
     const res = await Registry.register(MY_ACCOUNT);
-    console.log(`\tTransaction ${shortString(res)} submitted on chain`);
-    await Aptos.waitForTransaction(res);
+    console.log(`\tTransaction ${shortString(res.hash)} submitted on chain`);
+    await Aptos.waitForTransaction(res.hash);
     console.log(`\tTransaction confirmed. Registration succeeds.`);
 
     printSeparator();
