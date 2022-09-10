@@ -10,6 +10,7 @@ import {registerCreationDetails} from "./creation-details";
 import {ApiError} from "aptos";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
+import {registerMSafeDetails} from "./msafe-details";
 
 export const defaultConfigPath = `.aptos/config.yaml`;
 
@@ -47,6 +48,7 @@ function registerAllStates() {
   registerList();
   registerCreation();
   registerCreationDetails();
+  registerMSafeDetails();
 }
 
 async function loadConfigAndApply() {
@@ -92,7 +94,7 @@ async function registerIfNotRegistered() {
     printSeparator();
     console.log("\tRegistering...");
     const res = await Registry.register(MY_ACCOUNT);
-    console.log(`\tTransaction ${shortString(res.hash)} submitted on chain`);
+    console.log(`\tTransaction ${res.hash} submitted on chain`);
     await Aptos.waitForTransaction(res.hash);
     console.log(`\tTransaction confirmed. Registration succeeds.`);
 

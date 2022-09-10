@@ -1,6 +1,13 @@
 import {MY_ACCOUNT} from "../web3/global";
 import {Registry} from "../momentum-safe/registry";
-import {printSeparator, promptUntilString, printMyMessage, registerState, setState, State} from "./common";
+import {
+  printMyMessage,
+  registerState,
+  setState,
+  State,
+  shortString,
+  executeCmdOptions, CmdOption
+} from "./common";
 
 export function registerList() {
   registerState(State.List, () => list());
@@ -14,52 +21,29 @@ async function list() {
 
   let i = 1;
 
-  if (msafes.pendings) {
-    console.log("Pending creations");
-    msafes.pendings.forEach( addr => {
-      console.log(`\t${i})\t${addr}`);
-      i = i + 1;
+  const opts: CmdOption[] = [];
+  msafes.pendings.forEach( addr => {
+    opts.push({
+      shortage: i,
+      showText: `${addr} (Pending Creation)`,
+      handleFunc: () => setState(State.PendingCreate, {address: addr}),
     });
-    console.log();
-  }
+    i += 1;
+  });
 
-  if (msafes.msafes) {
-    console.log("Existing msafe");
-    console.log();
-    msafes.msafes.forEach( addr => {
-      console.log(`\t${i})\t${addr}`);
-      i = i + 1;
+  msafes.msafes.forEach ( addr => {
+    opts.push({
+      shortage: i,
+      showText: `${addr}`,
+      handleFunc: () => setState(State.MSafeDetails, {address: addr}),
     });
-    console.log();
-  }
+    i += 1;
+  });
 
-  console.log("Operations");
+  opts.push(
+    {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.Entry)},
+    {shortage: 'r', showText: 'Refresh', handleFunc: () => setState(State.List)},
+  );
 
-  console.log(`\tb)\t back`);
-  console.log(`\tr)\t refresh`);
-
-  printSeparator();
-
-  const selection = await promptUntilString("Input your selection\t",
-    "Please input a valid selection\t",
-    (s: string) => {
-      if (s === 'b' || s === 'r') {
-        return true;
-      }
-      return Number(s) >= 1 && Number(s) <= i-1;
-    });
-
-  if (selection === 'b') {
-    setState(State.Entry);
-  } else if (selection === 'r'){
-    setState(State.List);
-  } else {
-    const selectID = Number(selection) - 1;
-    if (selectID < msafes.pendings.length) {
-      setState(State.PendingCreate, {address: msafes.pendings[selectID]});
-    } else if (selectID < msafes.pendings.length + msafes.msafes.length) {
-      // Replace here
-    }
-  }
-
+  await executeCmdOptions('My Momentum Safes', opts);
 }

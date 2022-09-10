@@ -2,6 +2,7 @@ import readline from "readline-sync";
 import clear from 'clear';
 import * as Aptos from "../web3/global";
 import {HexString} from "aptos";
+import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 
 const SEPARATOR_LENGTH = 20;
 
@@ -130,6 +131,20 @@ export async function printMyMessage() {
   console.log();
 }
 
+export async function printMSafeMessage(address: HexString, info: MomentumSafeInfo) {
+  console.log(`Momentum Safe Info:`);
+  console.log();
+  console.log(`Address:\t\t${address}`);
+  console.log(`Threshold:\t\t${info.threshold}`);
+  console.log(`Owners:\t\t\t${info.pubKeys.length}`);
+  info.pubKeys.forEach( (pk, i) => {
+    console.log(`\t\t\t(${i+1}/${info.pubKeys.length}) ${pk.hex()}`);
+  });
+  console.log(`Balance:\t\t${await Aptos.getBalance(address)}`);
+  console.log("-".repeat(process.stdout.columns));
+  console.log();
+}
+
 export function shortString(val: HexString | string) {
   if (typeof val === 'string' && val.length < 15) {
     return val;
@@ -140,19 +155,24 @@ export function shortString(val: HexString | string) {
   return `${s.substring(0, 8)}...${s.substring(s.length-5)}`;
 }
 
-interface cmdOption {
+export interface CmdOption {
   shortage: number | string;
   showText: string;
   handleFunc: () => void;
 }
 
-export class CmdOptionHelper {
+export async function executeCmdOptions(pmp: string, options: CmdOption[]) {
+  const coh = new CmdOptionHelper(pmp, options);
+  await coh.execute();
+}
+
+class CmdOptionHelper {
 
   pmp: string;
-  m: Map<number|string, cmdOption>;
-  options: cmdOption[];
+  m: Map<number|string, CmdOption>;
+  options: CmdOption[];
 
-  constructor(pmp: string, options: cmdOption[]) {
+  constructor(pmp: string, options: CmdOption[]) {
     this.options = options;
     this.pmp = pmp;
     this.m = new Map();
@@ -167,7 +187,6 @@ export class CmdOptionHelper {
   async execute() {
     this.printOptions();
     const opt = await this.prompt();
-    console.log(opt);
     opt.handleFunc();
   }
 
@@ -180,8 +199,8 @@ export class CmdOptionHelper {
     console.log();
   }
 
-  private async prompt(): Promise<cmdOption> {
-    let res: cmdOption;
+  private async prompt(): Promise<CmdOption> {
+    let res: CmdOption;
     await promptUntilString(
       'Please input your option:\t',
       'Please input a valid option:\t',
@@ -199,3 +218,6 @@ export class CmdOptionHelper {
     return res!;
   }
 }
+
+
+

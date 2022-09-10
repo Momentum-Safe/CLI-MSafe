@@ -1,7 +1,16 @@
 import {HexString} from "aptos";
 import {CreationHelper} from "../momentum-safe/creation";
 import {MY_ACCOUNT} from "../web3/global";
-import {printSeparator, promptUntilString, registerState, setState, State, printMyMessage, shortString} from "./common";
+import {
+  printSeparator,
+  promptUntilString,
+  registerState,
+  setState,
+  State,
+  printMyMessage,
+  shortString,
+  CmdOption, executeCmdOptions
+} from "./common";
 import * as Gen from "aptos/src/generated";
 
 interface creationDetailsArg {
@@ -42,43 +51,35 @@ async function creationDetails(rawArg: any) {
 
   console.log(`Collected signatures from public keys: ${collectedSigs.length} / ${creation.threshold}`);
   collectedSigs.forEach( (pk, i) => {
-    console.log(`pk ${i}:\t${shortString(pk)}`);
+    console.log(`pk ${i}:\t${pk}`);
   });
   const isMeSigned = collectedSigs.find( pk => pk.hex() === MY_ACCOUNT.publicKey().hex()) !== undefined;
 
   printSeparator();
+
+  let optionPromptStr: string;
   if (isMeSigned) {
-    console.log("Previously already signed. Waiting for other confirmations.");
+    optionPromptStr = 'Already signed. Waiting for other confirmations.';
   } else {
-    console.log("Waiting for my signature. Sign?");
+    optionPromptStr = 'Waiting for my signature. Sign?';
   }
 
-  // TODO: extract this pattern and make a function
+  let isReturn = true;
+  const opts: CmdOption[] = [];
   if (!isMeSigned) {
-    console.log("\ts)\tsign");
+    opts.push({shortage: 's', showText: 'Sign', handleFunc: () => { isReturn = false }});
   }
-  console.log("\tr)\trefresh");
-  console.log("\tb)\tback");
+  opts.push(
+    {shortage: 'r', showText: 'Refresh', handleFunc: () =>
+        setState(State.PendingCreate, {address: creation.address})},
+    {shortage: 'b', showText: 'Back', handleFunc: () =>
+        setState(State.List)}
+    );
 
-  const option = await promptUntilString(
-    "",
-    "",
-    v => {
-      if (v === 'b' || v === 'r') {return true}
-      if (!isMeSigned && v === 's') { return true}
-      return false;
-    }
-  );
+  await executeCmdOptions(optionPromptStr, opts);
+  if (isReturn) {return}
 
-  if (option === 'b') {
-    setState(State.List);
-    return;
-  } else if (option === 'r') {
-    setState(State.PendingCreate, {address: creation.address});
-    return;
-  }
-
-  printSeparator();
+  console.log();
 
   const isReadyExecute = await creation.isReadyToSubmit(MY_ACCOUNT.publicKey());
   let tx: Gen.PendingTransaction;
@@ -87,26 +88,18 @@ async function creationDetails(rawArg: any) {
   } else {
     tx = await creation.submitSignature(MY_ACCOUNT);
   }
-  console.log(`Transaction ${shortString(tx.hash)} submitted. Waiting for confirmation`);
-  console.log(`Transaction confirmed on chain.`);
+  console.log(`\tTransaction ${tx.hash} submitted. Waiting for confirmation`);
+  console.log(`\tTransaction confirmed on chain.`);
 
   printSeparator();
 
-  console.log("\tr)\trefresh");
-  console.log("\tb)\tback");
-
-  const option2 = await promptUntilString(
-    "",
-    "",
-    v => {
-      if (v === 'b' || v === 'r') {return true}
-      return false;
-    }
+  await executeCmdOptions(
+    'Choose your next step',
+    [
+      {shortage: 'r', showText: 'Refresh', handleFunc: () =>
+        setState(State.PendingCreate, {address: creation.address})},
+      {shortage: 'b', showText: 'Back', handleFunc: () =>
+        setState(State.List)},
+    ]
   );
-
-  if (option2 === 'b') {
-    setState(State.List);
-  } else if (option2 === 'r') {
-    setState(State.PendingCreate, {address: creation.address});
-  }
 }

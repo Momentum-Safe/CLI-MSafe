@@ -1,4 +1,4 @@
-import {promptUntilNumber, printMyMessage, CmdOptionHelper, registerState, setState, State} from "./common";
+import {promptUntilNumber, printMyMessage, executeCmdOptions, registerState, setState, State} from "./common";
 
 
 export function registerEntry() {
@@ -9,9 +9,8 @@ async function entry() {
   console.clear();
   await printMyMessage();
 
-  const coh = new CmdOptionHelper('Select a task?', [
+  await executeCmdOptions('Select a task?', [
     {shortage: 1, showText: 'View my MSafes', handleFunc: () => setState(State.List)},
     {shortage: 2, showText: 'Create a new MSafe', handleFunc: () => setState(State.Create)},
   ]);
-  await coh.execute();
 }

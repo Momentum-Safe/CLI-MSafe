@@ -1,4 +1,10 @@
-import {CmdOptionHelper, printSeparator, promptForYN, promptUntilNumber, promptUntilString} from "./common";
+import {
+  executeCmdOptions,
+  printSeparator,
+  promptForYN,
+  promptUntilNumber,
+  promptUntilString
+} from "./common";
 import {TxnBuilderTypes, HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
 import {CreationHelper} from "../momentum-safe/creation";
@@ -34,9 +40,9 @@ async function initCreateMSafe() {
   );
 
   const initialBalance = await promptUntilNumber(
-    "What's the amount of initial fund of MSafe? (>=20000)\t",
-    "\tPlease input a valid number (>=20000)\t",
-    v => v >= 20000,
+    "What's the amount of initial fund of MSafe? (>=2000)\t",
+    "\tPlease input a valid number (>=2000)\t",
+    v => v >= 2000,
   );
 
   const ownerPubKeys: HexString[] = [MY_ACCOUNT.publicKey()];
@@ -74,24 +80,11 @@ async function initCreateMSafe() {
 
   printSeparator();
 
-  const coh = new CmdOptionHelper('Choose your next step', [
-    {shortage: 'v', showText: 'View details', handleFunc: () => setState(State.Entry)},
-    {shortage: 'b', showText: 'Back', handleFunc: () =>
+  await executeCmdOptions('Choose your next step', [
+    {shortage: 'v', showText: 'View details', handleFunc: () =>
         setState(State.PendingCreate, {address: creation.address})},
+    {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.Entry)},
   ]);
-  await coh.execute();
-  //
-  // console.log('\td) view details');
-  // console.log('\tb) back');
-  // console.log();
-  //
-  // const next = await promptUntilString('Choose your next step', 'Please input a valid option',
-  //   s => s === 'b' || s === 'd');
-  // if (next === 'b') {
-  //   setState(State.Entry);
-  // } else if (next === 'd') {
-  //   setState(State.PendingCreate, {address: creation.address});
-  // }
 }
 
 function isStringPublicKey(s: string): boolean {

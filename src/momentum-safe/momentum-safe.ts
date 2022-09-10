@@ -68,7 +68,7 @@ type coinTransferTx = {
   amount: bigint,
 }
 
-type MomentumSafeInfo = {
+export type MomentumSafeInfo = {
   pubKeys: HexString[],
   creationNonce: number,
   threshold: number,
@@ -85,6 +85,7 @@ export class MomentumSafe {
   rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey;
   address: HexString;
 
+  // TODO: pk, threshold, e.t.c is possible to be updated later
   constructor(ownerPKs: HexString[], threshold: number, nonce: number, address?: HexString) {
     this.ownersPublicKeys = ownerPKs;
     this.threshold = threshold;

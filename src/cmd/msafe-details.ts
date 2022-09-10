@@ -1,7 +1,15 @@
 // CLI for showing the details of momentum safe
 
 import {HexString} from "aptos";
-import {printMyMessage, printSeparator, shortString, registerState, State} from "./common";
+import {
+  printMyMessage,
+  printSeparator,
+  shortString,
+  registerState,
+  State,
+  executeCmdOptions,
+  CmdOption, setState, printMSafeMessage
+} from "./common";
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 
 export function registerMSafeDetails() {
@@ -15,20 +23,29 @@ async function showMSafeDetails(c: {address: HexString}) {
   const addr = c.address;
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
   const info = await msafe.getMomentumSafeInfo();
-  console.log(`Momentum Safe Info:`);
-  console.log();
-  console.log(`\tAddress:\t\t${msafe.address}`);
-  console.log(`\tSignature required:\t${msafe.threshold} / ${msafe.ownersPublicKeys.length}`);
-  console.log(`\tOwner public keys:`);
-  info.pubKeys.forEach( pk => {
-    console.log(`\t\t${shortString(pk.hex())}`);
-  });
-  printSeparator();
-  console.log(`Pending transactions:`);
-  console.log();
+  await printMSafeMessage(addr, info);
 
-  for (const i = 0; i < info.pendingTxs.length; i++) {
-    console.log;
+  let pmpText = '';
+  if (info.pendingTxs.length != 0) {
+    pmpText = 'Pending transactions:\n\n\t\t| SN\t| Action\t\t| Confirmation\t|';
+  } else {
+    pmpText = 'No pending transactions.';
   }
+  const opts: CmdOption[] = [];
+  info.pendingTxs.forEach( (tx, i) => {
+    opts.push({
+      shortage: i + 1,
+      showText: `| ${tx.sn}\t| Transfer<${tx.operation!.coin}>(${shortString(tx.operation!.to)}, ${tx.operation!.amount})`,
+      handleFunc: () => { /* TODO: add here */ },
+    });
+  });
+  opts.push(
+    {shortage: 'r', showText: 'Refresh', handleFunc: () =>
+        setState(State.MSafeDetails, {address: c.address})},
+    {shortage: 'b', showText: 'Back', handleFunc: () =>
+        setState(State.List)},
+    );
+  await executeCmdOptions(pmpText, opts);
 }
+
 
