@@ -51,13 +51,13 @@ type coinTransferTxBrief = {
   to: HexString,
   amount: bigint,
   coin: string,
-  expiration: string,
+  expiration: Date,
 }
 
 type coinTransferTx = {
   sender: HexString,
   sn: number,
-  expiration: string,
+  expiration: Date,
   chainID: number,
   gasPrice: bigint,
   maxGas: bigint,
@@ -129,8 +129,8 @@ export class MomentumSafe {
     const tx = await this.findTx(txHash);
     const sigs = tx.signatures.data;
 
-    const found = sigs.data.find(entry => entry.key === extraPubKey.hex()) !== undefined;
-    let collectedSigs = sigs.data.length;
+    const found = sigs.find(entry => entry.key === extraPubKey.hex()) !== undefined;
+    let collectedSigs = sigs.length;
     if (!found) {
       collectedSigs = collectedSigs + 1;
     }
@@ -243,6 +243,13 @@ export class MomentumSafe {
         });
       }
     });
+    pendings.sort( (a, b) => {
+      if (a.sn != b.sn) {
+        return a.sn - b.sn;
+      } else {
+        return a.operation!.expiration.getUTCSeconds() - b.operation!.expiration.getUTCSeconds();
+      }
+    });
     return {
       pubKeys: data.info.public_keys.map(pk => HexString.ensure(pk)),
       creationNonce: data.info.nonce,
@@ -340,7 +347,7 @@ export class MomentumSafe {
 
   private static secToDate(sec: Uint64) {
     const ms = Number(sec) * 1000;
-    return new Date(ms).toLocaleString();
+    return new Date(ms);
   }
 
   private static coinTransferTxToTxBrief(tx: coinTransferTx): coinTransferTxBrief {

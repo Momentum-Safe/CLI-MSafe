@@ -1,23 +1,24 @@
-import {loadAptosYaml, defaultPath} from './load';
 import * as Aptos from '../web3/global';
-import {printMyMessage, shortString} from "./common";
 import {registerCreation} from "./create";
 import {Command} from "commander";
-import {printSeparator, prompt, promptForYN} from "./helper";
+import {printSeparator, prompt, promptForYN, printMyMessage, shortString, setState, State} from "./common";
 import {Registry} from "../momentum-safe/registry";
 import {MY_ACCOUNT} from "../web3/global";
-import {HexString} from 'aptos';
-import {setState, State} from "./state";
 import {registerEntry} from "./entry";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
+import {ApiError} from "aptos";
+import {load} from "js-yaml";
+import {readFile} from "fs/promises";
+
+export const defaultConfigPath = `.aptos/config.yaml`;
 
 const program = new Command();
 
 const cli = program
   .version("0.0.1")
   .description("Momentum Safe CLI")
-  .option("-c, --config <string>", "config file of aptos profile", defaultPath)
+  .option("-c, --config <string>", "config file of aptos profile", defaultConfigPath)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
   .parse(process.argv);
 
@@ -26,11 +27,18 @@ async function main() {
   registerAllStates();
   console.clear();
 
-  await loadConfigAndApply();
+  try {
+    await loadConfigAndApply();
+  } catch (e) {
+    if ((e as ApiError).message.includes('Account not found by Address')) {
+      console.log('Wallet must have some initial fund to interact with');
+      process.exit(1);
+    }
+    throw e;
+  }
 
   await registerIfNotRegistered();
 
-  console.log(22222222);
   setState(State.Entry);
 }
 
@@ -91,6 +99,14 @@ async function registerIfNotRegistered() {
     printSeparator();
     await prompt('continue');
   }
+}
+
+async function loadAptosYaml(filePath: string) {
+  return load(await readFile(filePath, 'utf-8'));
+}
+
+async function loadDefault() {
+  return loadAptosYaml(defaultConfigPath);
 }
 
 (async () => main())();

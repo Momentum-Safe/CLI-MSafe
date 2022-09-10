@@ -1,8 +1,6 @@
 import {MY_ACCOUNT} from "../web3/global";
 import {Registry} from "../momentum-safe/registry";
-import {printMyMessage} from "./common";
-import {printSeparator, promptUntilString} from "./helper";
-import {registerState, setState, State} from "./state";
+import {printSeparator, promptUntilString, printMyMessage, registerState, setState, State} from "./common";
 
 export function registerList() {
   registerState(State.List, () => list());

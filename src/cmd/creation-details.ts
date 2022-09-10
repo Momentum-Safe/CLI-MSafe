@@ -1,9 +1,7 @@
 import {HexString} from "aptos";
-import {printMyMessage, shortString} from "./common";
 import {CreationHelper} from "../momentum-safe/creation";
 import {MY_ACCOUNT} from "../web3/global";
-import {printSeparator, promptUntilString} from "./helper";
-import {registerState, setState, State} from "./state";
+import {printSeparator, promptUntilString, registerState, setState, State, printMyMessage, shortString} from "./common";
 import * as Gen from "aptos/src/generated";
 
 interface creationDetailsArg {

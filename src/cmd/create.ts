@@ -1,10 +1,10 @@
-import {printSeparator, prompt, promptForYN, promptUntilNumber, promptUntilString} from "./helper";
+import {CmdOptionHelper, printSeparator, promptForYN, promptUntilNumber, promptUntilString} from "./common";
 import {TxnBuilderTypes, HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
 import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";
 import {printMyMessage} from "./common";
-import {registerState, setState, State} from "./state";
+import {registerState, setState, State} from "./common";
 
 const MAX_OWNERS = 32;
 
@@ -12,7 +12,6 @@ const MAX_OWNERS = 32;
 export function registerCreation() {
   registerState(State.Create, () => initCreateMSafe());
 }
-
 
 async function initCreateMSafe() {
   console.clear();
@@ -75,17 +74,24 @@ async function initCreateMSafe() {
 
   printSeparator();
 
-  console.log('\td) view details');
-  console.log('\tb) back');
-  console.log();
-
-  const next = await promptUntilString('Choose your next step', 'Please input a valid option',
-    s => s === 'b' || s === 'd');
-  if (next === 'b') {
-    setState(State.Entry);
-  } else if (next === 'd') {
-    setState(State.PendingCreate, {address: creation.address});
-  }
+  const coh = new CmdOptionHelper('Choose your next step', [
+    {shortage: 'v', showText: 'View details', handleFunc: () => setState(State.Entry)},
+    {shortage: 'b', showText: 'Back', handleFunc: () =>
+        setState(State.PendingCreate, {address: creation.address})},
+  ]);
+  await coh.execute();
+  //
+  // console.log('\td) view details');
+  // console.log('\tb) back');
+  // console.log();
+  //
+  // const next = await promptUntilString('Choose your next step', 'Please input a valid option',
+  //   s => s === 'b' || s === 'd');
+  // if (next === 'b') {
+  //   setState(State.Entry);
+  // } else if (next === 'd') {
+  //   setState(State.PendingCreate, {address: creation.address});
+  // }
 }
 
 function isStringPublicKey(s: string): boolean {

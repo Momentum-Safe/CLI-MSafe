@@ -1,27 +1,17 @@
-import {promptUntilNumber} from "./helper";
-import {registerState, setState, State} from "./state";
-import {printMyMessage} from "./common";
+import {promptUntilNumber, printMyMessage, CmdOptionHelper, registerState, setState, State} from "./common";
 
 
 export function registerEntry() {
   registerState(State.Entry, () => entry());
 }
 
-async function entry(c?: any) {
+async function entry() {
   console.clear();
   await printMyMessage();
 
-  console.log("Select a task?");
-  console.log("\t1. View my MSafes");
-  console.log("\t2. Create a new MSafe");
-  const option = await promptUntilNumber('', '', v => v >= 1 && v <= 2);
-  switch (option) {
-    case 1:
-      // do list
-      setState(State.List);
-      break;
-    case 2:
-      // do create
-      setState(State.Create);
-  }
+  const coh = new CmdOptionHelper('Select a task?', [
+    {shortage: 1, showText: 'View my MSafes', handleFunc: () => setState(State.List)},
+    {shortage: 2, showText: 'Create a new MSafe', handleFunc: () => setState(State.Create)},
+  ]);
+  await coh.execute();
 }

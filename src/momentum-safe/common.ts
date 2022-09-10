@@ -2,7 +2,7 @@ import {HexString, TxnBuilderTypes,} from "aptos";
 import {Account} from "../web3/account";
 import {Buffer} from "buffer/";
 
-export const DEPLOYER = '0xb52f33337edb1408711b0240291b9e5500d00f17e78dc2df17d0fd582ef9e4ab';
+export const DEPLOYER = '0xfa5b7cd60b53bd673037cfcdd410be840a2eb654c7bcea182662605c8b0cb198';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export type vector<T> = T[]
