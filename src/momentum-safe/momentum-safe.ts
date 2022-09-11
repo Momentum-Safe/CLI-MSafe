@@ -1,12 +1,11 @@
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes, BCS} from 'aptos';
 import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder} from '../web3/txnBuilder';
-import {Transaction} from "../common/types";
+import {Transaction} from "../web3/types";
 import {Account} from '../web3/account';
 import {vector, SimpleMap, HexStr, DEPLOYER, DEPLOYER_HS, HexBuffer, assembleSignatures} from './common';
-import {computeMultiSigAddress, sha3_256} from "../common/crypto";
+import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
 import {Uint64} from "aptos/dist/transaction_builder/bcs";
-import * as SHA3 from "js-sha3";
 
 // TODO: refactor naming
 const MomentumSafeModule = 'MomentumSafe';

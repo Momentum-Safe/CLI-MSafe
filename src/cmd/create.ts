@@ -6,7 +6,7 @@ import {
   promptUntilString,
   isStringPublicKey,
 } from "./common";
-import {TxnBuilderTypes, HexString} from "aptos";
+import {HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
 import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";

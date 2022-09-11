@@ -1,14 +1,15 @@
 // TODO: apply the use case for 1/x signature momentum safe wallet
 // TODO: APT token amount change to decimal and use bigint
 // TODO: Coin register call
-// TODO: View assets list (get from resources)
 // TODO: Module publish
 // TODO: Arbitrary function call
+// TODO: View assets list (get from resources)
 // TODO: Revert transaction
-// TODO: Test with multiple pending transactions
+// TODO: Sequential pending transaction
+
+// TODO: Add private key encryption
 // TODO: (Need to update smart contract first) Key rotation
 // TODO: Replace data query interface with indexer
-
 
 import * as Aptos from '../web3/global';
 import {registerCreation} from "./create";

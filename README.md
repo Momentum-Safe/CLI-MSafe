@@ -1,2 +1,3 @@
 # CLI-MSafe
-CLI tool for Momentum Safe
+
+The CLI interface for Momentum Safe.  

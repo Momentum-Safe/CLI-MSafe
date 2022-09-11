@@ -8,7 +8,6 @@ import {
   setState,
   State,
   printMyMessage,
-  shortString,
   CmdOption, executeCmdOptions
 } from "./common";
 import * as Gen from "aptos/src/generated";
