@@ -4,7 +4,11 @@
 // TODO: View assets list (get from resources)
 // TODO: Module publish
 // TODO: Arbitrary function call
+// TODO: Revert transaction
+// TODO: Test with multiple pending transactions
 // TODO: (Need to update smart contract first) Key rotation
+// TODO: Replace data query interface with indexer
+
 
 import * as Aptos from '../web3/global';
 import {registerCreation} from "./create";
@@ -20,6 +24,7 @@ import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
 import {registerInitCoinTransfer} from "./init-coin-transfer";
+import {registerTxDetails} from "./tx-details";
 
 export const defaultConfigPath = `.aptos/config.yaml`;
 
@@ -59,6 +64,7 @@ function registerAllStates() {
   registerCreationDetails();
   registerMSafeDetails();
   registerInitCoinTransfer();
+  registerTxDetails();
 }
 
 async function loadConfigAndApply() {

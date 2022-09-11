@@ -1,7 +1,6 @@
 import {AptosAccount, HexString, MaybeHexString, TransactionBuilderEd25519, TxnBuilderTypes} from "aptos";
 import {Bytes} from "aptos/dist/transaction_builder/bcs";
 import {Transaction} from "../common/types";
-import * as SHA3 from "js-sha3";
 
 
 // SingleWallet is a single-signed wallet account

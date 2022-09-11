@@ -34,8 +34,6 @@ export function setState(state: State, arg?: any) {
   cb(arg);
 }
 
-
-
 export async function prompt(s: string): Promise<string> {
   return new Promise((resolve) => {
     return resolve(readline.question(s));

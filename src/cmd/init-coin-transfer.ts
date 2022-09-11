@@ -12,6 +12,7 @@ import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import {HexString} from "aptos";
 import * as Aptos from '../web3/global';
 import {MY_ACCOUNT} from "../web3/global";
+import {PendingTransaction} from "aptos/dist/generated";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, initCoinTransfer);
@@ -62,16 +63,18 @@ async function initCoinTransfer(c: {address: HexString}) {
   }
 
   // Submit transaction
-  const res = await msafe.initCoinTransfer(MY_ACCOUNT, toAddress, BigInt(amount));
+  const [txHash, res] = await msafe.initCoinTransfer(MY_ACCOUNT, toAddress, BigInt(amount));
+  const myHash = (res as PendingTransaction).hash;
   console.log();
-  console.log(`\tTransaction ${res.hash} submitted to blockchain`);
-  await Aptos.waitForTransaction(res.hash);
+  console.log(`\tTransaction ${myHash} submitted to blockchain`);
+  await Aptos.waitForTransaction(myHash);
   console.log(`\tTransaction confirmed on chain.`);
 
   printSeparator();
 
   await executeCmdOptions('Choose your next step', [
-    {shortage: 'v', showText: "View details", handleFunc: () => { /* TODO: add state here */ }},
+    {shortage: 'v', showText: "View details", handleFunc: () =>
+      { setState(State.PendingCoinTransfer, {address: addr, txHash: (txHash as HexString).hex()}) }},
     {shortage: 'b', showText: "Back", handleFunc: () => {setState(State.MSafeDetails, {address: addr})}}
     ]);
 }

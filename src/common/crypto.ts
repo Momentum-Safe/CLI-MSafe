@@ -52,6 +52,13 @@ export function deriveAuthKey(publicKey: HexString): HexString {
   return new HexString(hash.hex());
 }
 
+// Used to calculate the temporary hash of the transaction payload
+export function sha3_256(payload: Uint8Array): HexString {
+  const hash = SHA3.sha3_256.create();
+  hash.update(payload);
+  return new HexString(hash.hex());
+}
+
 export function deriveAddress(publicKey: HexString): HexString {
   return deriveAuthKey(publicKey);
 }

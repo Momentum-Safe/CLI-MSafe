@@ -4,8 +4,9 @@ import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder} from '../web3/txnBuil
 import {Transaction} from "../common/types";
 import {Account} from '../web3/account';
 import {vector, SimpleMap, HexStr, DEPLOYER, DEPLOYER_HS, HexBuffer, assembleSignatures} from './common';
-import {computeMultiSigAddress} from "../common/crypto";
+import {computeMultiSigAddress, sha3_256} from "../common/crypto";
 import {Uint64} from "aptos/dist/transaction_builder/bcs";
+import * as SHA3 from "js-sha3";
 
 // TODO: refactor naming
 const MomentumSafeModule = 'MomentumSafe';
@@ -33,8 +34,8 @@ type TxnBook = {
   pendings: SimpleMap<TransactionType>, // Hash => Tx
 }
 
-type TransactionType = {
-  nonce: number,
+export type TransactionType = {
+  nonce: string,
   payload: HexStr,
   metadata: HexStr, // json or uri
   signatures: SimpleMap<HexStr>, // public_key => signature
@@ -54,7 +55,7 @@ type coinTransferTxBrief = {
   expiration: Date,
 }
 
-type coinTransferTx = {
+export type CoinTransferTx = {
   sender: HexString,
   sn: number,
   expiration: Date,
@@ -119,11 +120,13 @@ export class MomentumSafe {
   async initCoinTransfer(signer: Account, to: HexString, amount: bigint) {
     const tx = await this.makeCoinTransferTx(to, amount);
     const [rawTx, [sig]] = signer.getSigData(tx);
+    const tmpHash = sha3_256(rawTx);
 
     const initTx = await this.makeCoinTransferInitTx(signer, rawTx, sig);
     const signedInitTx = signer.sign(initTx);
 
-    return await Aptos.sendSignedTransactionAsync(signedInitTx);
+    const txRes = await Aptos.sendSignedTransactionAsync(signedInitTx);
+    return [tmpHash, txRes];
   }
 
   async isReadyToSubmit(txHash: string, extraPubKey: HexString) {
@@ -168,9 +171,23 @@ export class MomentumSafe {
     return sig;
   }
 
+  // TODO: do not query for resource
   async findTx(txHash: string) {
     const res = await this.getResource();
     return res.txnBook.pendings.data.find(entry => entry.key === txHash)!.value;
+  }
+
+  // TODO: do not query for resource
+  // TODO: better API for TransactionType
+  // TODO: make tx a separate class
+  async getTxDetails(txHash: string): Promise<[TransactionType, CoinTransferTx]> {
+    const txType = await this.findTx(txHash);
+    const curSN = await Aptos.getSequenceNumber(this.address);
+    if (!MomentumSafe.isTxValid(txType, curSN)) {
+      throw new Error("Transaction is no longer valid: low sequence number.");
+    }
+    const txData = MomentumSafe.decodeCoinTransferTx(txType.payload);
+    return [txType, txData];
   }
 
   private async makeCoinTransferInitTx(
@@ -180,7 +197,8 @@ export class MomentumSafe {
   ) {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer.address());
-    const multiSN = await Aptos.getSequenceNumber(this.address);
+    // TODO: do not query for resource again;
+    const multiSN = await this.getMSafeNextSequenceNumber();
     const txBuilder = new AptosEntryTxnBuilder();
     const pkIndex = this.getIndex(signer.publicKey());
 
@@ -237,7 +255,7 @@ export class MomentumSafe {
       if (MomentumSafe.isTxValid(tx.value, sn)) {
         const decodedTx = MomentumSafe.decodeCoinTransferTx(tx.value.payload);
         pendings.push({
-          sn: tx.value.nonce,
+          sn: Number(tx.value.nonce),
           numSigs: tx.value.signatures.data.length,
           hash: tx.key,
           operation: MomentumSafe.coinTransferTxToTxBrief(decodedTx),
@@ -264,7 +282,7 @@ export class MomentumSafe {
 
   private static isTxValid(tx: TransactionType, curSN: number): boolean {
     // Add expiration
-    return tx.nonce >= curSN;
+    return Number(tx.nonce) >= curSN;
   }
 
   private async makeCoinTransferTx(to: HexString, amount: bigint) {
@@ -280,15 +298,16 @@ export class MomentumSafe {
       .build();
   }
 
+  // TODO: do not query for resource in this function
   private async getMSafeNextSequenceNumber() {
     const res = await this.getResource();
     let maxNonce = await Aptos.getSequenceNumber(this.address);
     res.txnBook.pendings.data.forEach( entry => {
-      if (entry.value.nonce > maxNonce) {
-        maxNonce = entry.value.nonce;
+      if (Number(entry.value.nonce) + 1 > maxNonce) {
+        maxNonce = Number(entry.value.nonce) + 1;
       }
     });
-    return maxNonce + 1;
+    return maxNonce;
   }
 
   private getIndex(target: HexString): number {
@@ -302,7 +321,7 @@ export class MomentumSafe {
   }
 
   // TODO: refactor this
-  private static decodeCoinTransferTx(payload: string): coinTransferTx {
+  private static decodeCoinTransferTx(payload: string): CoinTransferTx {
     const tx = Transaction.deserialize(HexBuffer(payload)).raw;
     const txPayload = tx.payload;
     if (!(txPayload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction)) {
@@ -351,7 +370,7 @@ export class MomentumSafe {
     return new Date(ms);
   }
 
-  private static coinTransferTxToTxBrief(tx: coinTransferTx): coinTransferTxBrief {
+  private static coinTransferTxToTxBrief(tx: CoinTransferTx): coinTransferTxBrief {
     return {
       to: tx.to,
       amount: tx.amount,
