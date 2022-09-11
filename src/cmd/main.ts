@@ -1,3 +1,11 @@
+// TODO: apply the use case for 1/x signature momentum safe wallet
+// TODO: APT token amount change to decimal and use bigint
+// TODO: Coin register call
+// TODO: View assets list (get from resources)
+// TODO: Module publish
+// TODO: Arbitrary function call
+// TODO: (Need to update smart contract first) Key rotation
+
 import * as Aptos from '../web3/global';
 import {registerCreation} from "./create";
 import {Command} from "commander";
@@ -11,6 +19,7 @@ import {ApiError} from "aptos";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
+import {registerInitCoinTransfer} from "./init-coin-transfer";
 
 export const defaultConfigPath = `.aptos/config.yaml`;
 
@@ -49,6 +58,7 @@ function registerAllStates() {
   registerCreation();
   registerCreationDetails();
   registerMSafeDetails();
+  registerInitCoinTransfer();
 }
 
 async function loadConfigAndApply() {

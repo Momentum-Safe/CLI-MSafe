@@ -1,7 +1,7 @@
 import readline from "readline-sync";
 import clear from 'clear';
 import * as Aptos from "../web3/global";
-import {HexString} from "aptos";
+import {HexString, TxnBuilderTypes} from "aptos";
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 
 const SEPARATOR_LENGTH = 20;
@@ -131,7 +131,7 @@ export async function printMyMessage() {
   console.log();
 }
 
-export async function printMSafeMessage(address: HexString, info: MomentumSafeInfo) {
+export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: number) {
   console.log(`Momentum Safe Info:`);
   console.log();
   console.log(`Address:\t\t${address}`);
@@ -140,7 +140,7 @@ export async function printMSafeMessage(address: HexString, info: MomentumSafeIn
   info.pubKeys.forEach( (pk, i) => {
     console.log(`\t\t\t(${i+1}/${info.pubKeys.length}) ${pk.hex()}`);
   });
-  console.log(`Balance:\t\t${await Aptos.getBalance(address)}`);
+  console.log(`Balance:\t\t${balance}`);
   console.log("-".repeat(process.stdout.columns));
   console.log();
 }
@@ -220,4 +220,18 @@ class CmdOptionHelper {
 }
 
 
+export function isStringPublicKey(s: string): boolean {
+  let byteLength;
+  try {
+    byteLength = HexString.ensure(s).toUint8Array().length;
+  } catch (e) {
+    return false;
+  }
+  return byteLength == TxnBuilderTypes.Ed25519PublicKey.LENGTH;
+}
+
+export function isStringAddress(s: string): boolean {
+  const byteLength = HexString.ensure(s).toUint8Array().length;
+  return byteLength == 32; // SHA3_256 length
+}
 

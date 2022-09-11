@@ -3,7 +3,8 @@ import {
   printSeparator,
   promptForYN,
   promptUntilNumber,
-  promptUntilString
+  promptUntilString,
+  isStringPublicKey,
 } from "./common";
 import {TxnBuilderTypes, HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
@@ -85,19 +86,4 @@ async function initCreateMSafe() {
         setState(State.PendingCreate, {address: creation.address})},
     {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.Entry)},
   ]);
-}
-
-function isStringPublicKey(s: string): boolean {
-  let byteLength;
-  try {
-    byteLength = HexString.ensure(s).toUint8Array().length;
-  } catch (e) {
-    return false;
-  }
-  return byteLength == TxnBuilderTypes.Ed25519PublicKey.LENGTH;
-}
-
-function isStringAddress(s: string): boolean {
-  const byteLength = HexString.ensure(s).toUint8Array().length;
-  return byteLength == 32; // SHA3_256 length
 }
