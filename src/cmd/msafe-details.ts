@@ -3,7 +3,6 @@
 import {HexString} from "aptos";
 import {
   printMyMessage,
-  printSeparator,
   shortString,
   registerState,
   State,

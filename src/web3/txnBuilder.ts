@@ -1,6 +1,6 @@
 import {BCS, HexString, TxnBuilderTypes} from "aptos";
 import {ChainId} from "aptos/dist/transaction_builder/aptos_types";
-import {Transaction} from "../common/types";
+import {Transaction} from "./types";
 
 const COIN_MODULE = "0x1::coin";
 const TRANSFER_METHOD = "transfer";

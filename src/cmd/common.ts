@@ -132,13 +132,13 @@ export async function printMyMessage() {
 export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: number) {
   console.log(`Momentum Safe Info:`);
   console.log();
-  console.log(`Address:\t\t${address}`);
-  console.log(`Threshold:\t\t${info.threshold}`);
-  console.log(`Owners:\t\t\t${info.pubKeys.length}`);
+  console.log(`Address:\t${address}`);
+  console.log(`Threshold:\t${info.threshold}`);
+  console.log(`Owners:\t\t${info.pubKeys.length}`);
   info.pubKeys.forEach( (pk, i) => {
-    console.log(`\t\t\t(${i+1}/${info.pubKeys.length}) ${pk.hex()}`);
+    console.log(`\t\t(${i+1}/${info.pubKeys.length}) ${pk.hex()}`);
   });
-  console.log(`Balance:\t\t${balance}`);
+  console.log(`Balance:\t${balance}`);
   console.log("-".repeat(process.stdout.columns));
   console.log();
 }

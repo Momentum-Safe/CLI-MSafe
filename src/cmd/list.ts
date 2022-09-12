@@ -5,7 +5,6 @@ import {
   registerState,
   setState,
   State,
-  shortString,
   executeCmdOptions, CmdOption
 } from "./common";
 
