@@ -65,7 +65,7 @@ async function initCreateMSafe() {
 
   console.log(`Creating ${creation.threshold} / ${creation.ownerPubKeys.length} Momentum Safe wallet`);
   console.log(`\tAddress:\t${creation.address}`);
-  console.log(`\tNonce:\t\t${creation.nonce}`);
+  console.log(`\tNonce:\t\t${creation.creationNonce}`);
 
   printSeparator();
   const userContinue = await promptForYN("Initiate wallet creation?", true);

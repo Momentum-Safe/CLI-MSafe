@@ -36,9 +36,9 @@ export class Account {
     return new TxnBuilderTypes.Ed25519Signature(sig.toUint8Array());
   }
 
-  getSigData(txn: Transaction): [signing: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature[]] {
+  getSigData(txn: Transaction): [signing: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature] {
     const signingMessage = txn.getSigningMessage();
     const sig = this.signFn(signingMessage);
-    return [signingMessage, [sig]];
+    return [signingMessage, sig];
   }
 }

@@ -32,21 +32,39 @@ type PendingMultiSigCreations = {
   creations: SimpleMap<MultiSigCreation>
 };
 
+
 export class CreationHelper {
+  /**
+   * CreationHelper is the helper for momentum safe creation process.
+   * Each CreationHelper is used for creation for one momentum safe wallet.
+   * The class can be initialized with to methods:
+   *   1. Directly through constructor. This shall be used when initializing
+   *      a new momentum safe.
+   *
+   *      ```ts
+   *      const ch = new CreationHelper(ownerPubKeys, threshold, creationNonce, initBalance);
+   *      ```
+   *
+   *   2. By reading momentum safe data from the MOVE resources with the address.
+   *
+   *      ```ts
+   *      const ch = MomentumSafe.fromPendingCreation(addr);
+   *      ```
+   **/
   address: HexString;
   rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey;
 
   constructor(
     readonly ownerPubKeys: HexString[],
     readonly threshold: number,
-    readonly nonce: number,
+    readonly creationNonce: number,
     readonly initBalance?: bigint,
     ){
     checkDuplicatePubKeys(ownerPubKeys);
     if (threshold > ownerPubKeys.length) {
       throw new Error("threshold is bigger than number of owners");
     }
-    [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, nonce);
+    [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, creationNonce);
   }
 
   static async fromPendingCreation(addr: HexString): Promise<CreationHelper> {
@@ -54,7 +72,6 @@ export class CreationHelper {
     if (!creation) {
       throw new Error("cannot get creation data");
     }
-
     const threshold = creation.threshold;
     const nonce = creation.nonce;
     const ownerPubKeys = creation.public_keys;
@@ -65,7 +82,7 @@ export class CreationHelper {
   async initCreation(signer: Account) {
     // Sign on the multi-sig transaction
     const tx = await this.makeMSafeRegisterTxn(this.address, 'Wallet test');
-    const [payload, [sig]] = signer.getSigData(tx);
+    const [payload, sig] = signer.getSigData(tx);
 
     // Sign and submit the transaction from the signer
     // TODO: corner case when the threshold is not 0
@@ -120,7 +137,7 @@ export class CreationHelper {
 
   signPendingCreation(signer: Account, creation: MultiSigCreation): TxnBuilderTypes.Ed25519Signature {
     const payload = Transaction.deserialize(HexBuffer(creation.txn.payload));
-    const [, [sig]] = signer.getSigData(payload);
+    const [, sig] = signer.getSigData(payload);
     return sig;
   }
 

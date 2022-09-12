@@ -118,7 +118,7 @@ export class MomentumSafe {
 
   async initCoinTransfer(signer: Account, to: HexString, amount: bigint) {
     const tx = await this.makeCoinTransferTx(to, amount);
-    const [rawTx, [sig]] = signer.getSigData(tx);
+    const [rawTx, sig] = signer.getSigData(tx);
     const tmpHash = sha3_256(rawTx);
 
     const initTx = await this.makeCoinTransferInitTx(signer, rawTx, sig);
@@ -166,7 +166,7 @@ export class MomentumSafe {
 
   signTx(signer: Account, txType: TransactionType) {
     const tx = Transaction.deserialize(HexBuffer(txType.payload));
-    const [, [sig]] = signer.getSigData(tx);
+    const [, sig] = signer.getSigData(tx);
     return sig;
   }
 
