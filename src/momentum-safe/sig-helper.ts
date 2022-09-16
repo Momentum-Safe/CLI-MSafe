@@ -13,9 +13,9 @@ export class MultiSigHelper {
   private pks: HexString[]; // pks might be updated in future implementation
   private sigs: Map<HexString, TxnBuilderTypes.Ed25519Signature>;
 
-  constructor(pks: HexString[], sigs: SimpleMap<HexStr>) {
+  constructor(pks: HexString[], sigs?: SimpleMap<HexStr>) {
     this.pks = pks;
-    this.sigs = MultiSigHelper.simpleMapToSigMap(sigs);
+    this.sigs = simpleMapToSigMap(sigs);
   }
 
   findIndex(target: HexString): number {
@@ -36,7 +36,7 @@ export class MultiSigHelper {
         addedSigs.push( {pubKey: pk} );
       }
     });
-    this.sigs = MultiSigHelper.simpleMapToSigMap(newSigs);
+    this.sigs = simpleMapToSigMap(newSigs);
     return addedSigs;
   }
 
@@ -63,16 +63,16 @@ export class MultiSigHelper {
       sigSorted, parsedBitmap,
     );
   }
+}
 
-  static simpleMapToSigMap(smSigs: SimpleMap<HexStr>):
-    Map<HexString, TxnBuilderTypes.Ed25519Signature>
-  {
-    const m = new Map<HexString, TxnBuilderTypes.Ed25519Signature>();
+function simpleMapToSigMap(smSigs: SimpleMap<HexStr> | undefined): Map<HexString, TxnBuilderTypes.Ed25519Signature> {
+  const m = new Map<HexString, TxnBuilderTypes.Ed25519Signature>();
+  if (smSigs) {
     smSigs.data.forEach( entry => {
       const pk = HexString.ensure(entry.key);
       const sig = new TxnBuilderTypes.Ed25519Signature(HexBuffer(entry.value));
       m.set(pk, sig);
     });
-    return m;
   }
+  return m;
 }

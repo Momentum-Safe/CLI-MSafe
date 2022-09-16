@@ -1,4 +1,4 @@
-import {AptosClient, BCS, HexString, TxnBuilderTypes} from 'aptos';
+import {BCS, HexString, TxnBuilderTypes} from 'aptos';
 import {SimpleMap, DEPLOYER, DEPLOYER_HS, assembleSignatures, checkDuplicatePubKeys} from './common';
 import {Transaction} from "../web3/types";
 import * as Aptos from "../web3/global";
@@ -7,6 +7,7 @@ import {Account} from "../web3/account";
 import {computeMultiSigAddress} from "../web3/crypto";
 import {Bytes} from "aptos/dist/transaction_builder/bcs";
 import {HexBuffer} from "./common";
+import {MultiSigHelper} from "./sig-helper";
 
 
 const CreatorModule = 'Creator';
@@ -60,13 +61,19 @@ export class CreationHelper {
     readonly creationNonce: number,
     readonly initBalance?: bigint,
     ){
-    checkDuplicatePubKeys(ownerPubKeys);
+    // Input parameter checks
+    if (threshold <= 0) {
+      throw new Error("threshold is must be greater than 0");
+    }
     if (threshold > ownerPubKeys.length) {
       throw new Error("threshold is bigger than number of owners");
     }
+    checkDuplicatePubKeys(ownerPubKeys);
+    // Compute for multi-ed25519 public key and address
     [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, creationNonce);
   }
 
+  // Create the momentum safe creation from resource data
   static async fromPendingCreation(addr: HexString): Promise<CreationHelper> {
     const creation = await CreationHelper.getMSafeCreation(addr);
     if (!creation) {
@@ -80,6 +87,10 @@ export class CreationHelper {
   }
 
   async initCreation(signer: Account) {
+    const creation = await this.getResourceData();
+    if (creation !== undefined) {
+      throw new Error("creation already in progress");
+    }
     // Sign on the multi-sig transaction
     const tx = await this.makeMSafeRegisterTxn(this.address, 'Wallet test');
     const [payload, sig] = signer.getSigData(tx);
@@ -93,17 +104,19 @@ export class CreationHelper {
   }
 
   async collectedSignatures(): Promise<HexString[]> {
-    const creation = await CreationHelper.getMSafeCreation(this.address);
+    const creation = await this.getResourceData();
     const sigs = creation.txn.signatures.data;
-
     return sigs.map( entry => HexString.ensure(entry.key));
   }
 
   async isReadyToSubmit(extraPubKey: HexString) {
-    const creation = await CreationHelper.getMSafeCreation(this.address);
+    const creation = await this.getResourceData();
     const sigs = creation.txn.signatures;
+    const msHelper = new MultiSigHelper(this.ownerPubKeys, sigs);
+    const found = msHelper.findIndex(extraPubKey) !== -1;
 
-    const found = sigs.data.find( entry => entry.key === extraPubKey.hex()) !== undefined;
+    // Total number signatures is existing signatures plus 1 if extra public key
+    // is not in existing signs.
     let collectedSigs = sigs.data.length;
     if (!found) {
       collectedSigs = collectedSigs + 1;
@@ -112,7 +125,7 @@ export class CreationHelper {
   }
 
   async submitSignature(signer: Account) {
-    const creation = await CreationHelper.getMSafeCreation(this.address);
+    const creation = await this.getResourceData();
     const sig = this.signPendingCreation(signer, creation);
     const tx = await this.makeSubmitSignatureTxn(signer, sig);
     const signedTx = signer.sign(tx);
@@ -226,18 +239,22 @@ export class CreationHelper {
     return nonce.value;
   }
 
-  static async getResourceData(): Promise<PendingMultiSigCreations> {
+  private async getResourceData() {
+    return await CreationHelper.getMSafeCreation(this.address);
+  }
+
+  // getMSafeCreation get the current data for mSafe creation
+  private static async getMSafeCreation(msafeAddr: HexString): Promise<MultiSigCreation> {
+    const creations = await CreationHelper.getResourceData();
+    const creation = creations.creations.data.find( ({key}) => key === msafeAddr.hex())?.value;
+    return creation as MultiSigCreation;
+  }
+
+  private static async getResourceData(): Promise<PendingMultiSigCreations> {
     const res = await Aptos.getAccountResource(DEPLOYER_HS, CreatorResourceType);
     if (!res) {
       throw new Error("Creator contract not initialized");
     }
     return res.data as PendingMultiSigCreations;
-  }
-
-  // getMSafeCreation get the current data for mSafe creation
-  static async getMSafeCreation(msafeAddr: HexString): Promise<MultiSigCreation> {
-    const creations = await CreationHelper.getResourceData();
-    const creation = creations.creations.data.find( ({key}) => key === msafeAddr.hex())?.value;
-    return creation as MultiSigCreation;
   }
 }

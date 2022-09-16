@@ -6,6 +6,7 @@
 // TODO: View assets list (get from resources)
 // TODO: Revert transaction
 // TODO: Sequential pending transaction
+// TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
 
 // TODO: Add private key encryption
 // TODO: (Need to update smart contract first) Key rotation
