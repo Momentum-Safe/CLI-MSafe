@@ -7,7 +7,7 @@ import {vector, SimpleMap, HexStr, DEPLOYER, DEPLOYER_HS, HexBuffer, assembleSig
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
 
 // TODO: refactor naming
-const MomentumSafeModule = 'MomentumSafe';
+const MomentumSafeModule = 'momentum_safe';
 const momentumSafeResourceType = `${DEPLOYER}::${MomentumSafeModule}::Momentum`;
 const initTransactionFn = 'init_transaction';
 const submitSignatureFn = 'submit_signature';
@@ -201,7 +201,7 @@ export class MomentumSafe {
     const pkIndex = this.getIndex(signer.publicKey());
 
     return txBuilder
-      .contract(DEPLOYER_HS)
+      .addr(DEPLOYER_HS)
       .module(MomentumSafeModule)
       .method(initTransactionFn)
       .from(signer.address())
@@ -229,7 +229,7 @@ export class MomentumSafe {
     const txBuilder = new AptosEntryTxnBuilder();
 
     return txBuilder
-      .contract(DEPLOYER_HS)
+      .addr(DEPLOYER_HS)
       .module(MomentumSafeModule)
       .method(submitSignatureFn)
       .from(signer.address())

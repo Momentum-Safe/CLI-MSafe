@@ -9,7 +9,7 @@ import {HexBuffer} from "./common";
 import {MultiSigHelper} from "./sig-helper";
 
 
-const CreatorModule = 'Creator';
+const CreatorModule = 'creator';
 const CreatorResourceType = `${DEPLOYER}::${CreatorModule}::PendingMultiSigCreations`;
 const InitWalletCreationFn = "init_wallet_creation";
 
@@ -160,7 +160,7 @@ export class CreationHelper {
     const index = this.findPkIndex(signer.publicKey());
 
     return txModuleBuilder
-      .contract(DEPLOYER_HS)
+      .addr(DEPLOYER_HS)
       .module(CreatorModule)
       .method('submit_signature')
       .from(signer.address())
@@ -188,7 +188,7 @@ export class CreationHelper {
 
     const txModuleBuilder = new AptosEntryTxnBuilder();
     return txModuleBuilder
-      .contract(DEPLOYER_HS)
+      .addr(DEPLOYER_HS)
       .module('MomentumSafe')
       .method('register')
       .from(from)
@@ -203,7 +203,7 @@ export class CreationHelper {
     const sn = await Aptos.getSequenceNumber(signer);
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
-      .contract(DEPLOYER_HS)
+      .addr(DEPLOYER_HS)
       .module(CreatorModule)
       .method(InitWalletCreationFn)
       .from(signer)

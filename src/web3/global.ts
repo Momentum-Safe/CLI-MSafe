@@ -1,5 +1,4 @@
 import {AptosClient, FaucetClient, HexString, BCS, ApiError} from 'aptos';
-import * as Gen from 'aptos/src/generated';
 import {Account} from "./account";
 
 let APTOS: AptosClient;
@@ -56,14 +55,14 @@ export async function getChainId(): Promise<number> {
 }
 
 
-export async function sendSignedTransactionAsync(message: BCS.Bytes): Promise<Gen.PendingTransaction> {
+export async function sendSignedTransactionAsync(message: BCS.Bytes) {
   return await APTOS.submitSignedBCSTransaction(message as Uint8Array);
 }
 
 
-export async function waitForTransaction(txnHash: string): Promise<Gen.Transaction_UserTransaction> {
+export async function waitForTransaction(txnHash: string) {
   await APTOS.waitForTransaction(txnHash);
-  const tx = (await APTOS.getTransactionByHash(txnHash)) as Gen.Transaction_UserTransaction;
+  const tx = (await APTOS.getTransactionByHash(txnHash)) as any;
   if (!tx.success) {
     console.log('tx failed', tx);
     throw tx.vm_status;
@@ -75,7 +74,7 @@ export async function getAccount(addr: HexString) {
   return await APTOS.getAccount(addr);
 }
 
-export async function getAccountResource(addr: HexString, resourceTag: string): Promise<Gen.MoveResource> {
+export async function getAccountResource(addr: HexString, resourceTag: string) {
   return APTOS.getAccountResource(addr, resourceTag);
 }
 

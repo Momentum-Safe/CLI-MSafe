@@ -4,7 +4,7 @@ import {DEPLOYER, DEPLOYER_HS, HexStr, vector} from "./common";
 import {Account} from "../web3/account";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
 
-const RegistryModule = 'Registry';
+const RegistryModule = 'registry';
 const RegisterFunction = 'register';
 const RegistryResourceType = `${DEPLOYER}::${RegistryModule}::OwnerMomentumSafes`;
 
@@ -57,7 +57,7 @@ export class Registry {
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
-      .contract(DEPLOYER_HS)
+      .addr(DEPLOYER_HS)
       .module(RegistryModule)
       .method(RegisterFunction)
       .from(signer.address())

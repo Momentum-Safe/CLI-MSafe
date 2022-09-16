@@ -151,7 +151,7 @@ export class AptosEntryTxnBuilder extends AptosTxnBuilder {
   private _type_args: any[] = [];
   private _args: any[] = [];
 
-  contract(_contract: HexString): this {
+  addr(_contract: HexString): this {
     this._contract = _contract;
     return this;
   }
