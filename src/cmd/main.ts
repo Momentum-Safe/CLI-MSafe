@@ -7,7 +7,7 @@
 // TODO: Revert transaction
 // TODO: Sequential pending transaction
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
-
+// TODO: Make address / public key type
 // TODO: Add private key encryption
 // TODO: (Need to update smart contract first) Key rotation
 // TODO: Replace data query interface with indexer
@@ -103,7 +103,7 @@ async function fundWithFaucetIfNotSetup() {
   } catch (e) {
     if (e instanceof ApiError && e.message.includes("Resource not found")) {
       // Set up the aptos account and give some initial funding
-      const opt = promptForYN("Get some funding with faucet?", true);
+      const opt = promptForYN("Account not exist.\nGet some funding with faucet?", true);
       if (!opt) {
         process.exit(1);
       }

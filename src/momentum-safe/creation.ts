@@ -6,7 +6,7 @@ import {
   MODULES,
   FUNCTIONS,
   RESOURCES,
-  MAX_NUM_OWNERS, assembleMultiSigTxn,
+  MAX_NUM_OWNERS, assembleMultiSigTxn, serializeOwners, isHexEqual,
 } from './common';
 import {assembleMultiSig} from "./sig-helper";
 import {Transaction} from "../web3/types";
@@ -48,7 +48,7 @@ export class CreationHelper {
    *      a new momentum safe.
    *
    *      ```ts
-   *      const ch = new CreationHelper(ownerPubKeys, threshold, creationNonce, initBalance);
+   *      const ch = CreationHelper.fromUserRequest(owners, threshold, initBalance);
    *      ```
    *
    *   2. By reading momentum safe data from the MOVE resources with the address.
@@ -108,7 +108,7 @@ export class CreationHelper {
   ): Promise<CreationHelper> {
     const pubKeys = await CreationHelper.getPublicKeysFromRegistry(owners);
     const creationNonce = await CreationHelper.getNonce(owners[0]);
-    return new CreationHelper(owners, pubKeys, creationNonce, threshold, initBalance);
+    return new CreationHelper(owners, pubKeys, threshold, creationNonce, initBalance);
   }
 
   async initCreation(signer: Account) {
@@ -138,7 +138,7 @@ export class CreationHelper {
     const creation = await this.getResourceData();
     const sigs = creation.txn.signatures;
     const msHelper = new MultiSigHelper(this.ownerPubKeys, sigs);
-    const found = msHelper.findIndex(extraPubKey) !== -1;
+    const found = msHelper.isSigSubmitted(extraPubKey);
 
     // Total number signatures is existing signatures plus 1 if extra public key
     // is not in existing signs.
@@ -166,6 +166,7 @@ export class CreationHelper {
 
     const multiSignature = assembleMultiSig(this.ownerPubKeys, signatures, acc, extraSig);
     const bcsTx = assembleMultiSigTxn(payload, this.rawPublicKey, multiSignature);
+
     return await Aptos.sendSignedTransactionAsync(bcsTx);
   }
 
@@ -199,7 +200,7 @@ export class CreationHelper {
   }
 
   private findPkIndex(publicKey: HexString) {
-    const index = this.ownerPubKeys.findIndex( pk => pk.hex() === publicKey.hex());
+    const index = this.ownerPubKeys.findIndex( pk => isHexEqual(pk, publicKey));
     if (index === -1) {
       throw new Error("cannot find public key");
     }
@@ -236,7 +237,7 @@ export class CreationHelper {
       .maxGas(2000n)
       .sequenceNumber(sn)
       .args([
-        this.serializePubKeys(),
+        serializeOwners(this.owners),
         BCS.bcsSerializeU8(this.threshold),
         BCS.bcsSerializeUint64(this.initBalance!),
         BCS.bcsSerializeBytes(payload as Uint8Array),
@@ -251,20 +252,10 @@ export class CreationHelper {
     );
   }
 
-  private serializePubKeys(): BCS.Bytes {
-    const pubKey = (key: HexString) => ({
-      serialize(serializer: BCS.Serializer) {
-        serializer.serializeBytes(key.toUint8Array());
-      }
-    });
-    const serializer = new BCS.Serializer();
-    BCS.serializeVector(this.ownerPubKeys.map(owner => pubKey(owner)), serializer);
-    return serializer.getBytes();
-  }
 
   private static async getNonce(initiator: HexString): Promise<number> {
     const pendingCreations = await CreationHelper.getResourceData();
-    const nonce = pendingCreations.nonces.data.find( entry => entry.key === initiator.hex());
+    const nonce = pendingCreations.nonces.data.find( entry => isHexEqual(entry.key, initiator));
     if (!nonce) {return 0}
     return nonce.value;
   }
@@ -276,8 +267,9 @@ export class CreationHelper {
   // getMSafeCreation get the current data for mSafe creation
   private static async getMSafeCreation(msafeAddr: HexString): Promise<MultiSigCreation> {
     const creations = await CreationHelper.getResourceData();
-    const creation = creations.creations.data.find( ({key}) => key === msafeAddr.hex())?.value;
-    return creation as MultiSigCreation;
+    const creation = creations.creations.data.find( ({key}) =>
+      isHexEqual(key, msafeAddr));
+    return creation.value as MultiSigCreation;
   }
 
   private static async getResourceData(): Promise<PendingMultiSigCreations> {

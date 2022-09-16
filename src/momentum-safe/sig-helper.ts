@@ -1,4 +1,4 @@
-import {HexBuffer, HexStr, SimpleMap} from "./common";
+import {HexBuffer, HexStr, isHexEqual, SimpleMap} from "./common";
 import {HexString, TxnBuilderTypes} from "aptos";
 import {Account} from "../web3/account";
 
@@ -23,7 +23,7 @@ export class MultiSigHelper {
     */
 
   private pks: HexString[]; // pks might be updated in future implementation
-  private sigs: Map<HexString, TxnBuilderTypes.Ed25519Signature>;
+  private sigs: Map<string, TxnBuilderTypes.Ed25519Signature>;
 
   constructor(pks: HexString[], sigs?: SimpleMap<HexStr>) {
     this.pks = pks;
@@ -32,7 +32,7 @@ export class MultiSigHelper {
 
   findIndex(target: HexString): number {
     const i = this.pks.findIndex( pk => {
-      return pk.hex() === target.hex();
+      return isHexEqual(pk, target);
     });
     if (i === -1) {
       throw new Error('target public key not found');
@@ -40,11 +40,15 @@ export class MultiSigHelper {
     return i;
   }
 
+  isSigSubmitted(pk: HexString): boolean {
+    return this.sigs.has(pk.hex());
+  }
+
   updateSigs(newSigs: SimpleMap<HexStr>): SigAdded[] {
     const addedSigs: SigAdded[] = [];
     newSigs.data.forEach( entry => {
       const pk = HexString.ensure(entry.key);
-      if (!this.sigs.has(pk)) {
+      if (!this.isSigSubmitted(pk)) {
         addedSigs.push( {pubKey: pk} );
       }
     });
@@ -53,7 +57,7 @@ export class MultiSigHelper {
   }
 
   addSig(pk: HexString, sig: TxnBuilderTypes.Ed25519Signature) {
-    this.sigs.set(pk, sig);
+    this.sigs.set(pk.hex(), sig);
   }
 
   assembleSignatures() {
@@ -61,7 +65,7 @@ export class MultiSigHelper {
     const bitmap: number[] = [];
     const sigsUnsorted: [number, TxnBuilderTypes.Ed25519Signature][] = [];
     this.sigs.forEach((value, key) => {
-      const pkIndex = this.findIndex(key);
+      const pkIndex = this.findIndex(HexString.ensure(key));
       bitmap.push(pkIndex);
       sigsUnsorted.push([pkIndex, value]);
     });
@@ -77,13 +81,13 @@ export class MultiSigHelper {
   }
 }
 
-function simpleMapToSigMap(smSigs: SimpleMap<HexStr> | undefined): Map<HexString, TxnBuilderTypes.Ed25519Signature> {
-  const m = new Map<HexString, TxnBuilderTypes.Ed25519Signature>();
+function simpleMapToSigMap(smSigs: SimpleMap<HexStr> | undefined): Map<string, TxnBuilderTypes.Ed25519Signature> {
+  const m = new Map<string, TxnBuilderTypes.Ed25519Signature>();
   if (smSigs) {
     smSigs.data.forEach( entry => {
       const pk = HexString.ensure(entry.key);
       const sig = new TxnBuilderTypes.Ed25519Signature(HexBuffer(entry.value));
-      m.set(pk, sig);
+      m.set(pk.hex(), sig);
     });
   }
   return m;

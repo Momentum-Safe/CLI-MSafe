@@ -69,3 +69,17 @@ export function hasDuplicateAddresses(addrs: HexString[]): boolean {
   });
   return false;
 }
+
+export function serializeOwners(addrs: HexString[]): BCS.Bytes {
+  const bcsAddress = (addr: HexString) => TxnBuilderTypes.AccountAddress.fromHex(addr);
+
+  const serializer = new BCS.Serializer();
+  BCS.serializeVector(addrs.map(owner => bcsAddress(owner)), serializer);
+  return serializer.getBytes();
+}
+
+export function isHexEqual(hex1: HexString | string, hex2: HexString | string): boolean {
+  const hs1 = (hex1 instanceof HexString)? hex1: HexString.ensure(hex1);
+  const hs2 = (hex2 instanceof HexString)? hex2: HexString.ensure(hex2);
+  return hs1.toShortString() === hs2.toShortString();
+}

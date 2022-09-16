@@ -10,10 +10,10 @@ import {
   DEPLOYER,
   DEPLOYER_HS,
   HexBuffer,
-  assembleMultiSig,
   RESOURCES,
-  MODULES, FUNCTIONS
+  MODULES, FUNCTIONS, assembleMultiSigTxn, isHexEqual
 } from './common';
+import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
 
 
@@ -135,7 +135,7 @@ export class MomentumSafe {
     const tx = await this.findTx(txHash);
     const sigs = tx.signatures.data;
 
-    const found = sigs.find(entry => entry.key === extraPubKey.hex()) !== undefined;
+    const found = sigs.find(entry => isHexEqual(entry.key, extraPubKey)) !== undefined;
     let collectedSigs = sigs.length;
     if (!found) {
       collectedSigs = collectedSigs + 1;
@@ -154,17 +154,14 @@ export class MomentumSafe {
 
   async assembleAndSubmitTx(signer: Account, txHash: string) {
     const txType = await this.findTx(txHash);
-    const signatures = txType.signatures.data;
+    const signatures = txType.signatures;
     const payload = txType.payload;
 
     const selfSignature = this.signTx(signer, txType);
 
     const multiSignature = assembleMultiSig(this.ownersPublicKeys, signatures, signer, selfSignature);
-    const authenticator = new TxnBuilderTypes.TransactionAuthenticatorMultiEd25519(this.rawPublicKey, multiSignature);
-    const signingTx = Transaction.deserialize(HexBuffer(payload));
-    const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);
-    const bcsTx = BCS.bcsToBytes(signedTx);
-    return await Aptos.sendSignedTransactionAsync(bcsTx);
+    const bcsTxn = assembleMultiSigTxn(payload, this.rawPublicKey, multiSignature);
+    return await Aptos.sendSignedTransactionAsync(bcsTxn);
   }
 
   signTx(signer: Account, txType: TransactionType) {
@@ -176,7 +173,7 @@ export class MomentumSafe {
   // TODO: do not query for resource
   async findTx(txHash: string) {
     const res = await this.getResource();
-    return res.txnBook.pendings.data.find(entry => entry.key === txHash)!.value;
+    return res.txnBook.pendings.data.find(entry => isHexEqual(entry.key, txHash))!.value;
   }
 
   // TODO: do not query for resource
@@ -314,7 +311,7 @@ export class MomentumSafe {
 
   private getIndex(target: HexString): number {
     const i = this.ownersPublicKeys.findIndex( pk => {
-      return pk.hex() === target.hex();
+      return isHexEqual(pk, target);
     });
     if (i == -1) {
       throw new Error("target pk not found in momentum safe");

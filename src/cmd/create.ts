@@ -48,7 +48,7 @@ async function initCreateMSafe() {
 
   const owners: HexString[] = [MY_ACCOUNT.address()];
 
-  console.log(`\t1 th address (Self): \t${MY_ACCOUNT.publicKey()}`);
+  console.log(`\t1 th address (Self): \t${MY_ACCOUNT.address()}`);
   for (let i = 1; i < numOwners; i++) {
     const addr = await promptUntilString(
       `\t${i + 1} th address: \t\t`,
