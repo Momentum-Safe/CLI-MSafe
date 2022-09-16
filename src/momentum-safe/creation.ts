@@ -1,5 +1,14 @@
 import {BCS, HexString, TxnBuilderTypes} from 'aptos';
-import {SimpleMap, DEPLOYER, DEPLOYER_HS, assembleSignatures, checkDuplicatePubKeys} from './common';
+import {
+  SimpleMap,
+  DEPLOYER_HS,
+  assembleSignatures,
+  hasDuplicateAddresses,
+  MODULES,
+  FUNCTIONS,
+  RESOURCES,
+  MAX_NUM_OWNERS,
+} from './common';
 import {Transaction} from "../web3/types";
 import * as Aptos from "../web3/global";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
@@ -7,11 +16,6 @@ import {Account} from "../web3/account";
 import {computeMultiSigAddress} from "../web3/crypto";
 import {HexBuffer} from "./common";
 import {MultiSigHelper} from "./sig-helper";
-
-
-const CreatorModule = 'creator';
-const CreatorResourceType = `${DEPLOYER}::${CreatorModule}::PendingMultiSigCreations`;
-const InitWalletCreationFn = "init_wallet_creation";
 
 
 // Data stored in creator
@@ -51,25 +55,30 @@ export class CreationHelper {
    *      const ch = MomentumSafe.fromPendingCreation(addr);
    *      ```
    **/
-  address: HexString;
-  rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey;
+  address: HexString | undefined;
+  rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey | undefined;
 
   constructor(
-    readonly ownerPubKeys: HexString[],
+    readonly owners: HexString[],
     readonly threshold: number,
     readonly creationNonce: number,
     readonly initBalance?: bigint,
-    ){
+  ){
     // Input parameter checks
     if (threshold <= 0) {
       throw new Error("threshold is must be greater than 0");
     }
-    if (threshold > ownerPubKeys.length) {
+    if (threshold > owners.length) {
       throw new Error("threshold is bigger than number of owners");
     }
-    checkDuplicatePubKeys(ownerPubKeys);
+    if (hasDuplicateAddresses(owners)) {
+      throw new Error("has duplicate addresses");
+    }
+    if (owners.length > MAX_NUM_OWNERS) {
+      throw new Error("momentum safe supports up to 32 owners");
+    }
     // Compute for multi-ed25519 public key and address
-    [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, creationNonce);
+    [this.rawPublicKey,, this.address] = computeMultiSigAddress(owners, threshold, creationNonce);
   }
 
   // Create the momentum safe creation from resource data
@@ -83,6 +92,18 @@ export class CreationHelper {
     const ownerPubKeys = creation.public_keys;
     const owners = ownerPubKeys.map( pk => HexString.ensure(pk));
     return new CreationHelper(owners, threshold, nonce);
+  }
+
+  // A new momentum safe creation request from user calls.
+  static async newMSafeCreation(
+    owners: HexString[],
+    threshold: number,
+    creationNonce: number,
+    initBalance: bigint,
+  ): Promise<CreationHelper> {
+    const pubKeys: HexString[] = [];
+    // continue coding here
+    // Promise.all();
   }
 
   async initCreation(signer: Account) {
@@ -147,13 +168,13 @@ export class CreationHelper {
     return await Aptos.sendSignedTransactionAsync(bcsTx);
   }
 
-  signPendingCreation(signer: Account, creation: MultiSigCreation): TxnBuilderTypes.Ed25519Signature {
+  private signPendingCreation(signer: Account, creation: MultiSigCreation): TxnBuilderTypes.Ed25519Signature {
     const payload = Transaction.deserialize(HexBuffer(creation.txn.payload));
     const [, sig] = signer.getSigData(payload);
     return sig;
   }
 
-  async makeSubmitSignatureTxn(signer: Account, sig: TxnBuilderTypes.Ed25519Signature) {
+  private async makeSubmitSignatureTxn(signer: Account, sig: TxnBuilderTypes.Ed25519Signature) {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txModuleBuilder = new AptosEntryTxnBuilder();
@@ -161,8 +182,8 @@ export class CreationHelper {
 
     return txModuleBuilder
       .addr(DEPLOYER_HS)
-      .module(CreatorModule)
-      .method('submit_signature')
+      .module(MODULES.CREATOR)
+      .method(FUNCTIONS.CREATOR_SUBMIT_SIG)
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
@@ -173,7 +194,7 @@ export class CreationHelper {
       ]).build();
   }
 
-  findPkIndex(publicKey: HexString) {
+  private findPkIndex(publicKey: HexString) {
     const index = this.ownerPubKeys.findIndex( pk => pk.hex() === publicKey.hex());
     if (index === -1) {
       throw new Error("cannot find public key");
@@ -182,15 +203,15 @@ export class CreationHelper {
   }
 
   // Generate transaction for MomentumSafe.register
-  async makeMSafeRegisterTxn(from: HexString, metadata: string): Promise<Transaction> {
+  private async makeMSafeRegisterTxn(from: HexString, metadata: string): Promise<Transaction> {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(from);
 
     const txModuleBuilder = new AptosEntryTxnBuilder();
     return txModuleBuilder
       .addr(DEPLOYER_HS)
-      .module('MomentumSafe')
-      .method('register')
+      .module(MODULES.MOMENTUM_SAFE)
+      .method(FUNCTIONS.MSAFE_REGISTER)
       .from(from)
       .chainId(chainID)
       .sequenceNumber(sn)
@@ -198,14 +219,14 @@ export class CreationHelper {
       .build();
   }
 
-  async makeInitCreationTxn(signer: HexString, payload: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature) {
+  private async makeInitCreationTxn(signer: HexString, payload: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature) {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer);
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
       .addr(DEPLOYER_HS)
-      .module(CreatorModule)
-      .method(InitWalletCreationFn)
+      .module(MODULES.CREATOR)
+      .method(FUNCTIONS.CREATOR_INIT_WALLET)
       .from(signer)
       .chainId(chainID)
       .maxGas(2000n)
@@ -220,7 +241,7 @@ export class CreationHelper {
       .build();
   }
 
-  serializePubKeys(): BCS.Bytes {
+  private serializePubKeys(): BCS.Bytes {
     const pubKey = (key: HexString) => ({
       serialize(serializer: BCS.Serializer) {
         serializer.serializeBytes(key.toUint8Array());
@@ -231,7 +252,7 @@ export class CreationHelper {
     return serializer.getBytes();
   }
 
-  static async getNonce(initiator: HexString): Promise<number> {
+  private static async getNonce(initiator: HexString): Promise<number> {
     const pendingCreations = await CreationHelper.getResourceData();
     const nonce = pendingCreations.nonces.data.find( entry => entry.key === initiator.hex());
     if (!nonce) {return 0}
@@ -250,7 +271,7 @@ export class CreationHelper {
   }
 
   private static async getResourceData(): Promise<PendingMultiSigCreations> {
-    const res = await Aptos.getAccountResource(DEPLOYER_HS, CreatorResourceType);
+    const res = await Aptos.getAccountResource(DEPLOYER_HS, RESOURCES.CREATOR);
     if (!res) {
       throw new Error("Creator contract not initialized");
     }

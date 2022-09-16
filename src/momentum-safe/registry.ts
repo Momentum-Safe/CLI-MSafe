@@ -1,13 +1,8 @@
 import {ApiError, AptosClient, BCS, HexString} from "aptos";
 import * as Aptos from "../web3/global";
-import {DEPLOYER, DEPLOYER_HS, HexStr, vector} from "./common";
+import {DEPLOYER, DEPLOYER_HS, FUNCTIONS, HexStr, MODULES, RESOURCES, vector} from "./common";
 import {Account} from "../web3/account";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
-
-const RegistryModule = 'registry';
-const RegisterFunction = 'register';
-const RegistryResourceType = `${DEPLOYER}::${RegistryModule}::OwnerMomentumSafes`;
-
 
 // Data in registry
 type OwnerMomentumSafes = {
@@ -20,10 +15,14 @@ export class Registry {
 
   static async getRegistryData(
     address: HexString
-  ): Promise<{publicKey: HexString, pendings: HexString[], msafes: HexString[]}> {
-    const res = await Aptos.getAccountResource(address, RegistryResourceType);
+  ): Promise<{
+    publicKey: HexString,
+    pendings: HexString[],
+    msafes: HexString[]
+  }> {
+    const res = await Aptos.getAccountResource(address, RESOURCES.REGISTRY);
     if (!res) {
-      throw new Error("not registered");
+      throw new Error(`Address not registered in momentum safe: ${address}`);
     }
     const ownedMSafes = res.data as OwnerMomentumSafes;
     return {
@@ -33,10 +32,15 @@ export class Registry {
     };
   }
 
+  static async getRegisteredPublicKey(address: HexString) {
+    const res = await Registry.getRegistryData(address);
+    return res.publicKey;
+  }
+
   static async isRegistered(address: HexString): Promise<boolean> {
     let res: any;
     try {
-      res = await Aptos.getAccountResource(address, RegistryResourceType);
+      res = await Aptos.getAccountResource(address, RESOURCES.REGISTRY);
     } catch (e) {
       if (e instanceof ApiError && e.message.includes("Resource not found")) {
         return false;
@@ -58,8 +62,8 @@ export class Registry {
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
       .addr(DEPLOYER_HS)
-      .module(RegistryModule)
-      .method(RegisterFunction)
+      .module(MODULES.REGISTRY)
+      .method(FUNCTIONS.REGISTRY_REGISTER)
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)

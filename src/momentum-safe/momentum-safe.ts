@@ -3,14 +3,18 @@ import {HexString, TxnBuilderTypes, BCS} from 'aptos';
 import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder} from '../web3/transaction';
 import {Transaction} from "../web3/types";
 import {Account} from '../web3/account';
-import {vector, SimpleMap, HexStr, DEPLOYER, DEPLOYER_HS, HexBuffer, assembleSignatures} from './common';
+import {
+  vector,
+  SimpleMap,
+  HexStr,
+  DEPLOYER,
+  DEPLOYER_HS,
+  HexBuffer,
+  assembleSignatures,
+  RESOURCES,
+  MODULES, FUNCTIONS
+} from './common';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-
-// TODO: refactor naming
-const MomentumSafeModule = 'momentum_safe';
-const momentumSafeResourceType = `${DEPLOYER}::${MomentumSafeModule}::Momentum`;
-const initTransactionFn = 'init_transaction';
-const submitSignatureFn = 'submit_signature';
 
 
 // Data stored in MomentumSafe.move
@@ -107,7 +111,7 @@ export class MomentumSafe {
   }
 
   static async queryMSafeResource(address: HexString): Promise<Momentum> {
-    const res = await Aptos.getAccountResource(address, momentumSafeResourceType);
+    const res = await Aptos.getAccountResource(address, RESOURCES.MOMENTUM);
     return res.data as Momentum;
   }
 
@@ -202,8 +206,8 @@ export class MomentumSafe {
 
     return txBuilder
       .addr(DEPLOYER_HS)
-      .module(MomentumSafeModule)
-      .method(initTransactionFn)
+      .module(MODULES.MOMENTUM_SAFE)
+      .method(FUNCTIONS.MSAFE_INIT_TRANSACTION)
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
@@ -230,8 +234,8 @@ export class MomentumSafe {
 
     return txBuilder
       .addr(DEPLOYER_HS)
-      .module(MomentumSafeModule)
-      .method(submitSignatureFn)
+      .module(MODULES.MOMENTUM_SAFE)
+      .method(FUNCTIONS.MSAFE_SUBMIT_SIGNATURE)
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
