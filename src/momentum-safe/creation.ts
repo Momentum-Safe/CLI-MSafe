@@ -16,26 +16,28 @@ import {Account} from "../web3/account";
 import {computeMultiSigAddress} from "../web3/crypto";
 import {HexBuffer} from "./common";
 import {MultiSigHelper} from "./sig-helper";
+import {Registry} from "./registry";
 
 
 // Data stored in creator
-type MultiSigCreation = {
-  public_keys: string[],
-  nonce: number,
-  threshold: number,
-  txn: CreateWalletTxn
-}
-
-type CreateWalletTxn = {
-  payload: string,
-  signatures: SimpleMap<string>,
-}
 
 type PendingMultiSigCreations = {
   nonces: SimpleMap<number>,
   creations: SimpleMap<MultiSigCreation>
 };
 
+type MultiSigCreation = {
+  owners: string[],
+  public_keys: string[],
+  nonce: number,
+  threshold: number,
+  txn: CreateWalletTxn,
+}
+
+type CreateWalletTxn = {
+  payload: string,
+  signatures: SimpleMap<string>,
+}
 
 export class CreationHelper {
   /**
@@ -55,16 +57,20 @@ export class CreationHelper {
    *      const ch = MomentumSafe.fromPendingCreation(addr);
    *      ```
    **/
-  address: HexString | undefined;
-  rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey | undefined;
+  address: HexString;
+  rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey;
 
   constructor(
     readonly owners: HexString[],
+    readonly ownerPubKeys: HexString[],
     readonly threshold: number,
     readonly creationNonce: number,
     readonly initBalance?: bigint,
   ){
     // Input parameter checks
+    if (owners.length != ownerPubKeys.length) {
+      throw new Error("owner length does nt match public keys");
+    }
     if (threshold <= 0) {
       throw new Error("threshold is must be greater than 0");
     }
@@ -75,10 +81,10 @@ export class CreationHelper {
       throw new Error("has duplicate addresses");
     }
     if (owners.length > MAX_NUM_OWNERS) {
-      throw new Error("momentum safe supports up to 32 owners");
+      throw new Error(`momentum safe supports up to ${MAX_NUM_OWNERS} owners`);
     }
     // Compute for multi-ed25519 public key and address
-    [this.rawPublicKey,, this.address] = computeMultiSigAddress(owners, threshold, creationNonce);
+    [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, creationNonce);
   }
 
   // Create the momentum safe creation from resource data
@@ -89,21 +95,20 @@ export class CreationHelper {
     }
     const threshold = creation.threshold;
     const nonce = creation.nonce;
-    const ownerPubKeys = creation.public_keys;
-    const owners = ownerPubKeys.map( pk => HexString.ensure(pk));
-    return new CreationHelper(owners, threshold, nonce);
+    const owners = creation.owners.map(addr => HexString.ensure(addr));
+    const ownerPubKeys = creation.public_keys.map(pk => HexString.ensure(pk));
+    return new CreationHelper(owners, ownerPubKeys, threshold, nonce);
   }
 
   // A new momentum safe creation request from user calls.
   static async newMSafeCreation(
     owners: HexString[],
     threshold: number,
-    creationNonce: number,
     initBalance: bigint,
   ): Promise<CreationHelper> {
-    const pubKeys: HexString[] = [];
-    // continue coding here
-    // Promise.all();
+    const pubKeys = await CreationHelper.getPublicKeysFromRegistry(owners);
+    const creationNonce = await CreationHelper.getNonce(owners[0]);
+    return new CreationHelper(owners, pubKeys, creationNonce, threshold, initBalance);
   }
 
   async initCreation(signer: Account) {
@@ -239,6 +244,12 @@ export class CreationHelper {
         BCS.bcsToBytes(signature),
       ])
       .build();
+  }
+
+  private static async getPublicKeysFromRegistry(addrs: HexString[]) {
+    return Promise.all(
+      addrs.map( addr => Registry.getRegisteredPublicKey(addr))
+    );
   }
 
   private serializePubKeys(): BCS.Bytes {

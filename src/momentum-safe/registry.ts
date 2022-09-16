@@ -34,7 +34,7 @@ export class Registry {
 
   static async getRegisteredPublicKey(address: HexString) {
     const res = await Registry.getRegistryData(address);
-    return res.publicKey;
+    return HexString.ensure(res.publicKey);
   }
 
   static async isRegistered(address: HexString): Promise<boolean> {
