@@ -10,7 +10,7 @@ import {
   DEPLOYER,
   DEPLOYER_HS,
   HexBuffer,
-  assembleSignatures,
+  assembleMultiSig,
   RESOURCES,
   MODULES, FUNCTIONS
 } from './common';
@@ -159,7 +159,7 @@ export class MomentumSafe {
 
     const selfSignature = this.signTx(signer, txType);
 
-    const multiSignature = assembleSignatures(this.ownersPublicKeys, signatures, signer, selfSignature);
+    const multiSignature = assembleMultiSig(this.ownersPublicKeys, signatures, signer, selfSignature);
     const authenticator = new TxnBuilderTypes.TransactionAuthenticatorMultiEd25519(this.rawPublicKey, multiSignature);
     const signingTx = Transaction.deserialize(HexBuffer(payload));
     const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);

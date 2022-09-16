@@ -1,8 +1,20 @@
 import {HexBuffer, HexStr, SimpleMap} from "./common";
 import {HexString, TxnBuilderTypes} from "aptos";
+import {Account} from "../web3/account";
 
 type SigAdded = {
   pubKey: HexString,
+}
+
+export function assembleMultiSig(
+  pubKeys: HexString[],
+  sigs: SimpleMap<HexStr>,
+  acc: Account,
+  sig: TxnBuilderTypes.Ed25519Signature
+) {
+  const msh = new MultiSigHelper(pubKeys, sigs);
+  msh.addSig(acc.publicKey(), sig);
+  return msh.assembleSignatures();
 }
 
 export class MultiSigHelper {

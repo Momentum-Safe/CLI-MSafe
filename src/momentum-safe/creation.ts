@@ -2,13 +2,13 @@ import {BCS, HexString, TxnBuilderTypes} from 'aptos';
 import {
   SimpleMap,
   DEPLOYER_HS,
-  assembleSignatures,
   hasDuplicateAddresses,
   MODULES,
   FUNCTIONS,
   RESOURCES,
-  MAX_NUM_OWNERS,
+  MAX_NUM_OWNERS, assembleMultiSigTxn,
 } from './common';
+import {assembleMultiSig} from "./sig-helper";
 import {Transaction} from "../web3/types";
 import * as Aptos from "../web3/global";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
@@ -159,21 +159,20 @@ export class CreationHelper {
 
   async assembleAndSubmitTx(acc: Account) {
     const creation = await CreationHelper.getMSafeCreation(this.address);
-    const signatures = creation.txn.signatures.data;
+    const signatures = creation.txn.signatures;
     const payload = creation.txn.payload;
 
-    const selfSignature = this.signPendingCreation(acc, creation);
+    const extraSig = this.signPendingCreation(acc, creation);
 
-    const multiSignature = assembleSignatures(this.ownerPubKeys, signatures, acc, selfSignature);
-    const authenticator = new TxnBuilderTypes.TransactionAuthenticatorMultiEd25519(this.rawPublicKey, multiSignature);
-    const signingTx = Transaction.deserialize(HexBuffer(payload));
-    const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);
-    const bcsTx = BCS.bcsToBytes(signedTx);
-
+    const multiSignature = assembleMultiSig(this.ownerPubKeys, signatures, acc, extraSig);
+    const bcsTx = assembleMultiSigTxn(payload, this.rawPublicKey, multiSignature);
     return await Aptos.sendSignedTransactionAsync(bcsTx);
   }
 
-  private signPendingCreation(signer: Account, creation: MultiSigCreation): TxnBuilderTypes.Ed25519Signature {
+  private signPendingCreation(
+    signer: Account,
+    creation: MultiSigCreation
+  ): TxnBuilderTypes.Ed25519Signature {
     const payload = Transaction.deserialize(HexBuffer(creation.txn.payload));
     const [, sig] = signer.getSigData(payload);
     return sig;
