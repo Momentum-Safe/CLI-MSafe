@@ -1,7 +1,7 @@
 import {AptosAccount, HexString, MaybeHexString, TransactionBuilderEd25519, TxnBuilderTypes} from "aptos";
 import {Bytes} from "aptos/dist/transaction_builder/bcs";
 import {Transaction} from "./types";
-import {AptosEntryTxnBuilder} from "./txnBuilder";
+import {AptosEntryTxnBuilder} from "./transaction";
 import {MY_ACCOUNT} from "./global";
 
 

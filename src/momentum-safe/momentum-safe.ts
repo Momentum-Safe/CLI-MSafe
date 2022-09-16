@@ -1,6 +1,6 @@
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes, BCS} from 'aptos';
-import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder} from '../web3/txnBuilder';
+import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder} from '../web3/transaction';
 import {Transaction} from "../web3/types";
 import {Account} from '../web3/account';
 import {vector, SimpleMap, HexStr, DEPLOYER, DEPLOYER_HS, HexBuffer, assembleSignatures} from './common';

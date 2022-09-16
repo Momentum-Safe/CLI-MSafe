@@ -2,7 +2,7 @@ import {ApiError, AptosClient, HexString} from "aptos";
 import * as Aptos from "../web3/global";
 import {DEPLOYER, DEPLOYER_HS, HexStr, vector} from "./common";
 import {Account} from "../web3/account";
-import {AptosEntryTxnBuilder} from "../web3/txnBuilder";
+import {AptosEntryTxnBuilder} from "../web3/transaction";
 
 const RegistryModule = 'Registry';
 const RegisterFunction = 'register';

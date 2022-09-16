@@ -2,7 +2,7 @@ import {BCS, HexString, TxnBuilderTypes} from 'aptos';
 import {SimpleMap, DEPLOYER, DEPLOYER_HS, assembleSignatures, checkDuplicatePubKeys} from './common';
 import {Transaction} from "../web3/types";
 import * as Aptos from "../web3/global";
-import {AptosEntryTxnBuilder} from "../web3/txnBuilder";
+import {AptosEntryTxnBuilder} from "../web3/transaction";
 import {Account} from "../web3/account";
 import {computeMultiSigAddress} from "../web3/crypto";
 import {Bytes} from "aptos/dist/transaction_builder/bcs";
