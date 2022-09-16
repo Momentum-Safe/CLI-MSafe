@@ -101,7 +101,7 @@ export class CreationHelper {
   }
 
   // A new momentum safe creation request from user calls.
-  static async newMSafeCreation(
+  static async fromUserRequest(
     owners: HexString[],
     threshold: number,
     initBalance: bigint,
