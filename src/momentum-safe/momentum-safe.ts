@@ -5,7 +5,6 @@ import {Transaction} from "../web3/types";
 import {Account} from '../web3/account';
 import {vector, SimpleMap, HexStr, DEPLOYER, DEPLOYER_HS, HexBuffer, assembleSignatures} from './common';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-import {Uint64} from "aptos/dist/transaction_builder/bcs";
 
 // TODO: refactor naming
 const MomentumSafeModule = 'MomentumSafe';
@@ -364,7 +363,7 @@ export class MomentumSafe {
     };
   }
 
-  private static secToDate(sec: Uint64) {
+  private static secToDate(sec: BCS.Uint64) {
     const ms = Number(sec) * 1000;
     return new Date(ms);
   }

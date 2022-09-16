@@ -1,4 +1,4 @@
-import {ApiError, AptosClient, HexString} from "aptos";
+import {ApiError, AptosClient, BCS, HexString} from "aptos";
 import * as Aptos from "../web3/global";
 import {DEPLOYER, DEPLOYER_HS, HexStr, vector} from "./common";
 import {Account} from "../web3/account";
@@ -11,21 +11,23 @@ const RegistryResourceType = `${DEPLOYER}::${RegistryModule}::OwnerMomentumSafes
 
 // Data in registry
 type OwnerMomentumSafes = {
+  public_key: string,
   pendings: vector<HexStr>,
   msafes: vector<HexStr>,
 }
 
 export class Registry {
 
-  constructor() {}
-
-  static async getOwnedMomentumSafes(address: HexString): Promise<{pendings: HexString[], msafes: HexString[]}> {
+  static async getRegistryData(
+    address: HexString
+  ): Promise<{publicKey: HexString, pendings: HexString[], msafes: HexString[]}> {
     const res = await Aptos.getAccountResource(address, RegistryResourceType);
     if (!res) {
       throw new Error("not registered");
     }
     const ownedMSafes = res.data as OwnerMomentumSafes;
     return {
+      publicKey: HexString.ensure(ownedMSafes.public_key),
       pendings: ownedMSafes.pendings.map( (addr) => HexString.ensure(addr)),
       msafes:  ownedMSafes.msafes.map( (addr) => HexString.ensure(addr) ),
     };
@@ -61,7 +63,9 @@ export class Registry {
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
-      .args([])
+      .args([
+        BCS.bcsSerializeBytes(signer.publicKeyBytes()),
+      ])
       .build();
   }
 }

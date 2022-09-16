@@ -25,6 +25,9 @@ export async function fundAddress(address: string, amount: number) {
 export function setGlobal(c: Config) {
   APTOS = new AptosClient(c.nodeURL);
   if (c.faucetURL) {
+    if (c.faucetURL.endsWith('/')) {
+      c.faucetURL = c.faucetURL.substring(0, c.faucetURL.length - 1);
+    }
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);

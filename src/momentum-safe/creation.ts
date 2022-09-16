@@ -5,7 +5,6 @@ import * as Aptos from "../web3/global";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
 import {Account} from "../web3/account";
 import {computeMultiSigAddress} from "../web3/crypto";
-import {Bytes} from "aptos/dist/transaction_builder/bcs";
 import {HexBuffer} from "./common";
 import {MultiSigHelper} from "./sig-helper";
 
@@ -221,7 +220,7 @@ export class CreationHelper {
       .build();
   }
 
-  serializePubKeys(): Bytes {
+  serializePubKeys(): BCS.Bytes {
     const pubKey = (key: HexString) => ({
       serialize(serializer: BCS.Serializer) {
         serializer.serializeBytes(key.toUint8Array());

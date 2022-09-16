@@ -60,13 +60,13 @@ async function main() {
 
 
 function registerAllStates() {
-  // registerEntry();
-  // registerList();
-  // registerCreation();
-  // registerCreationDetails();
-  // registerMSafeDetails();
-  // registerInitCoinTransfer();
-  // registerTxDetails();
+  registerEntry();
+  registerList();
+  registerCreation();
+  registerCreationDetails();
+  registerMSafeDetails();
+  registerInitCoinTransfer();
+  registerTxDetails();
 }
 
 async function loadConfigAndApply() {
@@ -97,7 +97,6 @@ function printSetupWalletMsg() {
   process.exit(1001);
 }
 
-
 async function fundWithFaucetIfNotSetup() {
   try {
     await Aptos.getAccount(MY_ACCOUNT.address());
@@ -114,7 +113,6 @@ async function fundWithFaucetIfNotSetup() {
     }
   }
 }
-
 
 async function registerIfNotRegistered() {
   const isRegistered = await Registry.isRegistered(MY_ACCOUNT.address());
