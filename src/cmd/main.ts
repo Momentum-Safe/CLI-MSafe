@@ -15,7 +15,7 @@
 import * as Aptos from '../web3/global';
 import {registerCreation} from "./create";
 import {Command} from "commander";
-import {printSeparator, prompt, promptForYN, printMyMessage, shortString, setState, State} from "./common";
+import {printSeparator, prompt, promptForYN, printMyMessage, setState, State} from "./common";
 import {Registry} from "../momentum-safe/registry";
 import {MY_ACCOUNT} from "../web3/global";
 import {registerEntry} from "./entry";
@@ -53,20 +53,20 @@ async function main() {
     }
     throw e;
   }
-
+  await fundWithFaucetIfNotSetup();
   await registerIfNotRegistered();
-
   setState(State.Entry);
 }
 
+
 function registerAllStates() {
-  registerEntry();
-  registerList();
-  registerCreation();
-  registerCreationDetails();
-  registerMSafeDetails();
-  registerInitCoinTransfer();
-  registerTxDetails();
+  // registerEntry();
+  // registerList();
+  // registerCreation();
+  // registerCreationDetails();
+  // registerMSafeDetails();
+  // registerInitCoinTransfer();
+  // registerTxDetails();
 }
 
 async function loadConfigAndApply() {
@@ -95,6 +95,24 @@ function printSetupWalletMsg() {
   console.log("Have you set up your Aptos address? Run the following command to setup your wallet\n");
   console.log("\taptos init\n");
   process.exit(1001);
+}
+
+
+async function fundWithFaucetIfNotSetup() {
+  try {
+    await Aptos.getAccount(MY_ACCOUNT.address());
+  } catch (e) {
+    if (e instanceof ApiError && e.message.includes("Resource not found")) {
+      // Set up the aptos account and give some initial funding
+      const opt = promptForYN("Get some funding with faucet?", true);
+      if (!opt) {
+        process.exit(1);
+      }
+      await Aptos.fundAddress(MY_ACCOUNT.address().hex(), 1000000);
+    } else {
+      throw e;
+    }
+  }
 }
 
 

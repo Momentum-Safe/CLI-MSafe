@@ -1,7 +1,6 @@
 import {AptosClient, FaucetClient, HexString, BCS, ApiError} from 'aptos';
 import * as Gen from 'aptos/src/generated';
 import {Account} from "./account";
-import {AccountData} from "aptos/dist/generated";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -17,6 +16,9 @@ interface Config {
 }
 
 export async function fundAddress(address: string, amount: number) {
+  if (FAUCET === undefined) {
+    throw new Error("faucet not set");
+  }
   await FAUCET!.fundAccount(address, amount);
 }
 
@@ -33,7 +35,7 @@ export function setMyAccount(privateKey: string, address: string) {
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<number> {
-  let res: AccountData;
+  let res: any;
   try {
     res = await APTOS.getAccount(address instanceof HexString ? address : HexString.ensure(address));
   } catch (e) {
@@ -64,6 +66,10 @@ export async function waitForTransaction(txnHash: string): Promise<Gen.Transacti
     throw tx.vm_status;
   }
   return tx;
+}
+
+export async function getAccount(addr: HexString) {
+  return await APTOS.getAccount(addr);
 }
 
 export async function getAccountResource(addr: HexString, resourceTag: string): Promise<Gen.MoveResource> {

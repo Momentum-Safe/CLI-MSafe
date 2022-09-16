@@ -1,8 +1,6 @@
 import {AptosAccount, HexString, MaybeHexString, TransactionBuilderEd25519, TxnBuilderTypes} from "aptos";
-import {Bytes} from "aptos/dist/transaction_builder/bcs";
+import {BCS} from 'aptos';
 import {Transaction} from "./types";
-import {AptosEntryTxnBuilder} from "./transaction";
-import {MY_ACCOUNT} from "./global";
 
 
 // SingleWallet is a single-signed wallet account
@@ -22,11 +20,11 @@ export class Account {
     return this.account.pubKey();
   }
 
-  publicKeyBytes(): Bytes {
+  publicKeyBytes(): BCS.Bytes {
     return this.account.pubKey().toUint8Array();
   }
 
-  sign(txn: Transaction): Bytes {
+  sign(txn: Transaction): BCS.Bytes {
     const txnBuilder = new TransactionBuilderEd25519((message: TxnBuilderTypes.SigningMessage) => {
       return this.signFn(message);
     }, this.publicKey().toUint8Array());
@@ -43,26 +41,4 @@ export class Account {
     const sig = this.signFn(signingMessage);
     return [signingMessage, sig];
   }
-}
-
-
-function test() {
-  const multiSigTx: TxnBuilderTypes.RawTransaction = (new AptosEntryTxnBuilder())
-    .module('deployer::creator')
-    .function('register').args([]).build();
-
-  const payload = multiSigTx.raw.getSigningMessage();
-  const sig = window.martian.signTransaction(multiSigTx.raw);
-
-  const myTx = msafe.makeInitCreationTxn(window.martian.account.address, payload, sig);
-  await window.martian.SignAndSubmit(myTx);
-}
-
-function follower() {
-  const payload = getFromBlockchain();
-  const multiTx = Transaction.deserialize(payload);
-  const sig = window.martian.signTransaction(multiTx.raw);
-
-  const myTx = msafe.makeSubmitSignatureTxn(window.martian.account.address, sig);
-  await window.martian.SignAndSubmit(window.martian.account, myTx);
 }

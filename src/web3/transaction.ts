@@ -1,5 +1,4 @@
 import {BCS, HexString, TxnBuilderTypes} from "aptos";
-import {ChainId} from "aptos/dist/transaction_builder/aptos_types";
 import {Transaction} from "./types";
 
 const COIN_MODULE = "0x1::coin";
@@ -104,7 +103,7 @@ abstract class AptosTxnBuilder {
     return BigInt(Math.floor(Date.now() / 1000) + (this._expiration as number));
   }
 
-  private getChainId(): ChainId {
+  private getChainId(): TxnBuilderTypes.ChainId {
     return new TxnBuilderTypes.ChainId(this._chainId as number);
   }
 }
