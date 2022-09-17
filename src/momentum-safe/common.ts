@@ -1,4 +1,4 @@
-import {BCS, HexString, TxnBuilderTypes,} from "aptos";
+import {BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
 import {Transaction} from "../web3/transaction";
 
@@ -6,6 +6,7 @@ export const DEPLOYER = '0xe5a6f272ee8517ca39d83715d14cb733e285853e924c3a3b8d6d5
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const MAX_NUM_OWNERS = 32;
+export const ADDRESS_LENGTH = 32;
 
 export const MODULES = {
   MOMENTUM_SAFE: 'momentum_safe',
@@ -81,4 +82,13 @@ export function isHexEqual(hex1: HexString | string, hex2: HexString | string): 
   const hs1 = (hex1 instanceof HexString)? hex1: HexString.ensure(hex1);
   const hs2 = (hex2 instanceof HexString)? hex2: HexString.ensure(hex2);
   return hs1.toShortString() === hs2.toShortString();
+}
+
+// Add zeros if size is not 32
+export function formatAddress(s: HexString | string): HexString {
+  let hexStr = s instanceof HexString? s.hex(): s.startsWith('0x')? s.substring(2): s;
+  if (hexStr.length < ADDRESS_LENGTH) {
+    hexStr = ''.concat('0'.repeat(ADDRESS_LENGTH - hexStr.length), hexStr);
+  }
+  return HexString.ensure(hexStr);
 }

@@ -8,6 +8,7 @@
 // TODO: Sequential pending transaction
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
 // TODO: Make address / public key type
+// TODO: data sync issue
 // TODO: Add private key encryption
 // TODO: (Need to update smart contract first) Key rotation
 // TODO: Replace data query interface with indexer

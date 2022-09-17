@@ -6,7 +6,7 @@ import {
   MODULES,
   FUNCTIONS,
   RESOURCES,
-  MAX_NUM_OWNERS, assembleMultiSigTxn, serializeOwners, isHexEqual,
+  MAX_NUM_OWNERS, assembleMultiSigTxn, serializeOwners, isHexEqual, formatAddress,
 } from './common';
 import {assembleMultiSig} from "./sig-helper";
 import * as Aptos from "../web3/global";
@@ -88,6 +88,7 @@ export class CreationHelper {
 
   // Create the momentum safe creation from resource data
   static async fromPendingCreation(addr: HexString): Promise<CreationHelper> {
+    addr = formatAddress(addr);
     const creation = await CreationHelper.getMSafeCreation(addr);
     const threshold = creation.threshold;
     const nonce = creation.nonce;
@@ -104,6 +105,7 @@ export class CreationHelper {
   ): Promise<CreationHelper> {
     const pubKeys = await CreationHelper.getPublicKeysFromRegistry(owners);
     const creationNonce = await CreationHelper.getNonce(owners[0]);
+    owners = owners.map(owner => formatAddress(owner));
     return new CreationHelper(owners, pubKeys, threshold, creationNonce, initBalance);
   }
 

@@ -1,6 +1,6 @@
 import {ApiError, AptosClient, BCS, HexString} from "aptos";
 import * as Aptos from "../web3/global";
-import {DEPLOYER, DEPLOYER_HS, FUNCTIONS, HexStr, MODULES, RESOURCES, vector} from "./common";
+import {DEPLOYER, DEPLOYER_HS, formatAddress, FUNCTIONS, HexStr, MODULES, RESOURCES, vector} from "./common";
 import {Account} from "../web3/account";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
 
@@ -27,8 +27,8 @@ export class Registry {
     const ownedMSafes = res.data as OwnerMomentumSafes;
     return {
       publicKey: HexString.ensure(ownedMSafes.public_key),
-      pendings: ownedMSafes.pendings.map( (addr) => HexString.ensure(addr)),
-      msafes:  ownedMSafes.msafes.map( (addr) => HexString.ensure(addr) ),
+      pendings: ownedMSafes.pendings.map( (addr) => formatAddress(addr)),
+      msafes:  ownedMSafes.msafes.map( (addr) => formatAddress(addr) ),
     };
   }
 
@@ -38,6 +38,7 @@ export class Registry {
   }
 
   static async isRegistered(address: HexString): Promise<boolean> {
+    address = formatAddress(address);
     let res: any;
     try {
       res = await Aptos.getAccountResource(address, RESOURCES.REGISTRY);
