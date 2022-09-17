@@ -3,7 +3,7 @@ import {
   CmdOption,
   executeCmdOptions,
   printMyMessage,
-  printSeparator,
+  printSeparator, promptForYN,
   registerState,
   setState,
   State
@@ -11,6 +11,7 @@ import {
 import {CoinTransferTx, MomentumSafe, TransactionType} from "../momentum-safe/momentum-safe";
 import {MY_ACCOUNT} from "../web3/global";
 import * as Gen from 'aptos/src/generated';
+import * as Aptos from "../web3/global";
 
 export function registerTxDetails() {
   registerState(State.PendingCoinTransfer, txDetails);
@@ -42,6 +43,14 @@ async function txDetails(c: {address: HexString, txHash: string}) {
 
   printTxDetails(txData);
   printSeparator();
+
+  const userBreak = await checkTxnEnoughSigsAndAssemble(msafe, txHash);
+  if (userBreak) {
+    await executeCmdOptions(
+      "User break the signature submission",
+      [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
+    );
+  }
 
   const collectedSigs = txType.signatures.data;
   console.log(`Collected signatures from public keys: ${collectedSigs.length} / ${msafe.threshold}`);
@@ -110,5 +119,23 @@ function printTxDetails(txData: CoinTransferTx) {
   console.log(`Expiration:\t\t${txData.expiration}`);
   console.log(`Gas Price:\t\t${txData.gasPrice}`);
   console.log(`Max Gas:\t\t${txData.maxGas}`);
+}
+
+export async function checkTxnEnoughSigsAndAssemble(msafe: MomentumSafe, txHash: string | HexString) {
+  const hasEnoughSigs = await msafe.isReadyToSubmit(txHash);
+  if (!hasEnoughSigs) {
+    return false;
+  }
+  const opt = await promptForYN("Already collected enough signature. Submit?", true);
+  if (!opt) {
+    return true;
+  }
+  const tx = await msafe.assembleAndSubmitTx(MY_ACCOUNT, txHash);
+  console.log(`\tTransaction ${tx.hash} submitted. Waiting for confirmation`);
+  await Aptos.waitForTransaction(tx.hash);
+  console.log(`\tTransaction confirmed on chain.`);
+
+  printSeparator();
+  return false;
 }
 

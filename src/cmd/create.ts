@@ -12,7 +12,7 @@ import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";
 import {printMyMessage} from "./common";
 import {registerState, setState, State} from "./common";
-import {checkEnoughSigsAndAssemble} from "./creation-details";
+import {checkCreationEnoughSigsAndAssemble} from "./creation-details";
 
 const MAX_OWNERS = 32;
 
@@ -83,7 +83,7 @@ async function initCreateMSafe() {
 
   // If there is already enough signatures collected, directly execute the
   // send transaction
-  const userBreak = await checkEnoughSigsAndAssemble(creation);
+  const userBreak = await checkCreationEnoughSigsAndAssemble(creation);
   if (userBreak) {
     await executeCmdOptions(
       "User breaks the signature submission",

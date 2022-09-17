@@ -134,14 +134,16 @@ export class MomentumSafe {
     return [tmpHash, txRes];
   }
 
-  async isReadyToSubmit(txHash: string, extraPubKey: HexString) {
+  async isReadyToSubmit(txHash: string | HexString, extraPubKey?: HexString) {
     const tx = await this.findTx(txHash);
     const sigs = tx.signatures.data;
-
-    const found = sigs.find(entry => isHexEqual(entry.key, extraPubKey)) !== undefined;
     let collectedSigs = sigs.length;
-    if (!found) {
-      collectedSigs = collectedSigs + 1;
+
+    if (extraPubKey) {
+      const found = sigs.find(entry => isHexEqual(entry.key, extraPubKey)) !== undefined;
+      if (!found) {
+        collectedSigs = collectedSigs + 1;
+      }
     }
     return collectedSigs >= this.threshold;
   }
@@ -155,7 +157,7 @@ export class MomentumSafe {
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
 
-  async assembleAndSubmitTx(signer: Account, txHash: string) {
+  async assembleAndSubmitTx(signer: Account, txHash: HexString | string) {
     const txType = await this.findTx(txHash);
     const signatures = txType.signatures;
     const payload = txType.payload;
@@ -174,7 +176,7 @@ export class MomentumSafe {
   }
 
   // TODO: do not query for resource
-  async findTx(txHash: string) {
+  async findTx(txHash: HexString | string) {
     const res = await this.getResource();
     return res.txn_book.pendings.data.find(entry => isHexEqual(entry.key, txHash))!.value;
   }
@@ -322,7 +324,7 @@ export class MomentumSafe {
   }
 
   private getNextSequenceNumberFromResourceData(momentum: Momentum) {
-    return momentum.txn_book.max_sequence_number + 1;
+    return Number(momentum.txn_book.max_sequence_number) + 1;
   }
 
   // TODO: refactor this

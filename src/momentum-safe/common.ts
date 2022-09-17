@@ -2,7 +2,7 @@ import {BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
 import {Transaction} from "../web3/transaction";
 
-export const DEPLOYER = '0xe5a6f272ee8517ca39d83715d14cb733e285853e924c3a3b8d6d59d9acab50aa';
+export const DEPLOYER = '0xa7596744c7587b7f4418248f36899681b9f93e45c6b9ce7000995bdb7c6c4741';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const MAX_NUM_OWNERS = 32;

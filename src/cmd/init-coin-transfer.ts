@@ -12,6 +12,7 @@ import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import {HexString} from "aptos";
 import * as Aptos from '../web3/global';
 import {MY_ACCOUNT} from "../web3/global";
+import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, initCoinTransfer);
@@ -70,6 +71,14 @@ async function initCoinTransfer(c: {address: HexString}) {
   console.log(`\tTransaction confirmed on chain.`);
 
   printSeparator();
+
+  const userBreak = await checkTxnEnoughSigsAndAssemble(msafe, (txHash as HexString));
+  if (userBreak) {
+    await executeCmdOptions(
+      "User break the signature submission",
+      [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
+    );
+  }
 
   await executeCmdOptions('Choose your next step', [
     {shortage: 'v', showText: "View details", handleFunc: () =>

@@ -67,7 +67,7 @@ async function creationDetails(rawArg: any) {
 
   // Do the check first. Corner case when the transaction was not executed last
   // time even enough signature was collected.
-  const userBreak = await checkEnoughSigsAndAssemble(creation);
+  const userBreak = await checkCreationEnoughSigsAndAssemble(creation);
   if (userBreak) {
     await executeCmdOptions(
       "User breaks the signature submission",
@@ -124,7 +124,7 @@ async function creationDetails(rawArg: any) {
 }
 
 // check whether enough signatures are collected, and then assemble, submit.
-export async function checkEnoughSigsAndAssemble(creation: CreationHelper): Promise<boolean> {
+export async function checkCreationEnoughSigsAndAssemble(creation: CreationHelper): Promise<boolean> {
   const isReadyToExecute = await creation.isReadyToSubmit();
   if (!isReadyToExecute) {
     return false;
