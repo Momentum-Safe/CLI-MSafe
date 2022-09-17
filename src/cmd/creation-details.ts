@@ -8,8 +8,9 @@ import {
   setState,
   State,
   printMyMessage,
-  CmdOption, executeCmdOptions
+  CmdOption, executeCmdOptions, promptForYN
 } from "./common";
+import * as Aptos from '../web3/global';
 import * as Gen from "aptos/src/generated";
 
 interface creationDetailsArg {
@@ -30,7 +31,7 @@ async function creationDetails(rawArg: any) {
   try {
     creation = await CreationHelper.fromPendingCreation(address);
   } catch (e) {
-    if (e instanceof Error && e.message.includes('cannot get creation data')) {
+    if (e instanceof Error && e.message.includes('Momentum Safe creation data not found')) {
       console.log("Cannot get creation data. Is multi-sig already registered?");
       // TODO: Check with momentum safe and go to msafe detail page.
       printSeparator();
@@ -55,6 +56,16 @@ async function creationDetails(rawArg: any) {
   const isMeSigned = collectedSigs.find( pk => pk.hex() === MY_ACCOUNT.publicKey().hex()) !== undefined;
 
   printSeparator();
+
+  // Do the check first. Corner case when the transaction was not executed last
+  // time even enough signature was collected.
+  const userBreak = await checkEnoughSigsAndAssemble(creation);
+  if (userBreak) {
+    await executeCmdOptions(
+      "User breaks the signature submission",
+      [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.List)}],
+    );
+  }
 
   let optionPromptStr: string;
   if (isMeSigned) {
@@ -88,6 +99,7 @@ async function creationDetails(rawArg: any) {
     tx = await creation.submitSignature(MY_ACCOUNT);
   }
   console.log(`\tTransaction ${tx.hash} submitted. Waiting for confirmation`);
+  await Aptos.waitForTransaction(tx.hash);
   console.log(`\tTransaction confirmed on chain.`);
 
   printSeparator();
@@ -101,4 +113,23 @@ async function creationDetails(rawArg: any) {
         setState(State.List)},
     ]
   );
+}
+
+// check whether enough signatures are collected, and then assemble, submit.
+export async function checkEnoughSigsAndAssemble(creation: CreationHelper): Promise<boolean> {
+  const isReadyToExecute = await creation.isReadyToSubmit();
+  if (!isReadyToExecute) {
+    return false;
+  }
+  const opt = await promptForYN("Already collected enough signature. Submit?", true);
+  if (!opt) {
+    return true;
+  }
+  const tx = await creation.assembleAndSubmitTx(MY_ACCOUNT);
+  console.log(`\tTransaction ${tx.hash} submitted. Waiting for confirmation`);
+  await Aptos.waitForTransaction(tx.hash);
+  console.log(`\tTransaction confirmed on chain.`);
+
+  printSeparator();
+  return false;
 }

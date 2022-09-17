@@ -44,6 +44,10 @@ export class MultiSigHelper {
     return this.sigs.has(pk.hex());
   }
 
+  numSigs(): number {
+    return this.sigs.size;
+  }
+
   updateSigs(newSigs: SimpleMap<HexStr>): SigAdded[] {
     const addedSigs: SigAdded[] = [];
     newSigs.data.forEach( entry => {

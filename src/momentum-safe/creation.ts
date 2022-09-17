@@ -90,9 +90,6 @@ export class CreationHelper {
   // Create the momentum safe creation from resource data
   static async fromPendingCreation(addr: HexString): Promise<CreationHelper> {
     const creation = await CreationHelper.getMSafeCreation(addr);
-    if (!creation) {
-      throw new Error("cannot get creation data");
-    }
     const threshold = creation.threshold;
     const nonce = creation.nonce;
     const owners = creation.owners.map(addr => HexString.ensure(addr));
@@ -112,10 +109,20 @@ export class CreationHelper {
   }
 
   async initCreation(signer: Account) {
-    const creation = await this.getResourceData();
-    if (creation !== undefined) {
-      throw new Error("creation already in progress");
+    let creation: MultiSigCreation | undefined;
+    try {
+      creation = await this.getResourceData();
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Momentum Safe creation data not found")){
+        // Expected behavior. We do not expect creation data at this stage
+      } else {
+        throw e;
+      }
     }
+    if (creation) {
+      throw new Error("Momentum Safe already initiated creation");
+    }
+
     // Sign on the multi-sig transaction
     const tx = await this.makeMSafeRegisterTxn(this.address, 'Wallet test');
     const [payload, sig] = signer.getSigData(tx);
@@ -130,21 +137,22 @@ export class CreationHelper {
 
   async collectedSignatures(): Promise<HexString[]> {
     const creation = await this.getResourceData();
-    const sigs = creation.txn.signatures.data;
+    const sigs = creation!.txn.signatures.data;
     return sigs.map( entry => HexString.ensure(entry.key));
   }
 
-  async isReadyToSubmit(extraPubKey: HexString) {
+  async isReadyToSubmit(extraPubKey?: HexString) {
     const creation = await this.getResourceData();
-    const sigs = creation.txn.signatures;
+    const sigs = creation!.txn.signatures;
     const msHelper = new MultiSigHelper(this.ownerPubKeys, sigs);
-    const found = msHelper.isSigSubmitted(extraPubKey);
+    let collectedSigs = sigs.data.length;
 
     // Total number signatures is existing signatures plus 1 if extra public key
     // is not in existing signs.
-    let collectedSigs = sigs.data.length;
-    if (!found) {
-      collectedSigs = collectedSigs + 1;
+    if (extraPubKey) {
+      if (!msHelper.isSigSubmitted(extraPubKey)) {
+        collectedSigs = collectedSigs + 1;
+      }
     }
     return collectedSigs >= this.threshold;
   }
@@ -269,7 +277,10 @@ export class CreationHelper {
     const creations = await CreationHelper.getResourceData();
     const creation = creations.creations.data.find( ({key}) =>
       isHexEqual(key, msafeAddr));
-    return creation.value as MultiSigCreation;
+    if (!creation) {
+      throw new Error(`Momentum Safe creation data not found`);
+    }
+    return creation!.value;
   }
 
   private static async getResourceData(): Promise<PendingMultiSigCreations> {
