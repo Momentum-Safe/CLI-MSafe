@@ -16,12 +16,13 @@ async function list() {
   console.clear();
   await printMyMessage();
 
-  const msafes = await Registry.getOwnedMomentumSafes(MY_ACCOUNT.address());
+  const rd = await Registry.getRegistryData(MY_ACCOUNT.address());
+  console.log(`Public key:\t${rd.publicKey}`);
 
   let i = 1;
 
   const opts: CmdOption[] = [];
-  msafes.pendings.forEach( addr => {
+  rd.pendings.forEach( addr => {
     opts.push({
       shortage: i,
       showText: `${addr} (Pending Creation)`,
@@ -30,7 +31,7 @@ async function list() {
     i += 1;
   });
 
-  msafes.msafes.forEach ( addr => {
+  rd.msafes.forEach ( addr => {
     opts.push({
       shortage: i,
       showText: `${addr}`,

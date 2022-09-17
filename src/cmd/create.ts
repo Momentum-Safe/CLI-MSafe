@@ -4,7 +4,7 @@ import {
   promptForYN,
   promptUntilNumber,
   promptUntilString,
-  isStringPublicKey,
+  isStringPublicKey, isStringAddress,
 } from "./common";
 import {HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
@@ -12,6 +12,7 @@ import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";
 import {printMyMessage} from "./common";
 import {registerState, setState, State} from "./common";
+import {checkCreationEnoughSigsAndAssemble} from "./creation-details";
 
 const MAX_OWNERS = 32;
 
@@ -46,26 +47,25 @@ async function initCreateMSafe() {
     v => v >= 2000,
   );
 
-  const ownerPubKeys: HexString[] = [MY_ACCOUNT.publicKey()];
+  const owners: HexString[] = [MY_ACCOUNT.address()];
 
-  console.log(`\t1 th public key (Self): \t${MY_ACCOUNT.publicKey()}`);
+  console.log(`\t1 th address (Self): \t${MY_ACCOUNT.address()}`);
   for (let i = 1; i < numOwners; i++) {
-    const publicKeyStr = await promptUntilString(
-      `\t${i + 1} th public key: \t\t`,
-      `\tPlease provide a valid public key\t\t`,
-      isStringPublicKey
+    const addr = await promptUntilString(
+      `\t${i + 1} th address: \t\t`,
+      `\tPlease provide a valid address\t\t`,
+      isStringAddress,
     );
-    ownerPubKeys.push(HexString.ensure(publicKeyStr));
+    owners.push(HexString.ensure(addr));
   }
 
   printSeparator();
 
-  const nonce = await CreationHelper.getNonce(MY_ACCOUNT.address());
-  const creation = new CreationHelper(ownerPubKeys, threshold, nonce, BigInt(initialBalance));
+  const creation = await CreationHelper.fromUserRequest(owners, threshold, BigInt(initialBalance));
 
   console.log(`Creating ${creation.threshold} / ${creation.ownerPubKeys.length} Momentum Safe wallet`);
   console.log(`\tAddress:\t${creation.address}`);
-  console.log(`\tNonce:\t\t${creation.nonce}`);
+  console.log(`\tNonce:\t\t${creation.creationNonce}`);
 
   printSeparator();
   const userContinue = await promptForYN("Initiate wallet creation?", true);
@@ -80,6 +80,16 @@ async function initCreateMSafe() {
   console.log(`\tTransaction confirmed, MomentumSafe creation initialized.`);
 
   printSeparator();
+
+  // If there is already enough signatures collected, directly execute the
+  // send transaction
+  const userBreak = await checkCreationEnoughSigsAndAssemble(creation);
+  if (userBreak) {
+    await executeCmdOptions(
+      "User breaks the signature submission",
+      [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.List)}],
+    );
+  }
 
   await executeCmdOptions('Choose your next step', [
     {shortage: 'v', showText: 'View details', handleFunc: () =>

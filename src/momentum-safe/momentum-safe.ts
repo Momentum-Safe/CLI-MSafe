@@ -1,26 +1,28 @@
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes, BCS} from 'aptos';
-import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder} from '../web3/txnBuilder';
-import {Transaction} from "../web3/types";
+import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from '../web3/transaction';
 import {Account} from '../web3/account';
-import {vector, SimpleMap, HexStr, DEPLOYER, DEPLOYER_HS, HexBuffer, assembleSignatures} from './common';
+import {
+  vector,
+  SimpleMap,
+  HexStr,
+  DEPLOYER_HS,
+  HexBuffer,
+  RESOURCES,
+  MODULES, FUNCTIONS, assembleMultiSigTxn, isHexEqual, formatAddress
+} from './common';
+import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-import {Uint64} from "aptos/dist/transaction_builder/bcs";
-
-// TODO: refactor naming
-const MomentumSafeModule = 'MomentumSafe';
-const momentumSafeResourceType = `${DEPLOYER}::${MomentumSafeModule}::Momentum`;
-const initTransactionFn = 'init_transaction';
-const submitSignatureFn = 'submit_signature';
 
 
 // Data stored in MomentumSafe.move
 type Momentum = {
   info: Info,
-  txnBook: TxnBook,
+  txn_book: TxnBook,
 }
 
 type Info = {
+  owners: vector<string>,
   public_keys: vector<HexStr>, // vector of public_keys
   nonce: number,
   threshold: number,
@@ -28,13 +30,14 @@ type Info = {
 }
 
 type TxnBook = {
+  min_sequence_number: string,
+  max_sequence_number: string,
   tx_hashes: SimpleMap<vector<HexStr>>, // nonce => vector<tx hash>
   // sequence number => a list of transactions (with the same sequence number)
   pendings: SimpleMap<TransactionType>, // Hash => Tx
 }
 
 export type TransactionType = {
-  nonce: string,
   payload: HexStr,
   metadata: HexStr, // json or uri
   signatures: SimpleMap<HexStr>, // public_key => signature
@@ -69,6 +72,7 @@ export type CoinTransferTx = {
 }
 
 export type MomentumSafeInfo = {
+  owners: HexString[],
   pubKeys: HexString[],
   creationNonce: number,
   threshold: number,
@@ -79,6 +83,7 @@ export type MomentumSafeInfo = {
 }
 
 export class MomentumSafe {
+  owners: HexString[];
   ownersPublicKeys: HexString[];
   threshold: number;
   creationNonce: number;
@@ -86,7 +91,15 @@ export class MomentumSafe {
   address: HexString;
 
   // TODO: pk, threshold, e.t.c is possible to be updated later
-  constructor(ownerPKs: HexString[], threshold: number, nonce: number, address?: HexString) {
+  // Do not construct directly through constructor. Use fromMomentumSafe instead
+  constructor(
+    owners: HexString[],
+    ownerPKs: HexString[],
+    threshold: number,
+    nonce: number,
+    address?: HexString
+  ) {
+    this.owners = owners;
     this.ownersPublicKeys = ownerPKs;
     this.threshold = threshold;
     this.creationNonce = nonce;
@@ -100,25 +113,18 @@ export class MomentumSafe {
   }
 
   static async fromMomentumSafe(address: HexString): Promise<MomentumSafe> {
+    address = formatAddress(address);
     const msafeData = await MomentumSafe.queryMSafeResource(address);
+    const owners = msafeData.info.owners.map(ownerStr => HexString.ensure(ownerStr));
     const threshold  = msafeData.info.threshold;
     const nonce = msafeData.info.nonce;
     const ownerPubKeys = msafeData.info.public_keys.map( pk => HexString.ensure(pk));
-    return new MomentumSafe(ownerPubKeys, threshold, nonce);
-  }
-
-  static async queryMSafeResource(address: HexString): Promise<Momentum> {
-    const res = await Aptos.getAccountResource(address, momentumSafeResourceType);
-    return res.data as Momentum;
-  }
-
-  async getResource(): Promise<Momentum> {
-    return MomentumSafe.queryMSafeResource(this.address);
+    return new MomentumSafe(owners, ownerPubKeys, threshold, nonce, address);
   }
 
   async initCoinTransfer(signer: Account, to: HexString, amount: bigint) {
     const tx = await this.makeCoinTransferTx(to, amount);
-    const [rawTx, [sig]] = signer.getSigData(tx);
+    const [rawTx, sig] = signer.getSigData(tx);
     const tmpHash = sha3_256(rawTx);
 
     const initTx = await this.makeCoinTransferInitTx(signer, rawTx, sig);
@@ -128,14 +134,16 @@ export class MomentumSafe {
     return [tmpHash, txRes];
   }
 
-  async isReadyToSubmit(txHash: string, extraPubKey: HexString) {
+  async isReadyToSubmit(txHash: string | HexString, extraPubKey?: HexString) {
     const tx = await this.findTx(txHash);
     const sigs = tx.signatures.data;
-
-    const found = sigs.find(entry => entry.key === extraPubKey.hex()) !== undefined;
     let collectedSigs = sigs.length;
-    if (!found) {
-      collectedSigs = collectedSigs + 1;
+
+    if (extraPubKey) {
+      const found = sigs.find(entry => isHexEqual(entry.key, extraPubKey)) !== undefined;
+      if (!found) {
+        collectedSigs = collectedSigs + 1;
+      }
     }
     return collectedSigs >= this.threshold;
   }
@@ -149,31 +157,28 @@ export class MomentumSafe {
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
 
-  async assembleAndSubmitTx(signer: Account, txHash: string) {
+  async assembleAndSubmitTx(signer: Account, txHash: HexString | string) {
     const txType = await this.findTx(txHash);
-    const signatures = txType.signatures.data;
+    const signatures = txType.signatures;
     const payload = txType.payload;
 
     const selfSignature = this.signTx(signer, txType);
 
-    const multiSignature = assembleSignatures(this.ownersPublicKeys, signatures, signer, selfSignature);
-    const authenticator = new TxnBuilderTypes.TransactionAuthenticatorMultiEd25519(this.rawPublicKey, multiSignature);
-    const signingTx = Transaction.deserialize(HexBuffer(payload));
-    const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);
-    const bcsTx = BCS.bcsToBytes(signedTx);
-    return await Aptos.sendSignedTransactionAsync(bcsTx);
+    const multiSignature = assembleMultiSig(this.ownersPublicKeys, signatures, signer, selfSignature);
+    const bcsTxn = assembleMultiSigTxn(payload, this.rawPublicKey, multiSignature);
+    return await Aptos.sendSignedTransactionAsync(bcsTxn);
   }
 
   signTx(signer: Account, txType: TransactionType) {
     const tx = Transaction.deserialize(HexBuffer(txType.payload));
-    const [, [sig]] = signer.getSigData(tx);
+    const [, sig] = signer.getSigData(tx);
     return sig;
   }
 
   // TODO: do not query for resource
-  async findTx(txHash: string) {
+  async findTx(txHash: HexString | string) {
     const res = await this.getResource();
-    return res.txnBook.pendings.data.find(entry => entry.key === txHash)!.value;
+    return res.txn_book.pendings.data.find(entry => isHexEqual(entry.key, txHash))!.value;
   }
 
   // TODO: do not query for resource
@@ -197,20 +202,18 @@ export class MomentumSafe {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer.address());
     // TODO: do not query for resource again;
-    const multiSN = await this.getMSafeNextSequenceNumber();
     const txBuilder = new AptosEntryTxnBuilder();
     const pkIndex = this.getIndex(signer.publicKey());
 
     return txBuilder
-      .contract(DEPLOYER_HS)
-      .module(MomentumSafeModule)
-      .method(initTransactionFn)
+      .addr(DEPLOYER_HS)
+      .module(MODULES.MOMENTUM_SAFE)
+      .method(FUNCTIONS.MSAFE_INIT_TRANSACTION)
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
-        BCS.bcsSerializeUint64(multiSN),
         BCS.bcsSerializeUint64(pkIndex),
         BCS.bcsSerializeBytes(payload),
         BCS.bcsToBytes(signature),
@@ -230,9 +233,9 @@ export class MomentumSafe {
     const txBuilder = new AptosEntryTxnBuilder();
 
     return txBuilder
-      .contract(DEPLOYER_HS)
-      .module(MomentumSafeModule)
-      .method(submitSignatureFn)
+      .addr(DEPLOYER_HS)
+      .module(MODULES.MOMENTUM_SAFE)
+      .method(FUNCTIONS.MSAFE_SUBMIT_SIGNATURE)
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
@@ -245,18 +248,28 @@ export class MomentumSafe {
       .build();
   }
 
+  private static async queryMSafeResource(address: HexString): Promise<Momentum> {
+    const res = await Aptos.getAccountResource(address, RESOURCES.MOMENTUM);
+    return res.data as Momentum;
+  }
+
+  private async getResource(): Promise<Momentum> {
+    return MomentumSafe.queryMSafeResource(this.address);
+  }
+
   async getMomentumSafeInfo(): Promise<MomentumSafeInfo> {
     const data = await MomentumSafe.queryMSafeResource(this.address);
     const balance = await Aptos.getBalance(this.address);
     const sn = await Aptos.getSequenceNumber(this.address);
     const pendings: TxnBrief[] = [];
-    data.txnBook.pendings.data.forEach( tx => {
-      if (MomentumSafe.isTxValid(tx.value, sn)) {
-        const decodedTx = MomentumSafe.decodeCoinTransferTx(tx.value.payload);
+    data.txn_book.pendings.data.forEach( e => {
+      const tx = e.value;
+      if (MomentumSafe.isTxValid(tx, sn)) {
+        const decodedTx = MomentumSafe.decodeCoinTransferTx(tx.payload);
         pendings.push({
-          sn: Number(tx.value.nonce),
-          numSigs: tx.value.signatures.data.length,
-          hash: tx.key,
+          sn: Number(decodedTx.sn),
+          numSigs: tx.signatures.data.length,
+          hash: e.key,
           operation: MomentumSafe.coinTransferTxToTxBrief(decodedTx),
         });
       }
@@ -269,6 +282,7 @@ export class MomentumSafe {
       }
     });
     return {
+      owners: data.info.owners.map(owner => formatAddress(owner)),
       pubKeys: data.info.public_keys.map(pk => HexString.ensure(pk)),
       creationNonce: data.info.nonce,
       threshold: data.info.threshold,
@@ -279,44 +293,38 @@ export class MomentumSafe {
     };
   }
 
-  private static isTxValid(tx: TransactionType, curSN: number): boolean {
+  private static isTxValid(txType: TransactionType, curSN: number): boolean {
     // Add expiration
-    return Number(tx.nonce) >= curSN;
+    const tx = Transaction.deserialize(HexBuffer(txType.payload));
+    return Number(tx.raw.sequence_number) >= curSN;
   }
 
   private async makeCoinTransferTx(to: HexString, amount: bigint) {
-    const sn = await this.getMSafeNextSequenceNumber();
+    const data = await this.getResource();
+    const sn = this.getNextSequenceNumberFromResourceData(data);
     const chainID = await Aptos.getChainId();
     const txBuilder = new AptosCoinTransferTxnBuilder();
     return txBuilder
       .from(this.address)
       .to(to)
       .amount(Number(amount))
-      .sequenceNumber(sn)
+      .sequenceNumber(Number(sn))
       .chainId(chainID)
       .build();
   }
 
-  // TODO: do not query for resource in this function
-  private async getMSafeNextSequenceNumber() {
-    const res = await this.getResource();
-    let maxNonce = await Aptos.getSequenceNumber(this.address);
-    res.txnBook.pendings.data.forEach( entry => {
-      if (Number(entry.value.nonce) + 1 > maxNonce) {
-        maxNonce = Number(entry.value.nonce) + 1;
-      }
-    });
-    return maxNonce;
-  }
-
   private getIndex(target: HexString): number {
     const i = this.ownersPublicKeys.findIndex( pk => {
-      return pk.hex() === target.hex();
+      return isHexEqual(pk, target);
     });
     if (i == -1) {
       throw new Error("target pk not found in momentum safe");
     }
     return i;
+  }
+
+  private getNextSequenceNumberFromResourceData(momentum: Momentum) {
+    return Number(momentum.txn_book.max_sequence_number) + 1;
   }
 
   // TODO: refactor this
@@ -364,7 +372,7 @@ export class MomentumSafe {
     };
   }
 
-  private static secToDate(sec: Uint64) {
+  private static secToDate(sec: BCS.Uint64) {
     const ms = Number(sec) * 1000;
     return new Date(ms);
   }

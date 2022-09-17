@@ -1,7 +1,5 @@
 import {AptosClient, FaucetClient, HexString, BCS, ApiError} from 'aptos';
-import * as Gen from 'aptos/src/generated';
 import {Account} from "./account";
-import {AccountData} from "aptos/dist/generated";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -17,12 +15,18 @@ interface Config {
 }
 
 export async function fundAddress(address: string, amount: number) {
+  if (FAUCET === undefined) {
+    throw new Error("faucet not set");
+  }
   await FAUCET!.fundAccount(address, amount);
 }
 
 export function setGlobal(c: Config) {
   APTOS = new AptosClient(c.nodeURL);
   if (c.faucetURL) {
+    if (c.faucetURL.endsWith('/')) {
+      c.faucetURL = c.faucetURL.substring(0, c.faucetURL.length - 1);
+    }
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
@@ -33,7 +37,7 @@ export function setMyAccount(privateKey: string, address: string) {
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<number> {
-  let res: AccountData;
+  let res: any;
   try {
     res = await APTOS.getAccount(address instanceof HexString ? address : HexString.ensure(address));
   } catch (e) {
@@ -51,14 +55,14 @@ export async function getChainId(): Promise<number> {
 }
 
 
-export async function sendSignedTransactionAsync(message: BCS.Bytes): Promise<Gen.PendingTransaction> {
+export async function sendSignedTransactionAsync(message: BCS.Bytes) {
   return await APTOS.submitSignedBCSTransaction(message as Uint8Array);
 }
 
 
-export async function waitForTransaction(txnHash: string): Promise<Gen.Transaction_UserTransaction> {
+export async function waitForTransaction(txnHash: string) {
   await APTOS.waitForTransaction(txnHash);
-  const tx = (await APTOS.getTransactionByHash(txnHash)) as Gen.Transaction_UserTransaction;
+  const tx = (await APTOS.getTransactionByHash(txnHash)) as any;
   if (!tx.success) {
     console.log('tx failed', tx);
     throw tx.vm_status;
@@ -66,7 +70,11 @@ export async function waitForTransaction(txnHash: string): Promise<Gen.Transacti
   return tx;
 }
 
-export async function getAccountResource(addr: HexString, resourceTag: string): Promise<Gen.MoveResource> {
+export async function getAccount(addr: HexString) {
+  return await APTOS.getAccount(addr);
+}
+
+export async function getAccountResource(addr: HexString, resourceTag: string) {
   return APTOS.getAccountResource(addr, resourceTag);
 }
 

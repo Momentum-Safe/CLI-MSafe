@@ -6,7 +6,9 @@
 // TODO: View assets list (get from resources)
 // TODO: Revert transaction
 // TODO: Sequential pending transaction
-
+// TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
+// TODO: Make address / public key type
+// TODO: data sync issue
 // TODO: Add private key encryption
 // TODO: (Need to update smart contract first) Key rotation
 // TODO: Replace data query interface with indexer
@@ -14,7 +16,7 @@
 import * as Aptos from '../web3/global';
 import {registerCreation} from "./create";
 import {Command} from "commander";
-import {printSeparator, prompt, promptForYN, printMyMessage, shortString, setState, State} from "./common";
+import {printSeparator, prompt, promptForYN, printMyMessage, setState, State} from "./common";
 import {Registry} from "../momentum-safe/registry";
 import {MY_ACCOUNT} from "../web3/global";
 import {registerEntry} from "./entry";
@@ -52,11 +54,11 @@ async function main() {
     }
     throw e;
   }
-
+  await fundWithFaucetIfNotSetup();
   await registerIfNotRegistered();
-
   setState(State.Entry);
 }
+
 
 function registerAllStates() {
   registerEntry();
@@ -96,6 +98,22 @@ function printSetupWalletMsg() {
   process.exit(1001);
 }
 
+async function fundWithFaucetIfNotSetup() {
+  try {
+    await Aptos.getAccount(MY_ACCOUNT.address());
+  } catch (e) {
+    if (e instanceof ApiError && e.message.includes("Resource not found")) {
+      // Set up the aptos account and give some initial funding
+      const opt = promptForYN("Account not exist.\nGet some funding with faucet?", true);
+      if (!opt) {
+        process.exit(1);
+      }
+      await Aptos.fundAddress(MY_ACCOUNT.address().hex(), 1000000);
+    } else {
+      throw e;
+    }
+  }
+}
 
 async function registerIfNotRegistered() {
   const isRegistered = await Registry.isRegistered(MY_ACCOUNT.address());

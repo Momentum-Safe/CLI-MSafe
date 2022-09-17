@@ -1,40 +1,47 @@
-import {ApiError, AptosClient, HexString} from "aptos";
+import {ApiError, AptosClient, BCS, HexString} from "aptos";
 import * as Aptos from "../web3/global";
-import {DEPLOYER, DEPLOYER_HS, HexStr, vector} from "./common";
+import {DEPLOYER, DEPLOYER_HS, formatAddress, FUNCTIONS, HexStr, MODULES, RESOURCES, vector} from "./common";
 import {Account} from "../web3/account";
-import {AptosEntryTxnBuilder} from "../web3/txnBuilder";
-
-const RegistryModule = 'Registry';
-const RegisterFunction = 'register';
-const RegistryResourceType = `${DEPLOYER}::${RegistryModule}::OwnerMomentumSafes`;
-
+import {AptosEntryTxnBuilder} from "../web3/transaction";
 
 // Data in registry
 type OwnerMomentumSafes = {
+  public_key: string,
   pendings: vector<HexStr>,
   msafes: vector<HexStr>,
 }
 
 export class Registry {
 
-  constructor() {}
-
-  static async getOwnedMomentumSafes(address: HexString): Promise<{pendings: HexString[], msafes: HexString[]}> {
-    const res = await Aptos.getAccountResource(address, RegistryResourceType);
+  static async getRegistryData(
+    address: HexString
+  ): Promise<{
+    publicKey: HexString,
+    pendings: HexString[],
+    msafes: HexString[]
+  }> {
+    const res = await Aptos.getAccountResource(address, RESOURCES.REGISTRY);
     if (!res) {
-      throw new Error("not registered");
+      throw new Error(`Address not registered in momentum safe: ${address}`);
     }
     const ownedMSafes = res.data as OwnerMomentumSafes;
     return {
-      pendings: ownedMSafes.pendings.map( (addr) => HexString.ensure(addr)),
-      msafes:  ownedMSafes.msafes.map( (addr) => HexString.ensure(addr) ),
+      publicKey: HexString.ensure(ownedMSafes.public_key),
+      pendings: ownedMSafes.pendings.map( (addr) => formatAddress(addr)),
+      msafes:  ownedMSafes.msafes.map( (addr) => formatAddress(addr) ),
     };
   }
 
+  static async getRegisteredPublicKey(address: HexString) {
+    const res = await Registry.getRegistryData(address);
+    return HexString.ensure(res.publicKey);
+  }
+
   static async isRegistered(address: HexString): Promise<boolean> {
+    address = formatAddress(address);
     let res: any;
     try {
-      res = await Aptos.getAccountResource(address, RegistryResourceType);
+      res = await Aptos.getAccountResource(address, RESOURCES.REGISTRY);
     } catch (e) {
       if (e instanceof ApiError && e.message.includes("Resource not found")) {
         return false;
@@ -55,13 +62,15 @@ export class Registry {
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
-      .contract(DEPLOYER_HS)
-      .module(RegistryModule)
-      .method(RegisterFunction)
+      .addr(DEPLOYER_HS)
+      .module(MODULES.REGISTRY)
+      .method(FUNCTIONS.REGISTRY_REGISTER)
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
-      .args([])
+      .args([
+        BCS.bcsSerializeBytes(signer.publicKeyBytes()),
+      ])
       .build();
   }
 }

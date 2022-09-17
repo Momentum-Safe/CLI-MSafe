@@ -20,13 +20,10 @@ export enum State {
 }
 
 export function registerState(state: State, cb: (arg?: any) => void) {
-  console.log('set');
   STATE_MAP.set(state, cb);
 }
 
 export function setState(state: State, arg?: any) {
-  console.log(STATE_MAP);
-  console.log(state);
   const cb = STATE_MAP.get(state);
   if (!cb) {
     throw new Error("undefined state");
@@ -134,9 +131,9 @@ export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, ba
   console.log();
   console.log(`Address:\t${address}`);
   console.log(`Threshold:\t${info.threshold}`);
-  console.log(`Owners:\t\t${info.pubKeys.length}`);
-  info.pubKeys.forEach( (pk, i) => {
-    console.log(`\t\t(${i+1}/${info.pubKeys.length}) ${pk.hex()}`);
+  console.log(`Owners:\t\t${info.owners.length}`);
+  info.owners.forEach( (owner, i) => {
+    console.log(`\t\t(${i+1}/${info.owners.length}) ${owner}`);
   });
   console.log(`Balance:\t${balance}`);
   console.log("-".repeat(process.stdout.columns));
