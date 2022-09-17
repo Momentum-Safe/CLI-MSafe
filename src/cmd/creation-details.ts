@@ -1,4 +1,4 @@
-import {HexString} from "aptos";
+import {HexString, TxnBuilderTypes} from "aptos";
 import {CreationHelper} from "../momentum-safe/creation";
 import {MY_ACCOUNT} from "../web3/global";
 import {
@@ -10,8 +10,10 @@ import {
   printMyMessage,
   CmdOption, executeCmdOptions, promptForYN
 } from "./common";
+import {Transaction} from "../web3/transaction";
 import * as Aptos from '../web3/global';
 import * as Gen from "aptos/src/generated";
+import {HexBuffer} from "../momentum-safe/common";
 
 interface creationDetailsArg {
   address: HexString,
@@ -56,6 +58,12 @@ async function creationDetails(rawArg: any) {
   const isMeSigned = collectedSigs.find( pk => pk.hex() === MY_ACCOUNT.publicKey().hex()) !== undefined;
 
   printSeparator();
+
+  const res = await creation.getResourceData();
+  const des_tx = Transaction.deserialize(HexBuffer(res.txn.payload));
+  console.log(res.txn.payload);
+  console.log("deserialized transaction", des_tx);
+  console.log(des_tx.raw.payload as TxnBuilderTypes.EntryFunction);
 
   // Do the check first. Corner case when the transaction was not executed last
   // time even enough signature was collected.

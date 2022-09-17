@@ -1,7 +1,6 @@
 import {BCS, HexString, TxnBuilderTypes,} from "aptos";
-import {Account} from "../web3/account";
 import {Buffer} from "buffer/";
-import {Transaction} from "../web3/types";
+import {Transaction} from "../web3/transaction";
 
 export const DEPLOYER = '0xe5a6f272ee8517ca39d83715d14cb733e285853e924c3a3b8d6d59d9acab50aa';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);

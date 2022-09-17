@@ -9,9 +9,8 @@ import {
   MAX_NUM_OWNERS, assembleMultiSigTxn, serializeOwners, isHexEqual,
 } from './common';
 import {assembleMultiSig} from "./sig-helper";
-import {Transaction} from "../web3/types";
 import * as Aptos from "../web3/global";
-import {AptosEntryTxnBuilder} from "../web3/transaction";
+import {AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
 import {Account} from "../web3/account";
 import {computeMultiSigAddress} from "../web3/crypto";
 import {HexBuffer} from "./common";
@@ -268,7 +267,8 @@ export class CreationHelper {
     return nonce.value;
   }
 
-  private async getResourceData() {
+  // debug only
+  async getResourceData() {
     return await CreationHelper.getMSafeCreation(this.address);
   }
 
