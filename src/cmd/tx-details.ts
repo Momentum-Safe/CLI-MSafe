@@ -3,15 +3,23 @@ import {
   CmdOption,
   executeCmdOptions,
   printMyMessage,
-  printSeparator, promptForYN,
+  printSeparator, printTxDetails,
+  promptForYN,
   registerState,
   setState,
   State
 } from "./common";
-import {CoinTransferTx, MomentumSafe, TransactionType} from "../momentum-safe/momentum-safe";
+import {MomentumSafe, TransactionType} from "../momentum-safe/momentum-safe";
+import * as Aptos from "../web3/global";
 import {MY_ACCOUNT} from "../web3/global";
 import * as Gen from 'aptos/src/generated';
-import * as Aptos from "../web3/global";
+import {
+  APTTransferArgs,
+  CoinRegisterArgs,
+  CoinTransferArgs,
+  MSafeTxnInfo,
+  MSafeTxnType
+} from "../momentum-safe/msafe-txn";
 
 export function registerTxDetails() {
   registerState(State.PendingCoinTransfer, txDetails);
@@ -27,8 +35,8 @@ async function txDetails(c: {address: HexString, txHash: string}) {
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
 
   // TODO: better name and better encapsulation
-  let txData: CoinTransferTx;
   let txType: TransactionType;
+  let txData: MSafeTxnInfo;
   try {
     [txType, txData] = await msafe.getTxDetails(txHash);
   } catch (e) {
@@ -41,6 +49,8 @@ async function txDetails(c: {address: HexString, txHash: string}) {
     throw e;
   }
 
+  console.log("Transaction details:");
+  console.log();
   printTxDetails(txData);
   printSeparator();
 
@@ -105,20 +115,6 @@ async function txDetails(c: {address: HexString, txHash: string}) {
         setState(State.MSafeDetails, {address: addr})},
     ]
   );
-}
-
-function printTxDetails(txData: CoinTransferTx) {
-  console.log("Transaction details:");
-  console.log();
-  console.log(`Action:\t\t\tSend Coin`);
-  console.log(`Coin Type:\t\t${txData.typeArgs}`);
-  console.log(`Sender:\t\t\t${txData.sender}`);
-  console.log(`To:\t\t\t${txData.to}`);
-  console.log(`Amount:\t\t\t${txData.amount}`);
-  console.log(`Sequence Number:\t${txData.sn}`);
-  console.log(`Expiration:\t\t${txData.expiration}`);
-  console.log(`Gas Price:\t\t${txData.gasPrice}`);
-  console.log(`Max Gas:\t\t${txData.maxGas}`);
 }
 
 export async function checkTxnEnoughSigsAndAssemble(msafe: MomentumSafe, txHash: string | HexString) {

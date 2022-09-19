@@ -1,34 +1,53 @@
-import {BCS, HexString, TxnBuilderTypes} from "aptos";
+import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
-import {Transaction} from "../web3/transaction";
+import {APTOS_TOKEN, Transaction} from "../web3/transaction";
 
-export const DEPLOYER = '0xe5a6f272ee8517ca39d83715d14cb733e285853e924c3a3b8d6d59d9acab50aa';
+export const DEPLOYER = '0x648877a0d16c79403eec543d588856f4e6edfe114564a7b37aadafe509ab9c14';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
+export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
+export const APTOS_FRAMEWORK_HS = HexString.ensure(APTOS_FRAMEWORK);
+
+
 export const MAX_NUM_OWNERS = 32;
-export const ADDRESS_LENGTH = 32;
+export const ADDRESS_HEX_LENGTH = 64;
 
 export const MODULES = {
   MOMENTUM_SAFE: 'momentum_safe',
   CREATOR: 'creator',
   REGISTRY: 'registry',
+  COIN: 'coin',
+  APTOS_COIN: "aptos_coin",
 };
 
 export const FUNCTIONS = {
   MSAFE_REGISTER: 'register',
   MSAFE_INIT_TRANSACTION: 'init_transaction',
   MSAFE_SUBMIT_SIGNATURE: 'submit_signature',
+  MSAFE_REVERT: 'do_nothing',
 
   CREATOR_INIT_WALLET: "init_wallet_creation",
   CREATOR_SUBMIT_SIG: "submit_signature",
 
+  COIN_TRANSFER: "transfer",
+  COIN_REGISTER: "register",
+  COIN_MINT: "mint",
+
   REGISTRY_REGISTER: "register",
 };
 
+export const STRUCTS = {
+  MOMENTUM: "Momentum",
+  CREATOR: "PendingMultiSigCreations",
+  REGISTRY: "OwnerMomentumSafes",
+  APTOS_COIN: "AptosCoin",
+};
+
 export const RESOURCES = {
-  MOMENTUM: `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::Momentum`,
-  CREATOR: `${DEPLOYER}::${MODULES.CREATOR}::PendingMultiSigCreations`,
-  REGISTRY: `${DEPLOYER}::${MODULES.REGISTRY}::OwnerMomentumSafes`
+  MOMENTUM: `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM}`,
+  CREATOR: `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR}`,
+  REGISTRY: `${DEPLOYER}::${MODULES.REGISTRY}::${STRUCTS.REGISTRY}`,
+  APTOS_COIN: `${APTOS_COIN}::${MODULES.COIN}::${STRUCTS.APTOS_COIN}`,
 };
 
 export type vector<T> = T[]
@@ -87,8 +106,19 @@ export function isHexEqual(hex1: HexString | string, hex2: HexString | string): 
 // Add zeros if size is not 32
 export function formatAddress(s: HexString | string): HexString {
   let hexStr = s instanceof HexString? s.hex(): s.startsWith('0x')? s.substring(2): s;
-  if (hexStr.length < ADDRESS_LENGTH) {
-    hexStr = ''.concat('0'.repeat(ADDRESS_LENGTH - hexStr.length), hexStr);
+  if (hexStr.length < ADDRESS_HEX_LENGTH) {
+    hexStr = ''.concat('0'.repeat(ADDRESS_HEX_LENGTH - hexStr.length), hexStr);
   }
   return HexString.ensure(hexStr);
 }
+
+export function secToDate(sec: BCS.Uint64) {
+  const ms = Number(sec) * 1000;
+  return new Date(ms);
+}
+
+export function typeTagStructFromName(name: string) {
+  const structTag = TxnBuilderTypes.StructTag.fromString(name);
+  return new TxnBuilderTypes.TypeTagStruct(structTag);
+}
+

@@ -7,6 +7,7 @@ import {
   State,
   executeCmdOptions, CmdOption
 } from "./common";
+import {formatAddress} from "../momentum-safe/common";
 
 export function registerList() {
   registerState(State.List, () => list());
@@ -17,7 +18,6 @@ async function list() {
   await printMyMessage();
 
   const rd = await Registry.getRegistryData(MY_ACCOUNT.address());
-  console.log(`Public key:\t${rd.publicKey}`);
 
   let i = 1;
 
@@ -25,7 +25,7 @@ async function list() {
   rd.pendings.forEach( addr => {
     opts.push({
       shortage: i,
-      showText: `${addr} (Pending Creation)`,
+      showText: `${formatAddress(addr.hex())} (Pending Creation)`,
       handleFunc: () => setState(State.PendingCreate, {address: addr}),
     });
     i += 1;

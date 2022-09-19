@@ -26,7 +26,7 @@ import {ApiError} from "aptos";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
-import {registerInitCoinTransfer} from "./init-coin-transfer";
+import {registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";
 
 export const defaultConfigPath = `.aptos/config.yaml`;

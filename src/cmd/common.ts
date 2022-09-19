@@ -3,6 +3,13 @@ import clear from 'clear';
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes} from "aptos";
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
+import {
+  APTTransferArgs,
+  CoinRegisterArgs,
+  CoinTransferArgs,
+  MSafeTxnInfo,
+  MSafeTxnType
+} from "../momentum-safe/msafe-txn";
 
 const SEPARATOR_LENGTH = 20;
 
@@ -95,18 +102,6 @@ function getValueYN(s: string, defVal: boolean): boolean {
       return defVal;
   }
   return false;
-}
-
-export async function step(index: number, name: string, f: () => Promise<void>) {
-  clear();
-  console.log('='.repeat(process.stdout.columns));
-  console.log(`Step ${index} - ${name}`);
-  console.log('-'.repeat(process.stdout.columns));
-  await prompt('');
-  await f();
-  console.log('');
-  console.log('='.repeat(process.stdout.columns));
-  await prompt('next...');
 }
 
 export function printSeparator() {
@@ -214,7 +209,6 @@ class CmdOptionHelper {
   }
 }
 
-
 export function isStringPublicKey(s: string): boolean {
   let byteLength;
   try {
@@ -230,3 +224,57 @@ export function isStringAddress(s: string): boolean {
   return byteLength == 32; // SHA3_256 length
 }
 
+export function isStringTypeStruct(s: string): boolean {
+  try {
+    TxnBuilderTypes.StructTag.fromString(s);
+  } catch (e) {
+    return false;
+  }
+  return true;
+}
+
+export function printTxDetails(txData: MSafeTxnInfo) {
+  switch (txData.txType) {
+    case (MSafeTxnType.APTCoinTransfer):
+      printAPTCoinTransfer(txData);
+      break;
+    case (MSafeTxnType.AnyCoinTransfer):
+      printAnyCoinTransfer(txData);
+      break;
+    case (MSafeTxnType.AnyCoinRegister):
+      printAnyCoinRegister(txData);
+  }
+  printTxCommonData(txData);
+}
+
+function printTxCommonData(txInfo: MSafeTxnInfo) {
+  console.log(`Sender:\t\t\t${txInfo.sender}`);
+  console.log(`Sequence Number:\t${txInfo.sn}`);
+  console.log(`Expiration:\t\t${txInfo.expiration}`);
+  console.log(`Gas Price:\t\t${txInfo.gasPrice}`);
+  console.log(`Max Gas:\t\t${txInfo.maxGas}`);
+}
+
+function printAPTCoinTransfer(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const args = txInfo.args as APTTransferArgs;
+
+  console.log(`To:\t\t\t${args.to}`);
+  console.log(`Amount:\t\t\t${args.amount}`);
+}
+
+function printAnyCoinTransfer(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const args = txInfo.args as CoinTransferArgs;
+  console.log();
+  console.log(`Coin:\t\t\t${args.coinType}`);
+  console.log(`To:\t\t\t${args.to}`);
+  console.log(`Amount:\t\t\t${args.amount}`);
+}
+
+function printAnyCoinRegister(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const args = txInfo.args as CoinRegisterArgs;
+  console.log();
+  console.log(`Coin:\t\t\t${args.coinType}`);
+}

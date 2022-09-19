@@ -3,12 +3,12 @@ import {Buffer} from "buffer/";
 
 const COIN_MODULE = "0x1::coin";
 const TRANSFER_METHOD = "transfer";
-const APTOS_TOKEN = "0x1::aptos_coin::AptosCoin";
+export const APTOS_TOKEN = "0x1::aptos_coin::AptosCoin";
 
 // TODO: Use prophecy and gas analysis
 const DEFAULT_MAX_GAS = 5000n;
 const DEFAULT_GAS_PRICE = 1n;
-const DEFAULT_EXPIRATION = 3600000000;
+const DEFAULT_EXPIRATION = 3600;
 
 
 abstract class AptosTxnBuilder {
@@ -100,7 +100,7 @@ abstract class AptosTxnBuilder {
 
   // Current time plus expiration
   private getTargetExpiration(): bigint {
-    return BigInt(Math.floor(Date.now() / 1000) + (this._expiration as number));
+    return BigInt(Math.floor(Date.now() / 1000) + this._expiration!);
   }
 
   private getChainId(): TxnBuilderTypes.ChainId {

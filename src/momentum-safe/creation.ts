@@ -16,6 +16,7 @@ import {computeMultiSigAddress} from "../web3/crypto";
 import {HexBuffer} from "./common";
 import {MultiSigHelper} from "./sig-helper";
 import {Registry} from "./registry";
+import {makeMSafeRegisterTx} from "./msafe-txn";
 
 
 // Data stored in creator
@@ -125,11 +126,12 @@ export class CreationHelper {
     }
 
     // Sign on the multi-sig transaction
-    const tx = await this.makeMSafeRegisterTxn(this.address, 'Wallet test');
+    const txArg = {metadata: 'Wallet test'};
+    const options = {sequenceNumber: 0};
+    const tx = await makeMSafeRegisterTx(this.address, txArg, options);
     const [payload, sig] = signer.getSigData(tx);
 
     // Sign and submit the transaction from the signer
-    // TODO: corner case when the threshold is not 0
     const tx2 = await this.makeInitCreationTxn(signer.address(), payload, sig);
     const signedTx2 = signer.sign(tx2);
 
@@ -214,23 +216,6 @@ export class CreationHelper {
       throw new Error("cannot find public key");
     }
     return index;
-  }
-
-  // Generate transaction for MomentumSafe.register
-  private async makeMSafeRegisterTxn(from: HexString, metadata: string): Promise<Transaction> {
-    const chainID = await Aptos.getChainId();
-    const sn = await Aptos.getSequenceNumber(from);
-
-    const txModuleBuilder = new AptosEntryTxnBuilder();
-    return txModuleBuilder
-      .addr(DEPLOYER_HS)
-      .module(MODULES.MOMENTUM_SAFE)
-      .method(FUNCTIONS.MSAFE_REGISTER)
-      .from(from)
-      .chainId(chainID)
-      .sequenceNumber(sn)
-      .args([BCS.bcsSerializeStr(metadata)])
-      .build();
   }
 
   private async makeInitCreationTxn(signer: HexString, payload: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature) {
