@@ -13,7 +13,7 @@ const cli = program
   .description("Momentum Safe test coin minter.")
   .option("-c, --config <string>", "config file of aptos profile", defaultConfigPath)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
-  .option("-t --to <string>", "target account to sesnd test coin")
+  .option("-t --to <string>", "target account to send test coin")
   .option("-a --amount <string>", "amount of token to be sent", DEF_SEND_AMOUNT)
   .option("-r --register", "Whether to register coin")
   .parse(process.argv);

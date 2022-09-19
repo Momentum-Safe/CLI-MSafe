@@ -4,7 +4,7 @@ version = "0.0.0"
 upgrade_policy = "compatible"
 
 [addresses]
-msafe = "0xb26049431dd7a4b383beda1459f8ae16751498d3609d054b804288d2afe17387"
+msafe = "be836d132840c6380a97342a46e09c75ca30d1cbf561bc4161e20f71e644692c"
 
 [dependencies]
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
