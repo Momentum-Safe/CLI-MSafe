@@ -16,10 +16,10 @@ import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
 import {makeMSafeAPTTransferTx} from "../momentum-safe/msafe-txn";
 
 export function registerInitCoinTransfer() {
-  registerState(State.InitCoinTransfer, initCoinTransfer);
+  registerState(State.InitCoinTransfer, newTransaction);
 }
 
-async function initCoinTransfer(c: {address: HexString}) {
+async function newTransaction(c: {address: HexString}) {
   console.clear();
   await printMyMessage();
 

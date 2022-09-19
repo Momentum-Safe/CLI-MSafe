@@ -1,6 +1,6 @@
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes, BCS} from 'aptos';
-import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from '../web3/transaction';
+import {AptosEntryTxnBuilder, Transaction} from '../web3/transaction';
 import {Account} from '../web3/account';
 import {
   vector,
@@ -13,7 +13,7 @@ import {
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-import {makeMSafeAPTTransferTx, MSafeTransaction, MSafeTxnInfo, Options} from "./msafe-txn";
+import {MSafeTransaction, MSafeTxnInfo, Options} from "./msafe-txn";
 
 
 // Data stored in MomentumSafe.move

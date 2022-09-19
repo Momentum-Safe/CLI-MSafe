@@ -2,7 +2,7 @@ import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "..
 import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
 import {Buffer} from "buffer/";
-import {DEPLOYER_HS, FUNCTIONS, HexBuffer, isHexEqual, MODULES, secToDate} from "./common";
+import {APTOS_FRAMEWORK_HS, DEPLOYER_HS, FUNCTIONS, HexBuffer, isHexEqual, MODULES, secToDate, STRUCTS} from "./common";
 import {sha3_256} from "../web3/crypto";
 
 const MINUTE_SECONDS = 60;
@@ -16,13 +16,6 @@ const DEFAULT_UNIT_PRICE = 1;
 const DEFAULT_REGISTER_MAX_GAS = 2000;
 const DEFAULT_EXPIRATION = MONTH_SECONDS;
 
-const CORE_ADDR = "0x1";
-const COIN_MODULE = "coin";
-const COIN_TRANSFER_METHOD = "transfer";
-const COIN_REGISTER_METHOD = "register";
-const COIN_MINT_METHOD = "mint";
-const APTOS_COIN_MODULE = "aptos_coin";
-const APTOS_COIN_STRUCT = "AptosCoin";
 
 // TODO: replace with bigint
 export type Options = {
@@ -56,6 +49,9 @@ export type APTRegisterArgs = {
   // empty
 }
 
+export type RevertArgs = {
+  sn: number, // The sn will override option
+}
 
 // call momentum_safe::register
 export async function makeMSafeRegisterTx(
@@ -100,6 +96,75 @@ export async function makeMSafeAPTTransferTx(
   return new MSafeTransaction(txn.raw);
 }
 
+export async function makeMSafeAnyCoinRegisterTx(
+  sender: HexString,
+  args: CoinTransferArgs,
+  opts?: Options,
+): Promise<MSafeTransaction> {
+  const config = await applyDefaultOptions(sender, opts);
+  const txBuilder = new AptosEntryTxnBuilder();
+  const txn = txBuilder
+    .addr(APTOS_FRAMEWORK_HS)
+    .module(MODULES.COIN)
+    .method(FUNCTIONS.COIN_REGISTER)
+    .from(sender)
+    .chainId(config.chainID!)
+    .sequenceNumber(config.sequenceNumber!)
+    .maxGas(BigInt(config.gasPrice!))
+    .expiration(config.expirationSec!)
+    .args([])
+    .build();
+  return new MSafeTransaction(txn.raw);
+}
+
+export async function makeMSafeAnyCoinTransferTx(
+  sender: HexString,
+  args: CoinTransferArgs,
+  opts?: Options,
+): Promise<MSafeTransaction> {
+  const config = await applyDefaultOptions(sender, opts);
+  const txBuilder = new AptosEntryTxnBuilder();
+  const txn = txBuilder
+    .addr(APTOS_FRAMEWORK_HS)
+    .module(MODULES.COIN)
+    .method(FUNCTIONS.COIN_TRANSFER)
+    .from(sender)
+    .chainId(config.chainID!)
+    .sequenceNumber(config.sequenceNumber!)
+    .maxGas(BigInt(config.gasPrice!))
+    .expiration(config.expirationSec!)
+    .args([
+      BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(args.to)),
+      BCS.bcsSerializeUint64(args.amount),
+    ])
+    .build();
+  return new MSafeTransaction(txn.raw);
+}
+
+export async function makeMSafeRevertTx(
+  sender: HexString,
+  args: RevertArgs,
+  opts?: Options,
+): Promise<MSafeTransaction> {
+  const config = await applyDefaultOptions(sender, opts);
+  // sequence number will override option sn
+  config.sequenceNumber = args.sn;
+  const txBuilder = new AptosEntryTxnBuilder();
+  const txn = txBuilder
+    .addr(DEPLOYER_HS)
+    .module(MODULES.MOMENTUM_SAFE)
+    .method(FUNCTIONS.MSAFE_REVERT)
+    .from(sender)
+    .chainId(config.chainID!)
+    .sequenceNumber(config.sequenceNumber!)
+    .maxGas(BigInt(config.gasPrice!))
+    .expiration(config.expirationSec!)
+    .args([])
+    .build();
+  return new MSafeTransaction(txn.raw);
+}
+
+
 async function applyDefaultOptions(sender: HexString, opts?: Options) {
   if (!opts) {
     opts = {};
@@ -123,11 +188,12 @@ async function applyDefaultOptions(sender: HexString, opts?: Options) {
 }
 
 export enum MSafeTxnType {
-  Unknown = "unknown transaction",
-  APTCoinTransfer = "coin transfer (APT)",
-  APTCoinRegister = "coin register (APT)", // Not likely being used
-  AnyCoinTransfer = "coin transfer (Any coin)",
-  AnyCoinRegister = "coin register (APT)",
+  Unknown = "Unknown transaction",
+  APTCoinTransfer = "Coin transfer (APT)",
+  APTCoinRegister = "Coin register (APT)", // Not likely being used
+  AnyCoinTransfer = "Coin transfer (Any coin)",
+  AnyCoinRegister = "Coin register (APT)",
+  Revert = "Revert transaction",
   AnyCoinMinter = "coin mint",
   CustomInteraction = "custom module interaction",
 }
@@ -196,6 +262,9 @@ export class MSafeTransaction extends Transaction {
       }
       return MSafeTxnType.AnyCoinRegister;
     }
+    if (isRevertTxn(payload)) {
+      return MSafeTxnType.Revert;
+    }
     return MSafeTxnType.Unknown;
   }
 
@@ -236,19 +305,33 @@ export class MSafeTransaction extends Transaction {
         return res;
       }
 
+      case MSafeTxnType.Revert: {
+        const sn = this.raw.sequence_number;
+        const res: RevertArgs = {sn: Number(sn)};
+        return res;
+      }
+
       default:
         throw new Error("unhandled transaction type");
     }
   }
 }
 
+function isRevertTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
+  const [deployer, module, fnName] = getModuleComponents(payload);
+
+  return isHexEqual(deployer, DEPLOYER_HS)
+    && module === MODULES.MOMENTUM_SAFE
+    && fnName === FUNCTIONS.MSAFE_REVERT;
+}
+
 
 function isCoinTransferTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
-  return isHexEqual(deployer, "0x1")
-    && module ===  COIN_MODULE
-    && fnName === COIN_TRANSFER_METHOD;
+  return isHexEqual(deployer, APTOS_FRAMEWORK_HS)
+    && module === MODULES.COIN
+    && fnName === FUNCTIONS.COIN_TRANSFER;
 }
 
 
@@ -256,8 +339,8 @@ function isCoinRegisterTx(payload: TxnBuilderTypes.TransactionPayloadEntryFuncti
   const [deployer, module, fnName] = getModuleComponents(payload);
 
   return isHexEqual(deployer, "0x1")
-    && module === COIN_MODULE
-    && fnName === COIN_REGISTER_METHOD;
+    && module === MODULES.COIN
+    && fnName === FUNCTIONS.COIN_REGISTER;
 }
 
 
@@ -271,9 +354,9 @@ function isAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunctio
     return false;
   }
   const coinTypeAddr = HexString.fromUint8Array(coinType.value.address.address);
-  return isHexEqual(coinTypeAddr, CORE_ADDR)
-    && coinType.value.module_name.value === APTOS_COIN_MODULE
-    && coinType.value.name.value === APTOS_COIN_STRUCT;
+  return isHexEqual(coinTypeAddr, APTOS_FRAMEWORK_HS)
+    && coinType.value.module_name.value === MODULES.APTOS_COIN
+    && coinType.value.name.value === STRUCTS.APTOS_COIN;
 }
 
 
