@@ -13,6 +13,7 @@ import {HexString} from "aptos";
 import * as Aptos from '../web3/global';
 import {MY_ACCOUNT} from "../web3/global";
 import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
+import {makeMSafeAPTTransferTx} from "../momentum-safe/msafe-txn";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, initCoinTransfer);
@@ -56,6 +57,10 @@ async function initCoinTransfer(c: {address: HexString}) {
   console.log(`\tAmount:\t\t${amount}`);
   printSeparator();
 
+  const txArg = {to: toAddress, amount: amount};
+  const sn = await msafe.getNextSN();
+  const tx = await makeMSafeAPTTransferTx(msafe.address, txArg, {sequenceNumber: sn});
+
   const userConfirmed = await promptForYN("Transaction information correct?", true);
   if (!userConfirmed) {
     setState(State.MSafeDetails, {address: addr});
@@ -63,7 +68,7 @@ async function initCoinTransfer(c: {address: HexString}) {
   }
 
   // Submit transaction
-  const [txHash, res] = await msafe.initCoinTransfer(MY_ACCOUNT, toAddress, BigInt(amount));
+  const [txHash, res] = await msafe.initTransaction(MY_ACCOUNT, tx);
   const myHash = (res as any).hash;
   console.log();
   console.log(`\tTransaction ${myHash} submitted to blockchain`);

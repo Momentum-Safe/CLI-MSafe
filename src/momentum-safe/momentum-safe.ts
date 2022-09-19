@@ -13,7 +13,7 @@ import {
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-import {makeMSafeAPTTransferTx, MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
+import {makeMSafeAPTTransferTx, MSafeTransaction, MSafeTxnInfo, Options} from "./msafe-txn";
 
 
 // Data stored in MomentumSafe.move
@@ -95,11 +95,7 @@ export class MomentumSafe {
     return new MomentumSafe(owners, ownerPubKeys, threshold, nonce, address);
   }
 
-  async initCoinTransfer(signer: Account, to: HexString, amount: bigint) {
-    const txArgs = {to: to, amount: Number(amount)};
-    const res = await this.getResource();
-    const opt = {sequenceNumber: this.getNextSequenceNumberFromResourceData(res)};
-    const tx = await makeMSafeAPTTransferTx(this.address, txArgs, opt);
+  async initTransaction(signer: Account, tx: MSafeTransaction) {
     const [rawTx, sig] = signer.getSigData(tx);
     const tmpHash = sha3_256(rawTx);
 
@@ -279,6 +275,11 @@ export class MomentumSafe {
       throw new Error("target pk not found in momentum safe");
     }
     return i;
+  }
+
+  async getNextSN() {
+    const momentum = await this.getResource();
+    return this.getNextSequenceNumberFromResourceData(momentum);
   }
 
   private getNextSequenceNumberFromResourceData(momentum: Momentum) {

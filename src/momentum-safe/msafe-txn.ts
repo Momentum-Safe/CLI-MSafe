@@ -20,11 +20,12 @@ const CORE_ADDR = "0x1";
 const COIN_MODULE = "coin";
 const COIN_TRANSFER_METHOD = "transfer";
 const COIN_REGISTER_METHOD = "register";
+const COIN_MINT_METHOD = "mint";
 const APTOS_COIN_MODULE = "aptos_coin";
 const APTOS_COIN_STRUCT = "AptosCoin";
 
 // TODO: replace with bigint
-type Options = {
+export type Options = {
   maxGas?: number,
   gasPrice?: number,
   expirationSec?: number, // target = time.now() + expiration
@@ -79,11 +80,10 @@ export async function makeMSafeRegisterTx(
   return new MSafeTransaction(txn.raw);
 }
 
-
 export async function makeMSafeAPTTransferTx(
   sender: HexString,
   args: APTTransferArgs,
-  opts: Options,
+  opts?: Options,
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosCoinTransferTxnBuilder();
@@ -100,7 +100,10 @@ export async function makeMSafeAPTTransferTx(
   return new MSafeTransaction(txn.raw);
 }
 
-async function applyDefaultOptions(sender: HexString, opts: Options) {
+async function applyDefaultOptions(sender: HexString, opts?: Options) {
+  if (!opts) {
+    opts = {};
+  }
   if (!opts.maxGas) {
     opts.maxGas = DEFAULT_REGISTER_MAX_GAS;
   }
@@ -125,11 +128,13 @@ export enum MSafeTxnType {
   APTCoinRegister = "coin register (APT)", // Not likely being used
   AnyCoinTransfer = "coin transfer (Any coin)",
   AnyCoinRegister = "coin register (APT)",
+  AnyCoinMinter = "coin mint",
   CustomInteraction = "custom module interaction",
 }
 
 type funArgs = CoinTransferArgs | CoinRegisterArgs
   | APTTransferArgs | APTRegisterArgs
+
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType,
