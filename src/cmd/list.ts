@@ -7,6 +7,7 @@ import {
   State,
   executeCmdOptions, CmdOption
 } from "./common";
+import {formatAddress} from "../momentum-safe/common";
 
 export function registerList() {
   registerState(State.List, () => list());
@@ -25,7 +26,7 @@ async function list() {
   rd.pendings.forEach( addr => {
     opts.push({
       shortage: i,
-      showText: `${addr} (Pending Creation)`,
+      showText: `${formatAddress(addr.hex())} (Pending Creation)`,
       handleFunc: () => setState(State.PendingCreate, {address: addr}),
     });
     i += 1;

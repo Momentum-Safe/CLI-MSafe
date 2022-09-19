@@ -13,6 +13,7 @@ import {
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
+import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
 
 
 // Data stored in MomentumSafe.move
@@ -43,34 +44,6 @@ export type TransactionType = {
   signatures: SimpleMap<HexStr>, // public_key => signature
 }
 
-type TxnBrief = {
-  sn: number,
-  numSigs: number,
-  hash: string,
-  operation?: coinTransferTxBrief,
-}
-
-type coinTransferTxBrief = {
-  to: HexString,
-  amount: bigint,
-  coin: string,
-  expiration: Date,
-}
-
-export type CoinTransferTx = {
-  sender: HexString,
-  sn: number,
-  expiration: Date,
-  chainID: number,
-  gasPrice: bigint,
-  maxGas: bigint,
-  moduleName: string,
-  functionName: string,
-  typeArgs: string,
-  to: HexString,
-  amount: bigint,
-}
-
 export type MomentumSafeInfo = {
   owners: HexString[],
   pubKeys: HexString[],
@@ -79,7 +52,7 @@ export type MomentumSafeInfo = {
   curSN: number,
   metadata: string,
   balance: number,
-  pendingTxs: TxnBrief[],
+  pendingTxs: MSafeTxnInfo[],
 }
 
 export class MomentumSafe {
@@ -184,14 +157,15 @@ export class MomentumSafe {
   // TODO: do not query for resource
   // TODO: better API for TransactionType
   // TODO: make tx a separate class
-  async getTxDetails(txHash: string): Promise<[TransactionType, CoinTransferTx]> {
+  async getTxDetails(txHash: string): Promise<[TransactionType, MSafeTxnInfo]> {
     const txType = await this.findTx(txHash);
     const curSN = await Aptos.getSequenceNumber(this.address);
     if (!MomentumSafe.isTxValid(txType, curSN)) {
       throw new Error("Transaction is no longer valid: low sequence number.");
     }
-    const txData = MomentumSafe.decodeCoinTransferTx(txType.payload);
-    return [txType, txData];
+    const msafeTx = MSafeTransaction.deserialize(HexBuffer(txType.payload));
+    const msafeTxInfo = msafeTx.getTxnInfo();
+    return [txType, msafeTxInfo];
   }
 
   private async makeCoinTransferInitTx(
@@ -325,65 +299,6 @@ export class MomentumSafe {
 
   private getNextSequenceNumberFromResourceData(momentum: Momentum) {
     return Number(momentum.txn_book.max_sequence_number) + 1;
-  }
-
-  // TODO: refactor this
-  private static decodeCoinTransferTx(payload: string): CoinTransferTx {
-    const tx = Transaction.deserialize(HexBuffer(payload)).raw;
-    const txPayload = tx.payload;
-    if (!(txPayload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction)) {
-      throw new Error('unknown transaction payload');
-    }
-    const address = (arr: Uint8Array) => HexString.fromUint8Array(arr);
-    const moduleName = `${address(txPayload.value.module_name.address.address).hex()}:${txPayload.value.module_name.name.value}`;
-    const fnName = txPayload.value.function_name.value;
-    const typeArgs: string[] = [];
-    txPayload.value.ty_args.forEach( tyArg => {
-      if (tyArg instanceof TxnBuilderTypes.TypeTagStruct) {
-        typeArgs.push(`${address(tyArg.value.address.address).hex()}::${tyArg.value.module_name.value}::${tyArg.value.name.value}`);
-      }
-    });
-    let toAddress: HexString;
-    let amount: bigint;
-    txPayload.value.args.forEach( (arg, i) => {
-      switch (i) {
-        case 0: {
-          const addressBytes = TxnBuilderTypes.AccountAddress.deserialize(new BCS.Deserializer(arg));
-          toAddress = address(addressBytes.address);
-          break;
-        }
-        case 1: {
-          amount = (new BCS.Deserializer(arg)).deserializeU64();
-        }
-      }
-    });
-    return {
-      sender: HexString.fromUint8Array(tx.sender.address),
-      sn: Number(tx.sequence_number),
-      expiration: MomentumSafe.secToDate(tx.expiration_timestamp_secs),
-      chainID: tx.chain_id.value,
-      gasPrice: tx.gas_unit_price,
-      maxGas: tx.max_gas_amount,
-      moduleName: moduleName,
-      functionName: fnName,
-      typeArgs: typeArgs[0],
-      to: toAddress!,
-      amount: amount!,
-    };
-  }
-
-  private static secToDate(sec: BCS.Uint64) {
-    const ms = Number(sec) * 1000;
-    return new Date(ms);
-  }
-
-  private static coinTransferTxToTxBrief(tx: CoinTransferTx): coinTransferTxBrief {
-    return {
-      to: tx.to,
-      amount: tx.amount,
-      coin: tx.typeArgs,
-      expiration: tx.expiration,
-    };
   }
 }
 

@@ -6,7 +6,7 @@ export const DEPLOYER = '0xe5a6f272ee8517ca39d83715d14cb733e285853e924c3a3b8d6d5
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const MAX_NUM_OWNERS = 32;
-export const ADDRESS_LENGTH = 32;
+export const ADDRESS_HEX_LENGTH = 64;
 
 export const MODULES = {
   MOMENTUM_SAFE: 'momentum_safe',
@@ -87,8 +87,14 @@ export function isHexEqual(hex1: HexString | string, hex2: HexString | string): 
 // Add zeros if size is not 32
 export function formatAddress(s: HexString | string): HexString {
   let hexStr = s instanceof HexString? s.hex(): s.startsWith('0x')? s.substring(2): s;
-  if (hexStr.length < ADDRESS_LENGTH) {
-    hexStr = ''.concat('0'.repeat(ADDRESS_LENGTH - hexStr.length), hexStr);
+  if (hexStr.length < ADDRESS_HEX_LENGTH) {
+    hexStr = ''.concat('0'.repeat(ADDRESS_HEX_LENGTH - hexStr.length), hexStr);
   }
   return HexString.ensure(hexStr);
 }
+
+export function secToDate(sec: BCS.Uint64) {
+  const ms = Number(sec) * 1000;
+  return new Date(ms);
+}
+
