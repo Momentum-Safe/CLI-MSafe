@@ -61,9 +61,6 @@ async function creationDetails(rawArg: any) {
 
   const res = await creation.getResourceData();
   const des_tx = Transaction.deserialize(HexBuffer(res.txn.payload));
-  console.log(res.txn.payload);
-  console.log("deserialized transaction", des_tx);
-  console.log(des_tx.raw.payload as TxnBuilderTypes.EntryFunction);
 
   // Do the check first. Corner case when the transaction was not executed last
   // time even enough signature was collected.

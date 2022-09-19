@@ -1,8 +1,9 @@
 import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
-import {BCS, HexString, TxnBuilderTypes} from "aptos";
+import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
 import {Buffer} from "buffer/";
-import {DEPLOYER_HS, FUNCTIONS, isHexEqual, MODULES, secToDate} from "./common";
+import {DEPLOYER_HS, FUNCTIONS, HexBuffer, isHexEqual, MODULES, secToDate} from "./common";
+import {sha3_256} from "../web3/crypto";
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = MINUTE_SECONDS * 60;
@@ -31,28 +32,29 @@ type Options = {
   chainID?: number,
 }
 
-type MSafeRegisterArgs = {
+export type MSafeRegisterArgs = {
   metadata: string,
 }
 
-type CoinTransferArgs = {
+export type CoinTransferArgs = {
   coinType: string,
   to: HexString,
   amount: number
 }
 
-type CoinRegisterArgs = {
+export type CoinRegisterArgs = {
   coinType: string,
 }
 
-type APTTransferArgs = {
+export type APTTransferArgs = {
   to: HexString,
   amount: number, //TODO: replace with big number
 }
 
-type APTRegisterArgs = {
+export type APTRegisterArgs = {
   // empty
 }
+
 
 // call momentum_safe::register
 export async function makeMSafeRegisterTx(
@@ -77,7 +79,8 @@ export async function makeMSafeRegisterTx(
   return new MSafeTransaction(txn.raw);
 }
 
-export async function makeMSafeCoinTransferTx(
+
+export async function makeMSafeAPTTransferTx(
   sender: HexString,
   args: APTTransferArgs,
   opts: Options,
@@ -116,7 +119,7 @@ async function applyDefaultOptions(sender: HexString, opts: Options) {
   return opts;
 }
 
-enum MSafeTxnType {
+export enum MSafeTxnType {
   Unknown = "unknown transaction",
   APTCoinTransfer = "coin transfer (APT)",
   APTCoinRegister = "coin register (APT)", // Not likely being used
@@ -126,10 +129,11 @@ enum MSafeTxnType {
 }
 
 type funArgs = CoinTransferArgs | CoinRegisterArgs
-  | APTTransferArgs | APTRegisterArgs | any
+  | APTTransferArgs | APTRegisterArgs
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType,
+  hash: HexString,
   sender: HexString,
   sn: number,
   expiration: Date,
@@ -137,6 +141,7 @@ export type MSafeTxnInfo = {
   gasPrice: bigint,
   maxGas: bigint,
   args: funArgs,
+  numSigs?: number,
 }
 
 export class MSafeTransaction extends Transaction {
@@ -157,10 +162,11 @@ export class MSafeTransaction extends Transaction {
     return new MSafeTransaction(tx.raw);
   }
 
-  getTxnInfo(): MSafeTxnInfo {
+  getTxnInfo(numSigs?: number): MSafeTxnInfo {
     const tx = this.raw;
     return{
       txType: this.txType,
+      hash: sha3_256(TransactionBuilder.getSigningMessage(tx)),
       sender: HexString.fromUint8Array(tx.sender.address),
       sn: Number(tx.sequence_number),
       expiration: secToDate(tx.expiration_timestamp_secs),
@@ -168,6 +174,7 @@ export class MSafeTransaction extends Transaction {
       gasPrice: tx.gas_unit_price,
       maxGas: tx.max_gas_amount,
       args: this.getTxnFuncArgs(),
+      numSigs: numSigs,
     };
   }
 

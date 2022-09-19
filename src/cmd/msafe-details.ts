@@ -37,7 +37,7 @@ async function showMSafeDetails(c: {address: HexString}) {
     opts.push({
       shortage: i + 1,
       // TODO: Refactor this field.
-      showText: `| ${tx.sn}\t| Send ${shortString(tx.operation!.to)} ${tx.operation!.amount}\t| ${tx.numSigs} / ${info.threshold}\t\t|`,
+      showText: `| ${tx.sn}\t| ${tx.txType}\t\t| ${tx.numSigs!} / ${info.threshold}`,
       handleFunc: () => { setState(State.PendingCoinTransfer, {address: addr, txHash: tx.hash}) },
     });
   });

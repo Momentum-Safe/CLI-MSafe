@@ -218,23 +218,6 @@ export class CreationHelper {
     return index;
   }
 
-  // Generate transaction for MomentumSafe.register
-  private async makeMSafeRegisterTxn(from: HexString, metadata: string): Promise<Transaction> {
-    const chainID = await Aptos.getChainId();
-    const sn = await Aptos.getSequenceNumber(from);
-
-    const txModuleBuilder = new AptosEntryTxnBuilder();
-    return txModuleBuilder
-      .addr(DEPLOYER_HS)
-      .module(MODULES.MOMENTUM_SAFE)
-      .method(FUNCTIONS.MSAFE_REGISTER)
-      .from(from)
-      .chainId(chainID)
-      .sequenceNumber(sn)
-      .args([BCS.bcsSerializeStr(metadata)])
-      .build();
-  }
-
   private async makeInitCreationTxn(signer: HexString, payload: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature) {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer);

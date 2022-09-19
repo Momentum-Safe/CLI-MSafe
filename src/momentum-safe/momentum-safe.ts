@@ -13,7 +13,7 @@ import {
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
+import {makeMSafeAPTTransferTx, MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
 
 
 // Data stored in MomentumSafe.move
@@ -96,7 +96,10 @@ export class MomentumSafe {
   }
 
   async initCoinTransfer(signer: Account, to: HexString, amount: bigint) {
-    const tx = await this.makeCoinTransferTx(to, amount);
+    const txArgs = {to: to, amount: Number(amount)};
+    const res = await this.getResource();
+    const opt = {sequenceNumber: this.getNextSequenceNumberFromResourceData(res)};
+    const tx = await makeMSafeAPTTransferTx(this.address, txArgs, opt);
     const [rawTx, sig] = signer.getSigData(tx);
     const tmpHash = sha3_256(rawTx);
 
@@ -235,24 +238,19 @@ export class MomentumSafe {
     const data = await MomentumSafe.queryMSafeResource(this.address);
     const balance = await Aptos.getBalance(this.address);
     const sn = await Aptos.getSequenceNumber(this.address);
-    const pendings: TxnBrief[] = [];
+    const pendings: MSafeTxnInfo[] = [];
     data.txn_book.pendings.data.forEach( e => {
       const tx = e.value;
       if (MomentumSafe.isTxValid(tx, sn)) {
-        const decodedTx = MomentumSafe.decodeCoinTransferTx(tx.payload);
-        pendings.push({
-          sn: Number(decodedTx.sn),
-          numSigs: tx.signatures.data.length,
-          hash: e.key,
-          operation: MomentumSafe.coinTransferTxToTxBrief(decodedTx),
-        });
+        const decodedTx = MSafeTransaction.deserialize(HexBuffer(tx.payload));
+        pendings.push(decodedTx.getTxnInfo(e.value.signatures.data.length));
       }
     });
     pendings.sort( (a, b) => {
       if (a.sn != b.sn) {
         return a.sn - b.sn;
       } else {
-        return a.operation!.expiration.getUTCSeconds() - b.operation!.expiration.getUTCSeconds();
+        return a.expiration.getUTCSeconds() - b.expiration.getUTCSeconds();
       }
     });
     return {
@@ -271,20 +269,6 @@ export class MomentumSafe {
     // Add expiration
     const tx = Transaction.deserialize(HexBuffer(txType.payload));
     return Number(tx.raw.sequence_number) >= curSN;
-  }
-
-  private async makeCoinTransferTx(to: HexString, amount: bigint) {
-    const data = await this.getResource();
-    const sn = this.getNextSequenceNumberFromResourceData(data);
-    const chainID = await Aptos.getChainId();
-    const txBuilder = new AptosCoinTransferTxnBuilder();
-    return txBuilder
-      .from(this.address)
-      .to(to)
-      .amount(Number(amount))
-      .sequenceNumber(Number(sn))
-      .chainId(chainID)
-      .build();
   }
 
   private getIndex(target: HexString): number {

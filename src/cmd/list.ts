@@ -18,7 +18,6 @@ async function list() {
   await printMyMessage();
 
   const rd = await Registry.getRegistryData(MY_ACCOUNT.address());
-  console.log(`Public key:\t${rd.publicKey}`);
 
   let i = 1;
 
