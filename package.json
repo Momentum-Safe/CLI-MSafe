@@ -27,6 +27,9 @@
   "scripts": {
     "start": "ts-node ./src/cmd/main.ts",
     "lint": "eslint . --ext .ts --fix",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'"
+    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
+    "test-coin": "ts-node test/test-coin/test-coin.ts",
+    "test-coin-compile": "aptos move compile --package-dir ./test/move",
+    "test-coin-publish": "aptos move publish --package-dir ./test/move"
   }
 }
