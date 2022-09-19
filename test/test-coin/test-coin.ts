@@ -112,7 +112,7 @@ async function registerTestToken() {
 }
 
 function getTestCoinResource(): string {
-  return `${MY_ACCOUNT.address()}::test_coin::MoonCoin`;
+  return `${MY_ACCOUNT.address()}::test_coin::TestCoin`;
 }
 
 (async () => main())();
