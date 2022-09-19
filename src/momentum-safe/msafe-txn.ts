@@ -1,8 +1,18 @@
-import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
+import {APTOS_TOKEN, AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
 import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
 import {Buffer} from "buffer/";
-import {APTOS_FRAMEWORK_HS, DEPLOYER_HS, FUNCTIONS, HexBuffer, isHexEqual, MODULES, secToDate, STRUCTS} from "./common";
+import {
+  APTOS_FRAMEWORK_HS,
+  DEPLOYER_HS,
+  FUNCTIONS,
+  HexBuffer,
+  isHexEqual,
+  MODULES,
+  secToDate,
+  STRUCTS,
+  typeTagStructFromName
+} from "./common";
 import {sha3_256} from "../web3/crypto";
 
 const MINUTE_SECONDS = 60;
@@ -45,12 +55,33 @@ export type APTTransferArgs = {
   amount: number, //TODO: replace with big number
 }
 
-export type APTRegisterArgs = {
-  // empty
-}
-
 export type RevertArgs = {
   sn: number, // The sn will override option
+}
+
+export enum MSafeTxnType {
+  Unknown = "Unknown transaction",
+  APTCoinTransfer = "Coin transfer (APT)",
+  AnyCoinTransfer = "Coin transfer (Any coin)",
+  AnyCoinRegister = "Coin register (Any coin)",
+  AnyCoinMinter = "coin mint",
+  Revert = "Revert transaction",
+  CustomInteraction = "custom module interaction",
+}
+
+export type FunArgs = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs | RevertArgs | any
+
+export type MSafeTxnInfo = {
+  txType: MSafeTxnType,
+  hash: HexString,
+  sender: HexString,
+  sn: number,
+  expiration: Date,
+  chainID: number,
+  gasPrice: bigint,
+  maxGas: bigint,
+  args: FunArgs,
+  numSigs?: number,
 }
 
 // call momentum_safe::register
@@ -98,11 +129,12 @@ export async function makeMSafeAPTTransferTx(
 
 export async function makeMSafeAnyCoinRegisterTx(
   sender: HexString,
-  args: CoinTransferArgs,
+  args: CoinRegisterArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosEntryTxnBuilder();
+  const structTag = typeTagStructFromName(args.coinType);
   const txn = txBuilder
     .addr(APTOS_FRAMEWORK_HS)
     .module(MODULES.COIN)
@@ -110,8 +142,10 @@ export async function makeMSafeAnyCoinRegisterTx(
     .from(sender)
     .chainId(config.chainID!)
     .sequenceNumber(config.sequenceNumber!)
-    .maxGas(BigInt(config.gasPrice!))
+    .gasPrice(BigInt(config.gasPrice!))
+    .maxGas(BigInt(config.maxGas!))
     .expiration(config.expirationSec!)
+    .type_args([structTag])
     .args([])
     .build();
   return new MSafeTransaction(txn.raw);
@@ -124,6 +158,8 @@ export async function makeMSafeAnyCoinTransferTx(
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosEntryTxnBuilder();
+  const structTag = typeTagStructFromName(args.coinType);
+
   const txn = txBuilder
     .addr(APTOS_FRAMEWORK_HS)
     .module(MODULES.COIN)
@@ -131,8 +167,10 @@ export async function makeMSafeAnyCoinTransferTx(
     .from(sender)
     .chainId(config.chainID!)
     .sequenceNumber(config.sequenceNumber!)
-    .maxGas(BigInt(config.gasPrice!))
+    .gasPrice(BigInt(config.gasPrice!))
+    .maxGas(BigInt(config.maxGas!))
     .expiration(config.expirationSec!)
+    .type_args([structTag])
     .args([
       BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(args.to)),
       BCS.bcsSerializeUint64(args.amount),
@@ -157,13 +195,13 @@ export async function makeMSafeRevertTx(
     .from(sender)
     .chainId(config.chainID!)
     .sequenceNumber(config.sequenceNumber!)
-    .maxGas(BigInt(config.gasPrice!))
+    .gasPrice(BigInt(config.gasPrice!))
+    .maxGas(BigInt(config.maxGas!))
     .expiration(config.expirationSec!)
     .args([])
     .build();
   return new MSafeTransaction(txn.raw);
 }
-
 
 async function applyDefaultOptions(sender: HexString, opts?: Options) {
   if (!opts) {
@@ -185,34 +223,6 @@ async function applyDefaultOptions(sender: HexString, opts?: Options) {
     opts.chainID = await Aptos.getChainId();
   }
   return opts;
-}
-
-export enum MSafeTxnType {
-  Unknown = "Unknown transaction",
-  APTCoinTransfer = "Coin transfer (APT)",
-  APTCoinRegister = "Coin register (APT)", // Not likely being used
-  AnyCoinTransfer = "Coin transfer (Any coin)",
-  AnyCoinRegister = "Coin register (APT)",
-  Revert = "Revert transaction",
-  AnyCoinMinter = "coin mint",
-  CustomInteraction = "custom module interaction",
-}
-
-type funArgs = CoinTransferArgs | CoinRegisterArgs
-  | APTTransferArgs | APTRegisterArgs
-
-
-export type MSafeTxnInfo = {
-  txType: MSafeTxnType,
-  hash: HexString,
-  sender: HexString,
-  sn: number,
-  expiration: Date,
-  chainID: number,
-  gasPrice: bigint,
-  maxGas: bigint,
-  args: funArgs,
-  numSigs?: number,
 }
 
 export class MSafeTransaction extends Transaction {
@@ -257,9 +267,6 @@ export class MSafeTransaction extends Transaction {
       return MSafeTxnType.AnyCoinTransfer;
     }
     if (isCoinRegisterTx(payload)) {
-      if (isAptosCoinType(payload)) {
-        return MSafeTxnType.APTCoinRegister;
-      }
       return MSafeTxnType.AnyCoinRegister;
     }
     if (isRevertTxn(payload)) {
@@ -268,7 +275,7 @@ export class MSafeTransaction extends Transaction {
     return MSafeTxnType.Unknown;
   }
 
-  private getTxnFuncArgs(): funArgs {
+  private getTxnFuncArgs(): FunArgs {
     const payload = this.payload;
 
     switch (this.txType) {
@@ -278,11 +285,6 @@ export class MSafeTransaction extends Transaction {
           to: toAddress,
           amount: Number(amount),
         };
-        return res;
-      }
-
-      case MSafeTxnType.APTCoinRegister: {
-        const res: APTRegisterArgs = {};
         return res;
       }
 
@@ -317,15 +319,6 @@ export class MSafeTransaction extends Transaction {
   }
 }
 
-function isRevertTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
-  const [deployer, module, fnName] = getModuleComponents(payload);
-
-  return isHexEqual(deployer, DEPLOYER_HS)
-    && module === MODULES.MOMENTUM_SAFE
-    && fnName === FUNCTIONS.MSAFE_REVERT;
-}
-
-
 function isCoinTransferTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
@@ -334,7 +327,6 @@ function isCoinTransferTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunct
     && fnName === FUNCTIONS.COIN_TRANSFER;
 }
 
-
 function isCoinRegisterTx(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): boolean {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
@@ -342,7 +334,6 @@ function isCoinRegisterTx(payload: TxnBuilderTypes.TransactionPayloadEntryFuncti
     && module === MODULES.COIN
     && fnName === FUNCTIONS.COIN_REGISTER;
 }
-
 
 function isAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): boolean {
   const tArgs = payload.value.ty_args;
@@ -359,6 +350,13 @@ function isAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunctio
     && coinType.value.name.value === STRUCTS.APTOS_COIN;
 }
 
+function isRevertTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
+  const [deployer, module, fnName] = getModuleComponents(payload);
+
+  return isHexEqual(deployer, DEPLOYER_HS)
+    && module === MODULES.MOMENTUM_SAFE
+    && fnName === FUNCTIONS.MSAFE_REVERT;
+}
 
 // Return address, module, and function name
 function getModuleComponents(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): [HexString, string, string] {
@@ -372,7 +370,6 @@ function getModuleComponents(payload: TxnBuilderTypes.TransactionPayloadEntryFun
     fnName,
   ];
 }
-
 
 function decodeAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): string {
   const tArgs = payload.value.ty_args;
@@ -394,7 +391,6 @@ function parseTypeStructTag(typeTag: TxnBuilderTypes.TypeTagStruct) {
   const deployerDisplay = HexString.fromUint8Array(deployer);
   return `${deployerDisplay}::${moduleName}::${structName}`;
 }
-
 
 function decodeCoinTransferArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): [HexString, bigint] {
   const args = payload.value.args;

@@ -3,7 +3,7 @@ import {
   CmdOption,
   executeCmdOptions,
   printMyMessage,
-  printSeparator,
+  printSeparator, printTxDetails,
   promptForYN,
   registerState,
   setState,
@@ -49,6 +49,8 @@ async function txDetails(c: {address: HexString, txHash: string}) {
     throw e;
   }
 
+  console.log("Transaction details:");
+  console.log();
   printTxDetails(txData);
   printSeparator();
 
@@ -113,55 +115,6 @@ async function txDetails(c: {address: HexString, txHash: string}) {
         setState(State.MSafeDetails, {address: addr})},
     ]
   );
-}
-
-function printTxDetails(txData: MSafeTxnInfo) {
-  console.log("Transaction details:");
-  console.log();
-  switch (txData.txType) {
-    case (MSafeTxnType.APTCoinRegister):
-      printAPTCoinTransfer(txData);
-      break;
-    case (MSafeTxnType.AnyCoinTransfer):
-      printAnyCoinTransfer(txData);
-      break;
-    case (MSafeTxnType.AnyCoinRegister):
-      printAnyCoinRegister(txData);
-  }
-  printTxCommonData(txData);
-}
-
-function printTxCommonData(txInfo: MSafeTxnInfo) {
-  console.log(`Sender:\t\t\t${txInfo.sender}`);
-  console.log(`Sequence Number:\t${txInfo.sn}`);
-  console.log(`Expiration:\t\t${txInfo.expiration}`);
-  console.log(`Gas Price:\t\t${txInfo.gasPrice}`);
-  console.log(`Max Gas:\t\t${txInfo.maxGas}`);
-}
-
-function printAPTCoinTransfer(txInfo: MSafeTxnInfo) {
-  console.log(`Action:\t\t\t${txInfo.txType}`);
-  const args = txInfo.args as APTTransferArgs;
-
-  console.log();
-  console.log(`To:\t\t\t${args.to}`);
-  console.log(`Amount:\t\t\t${args.amount}`);
-}
-
-function printAnyCoinTransfer(txInfo: MSafeTxnInfo) {
-  console.log(`Action:\t\t\t${txInfo.txType}`);
-  const args = txInfo.args as CoinTransferArgs;
-  console.log();
-  console.log(`Coin:\t\t\t${args.coinType}`);
-  console.log(`To:\t\t\t${args.to}`);
-  console.log(`Amount:\t\t\t${args.amount}`);
-}
-
-function printAnyCoinRegister(txInfo: MSafeTxnInfo) {
-  console.log(`Action:\t\t\t${txInfo.txType}`);
-  const args = txInfo.args as CoinRegisterArgs;
-  console.log();
-  console.log(`Coin:\t\t\t${args.coinType}`);
 }
 
 export async function checkTxnEnoughSigsAndAssemble(msafe: MomentumSafe, txHash: string | HexString) {

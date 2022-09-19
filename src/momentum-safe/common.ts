@@ -1,6 +1,6 @@
 import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
-import {Transaction} from "../web3/transaction";
+import {APTOS_TOKEN, Transaction} from "../web3/transaction";
 
 export const DEPLOYER = '0x648877a0d16c79403eec543d588856f4e6edfe114564a7b37aadafe509ab9c14';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
@@ -115,5 +115,10 @@ export function formatAddress(s: HexString | string): HexString {
 export function secToDate(sec: BCS.Uint64) {
   const ms = Number(sec) * 1000;
   return new Date(ms);
+}
+
+export function typeTagStructFromName(name: string) {
+  const structTag = TxnBuilderTypes.StructTag.fromString(name);
+  return new TxnBuilderTypes.TypeTagStruct(structTag);
 }
 
