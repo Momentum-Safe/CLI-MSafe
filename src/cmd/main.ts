@@ -2,6 +2,7 @@
 // TODO: APT token amount change to decimal and use bigint
 // TODO: Module publish
 // TODO: Arbitrary function call
+// TODO: handle transaction execution error during assemble and submit
 // TODO: View assets list (get from resources) and coin transfer
 // TODO: Sequential pending transaction
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c

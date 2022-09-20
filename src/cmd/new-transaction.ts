@@ -1,6 +1,6 @@
 import {
-  executeCmdOptions,
-  isStringAddress,
+  executeCmdOptions, getFunctionComponents,
+  isStringAddress, isStringFunction,
   isStringTypeStruct,
   printMSafeMessage,
   printMyMessage,
@@ -164,6 +164,71 @@ async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: number): 
   );
   const txArgs: CoinRegisterArgs = {coinType: coinType};
   return await makeMSafeAnyCoinRegisterTx(sender, txArgs, {sequenceNumber: sn});
+}
+
+async function promptAndBuildForCustomTx(sender: HexString, sn: number): Promise<MSafeTransaction> {
+  const fullFnName = await promptUntilString(
+    '\tModule name:\t\t',
+    '\tFunction name not valid:\t',
+    isStringFunction,
+  );
+  const [contractAddr, moduleName, fnName] = getFunctionComponents(fullFnName);
+}
+
+async function promptForTypeArgs() {
+  const numTypeArgs = await promptUntilNumber(
+    '\tNumber Type Arguments:\t',
+    '\tNumber Type Arguments:\t',
+    num => num > 0,
+  );
+  const tyArgs: string[] = [];
+  for (let i = 0; i != numTypeArgs; i = i+1) {
+    const ta = await promptUntilString(
+      `\t${i+1} th:\t\t`,
+      "\tInvalid type arg:\t",
+      isStringTypeStruct,
+    );
+    tyArgs.push(ta);
+  }
+
+  const numArgs = await promptUntilNumber(
+    '\tNumber of arguments:\t',
+    '\tNumber of arguments:\t',
+    num => num > 0,
+  );
+  for (let i = 0; i != numArgs; i = i+1) {
+
+  }
+}
+
+type argType = {
+  isValid: (s: string) => boolean,
+  encode: (val: string) => Uint8Array,
+}
+
+const argTypes = new Map<string, argType>(
+  ['Bytes (Hex)', {isValid: }]
+);
+
+async function promptForArg(i: number) {
+
+}
+
+function isHexString(s: string): boolean {
+  try {
+    HexString.ensure(s);
+  } catch (e) {
+    return false
+  }
+  return true
+}
+
+function hexStringToBytes(s: string): Uint8Array {
+  return HexString.ensure(s).toUint8Array();
+}
+
+function stringToBytes(s: string): Uint8Array {
+  return Buffer.from(s, 'base64');
 }
 
 function printTxConfirmation(txData: MSafeTxnInfo) {

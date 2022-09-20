@@ -234,6 +234,19 @@ export function isStringTypeStruct(s: string): boolean {
   return true;
 }
 
+export function isStringFunction(s: string): boolean {
+  const comps = s.split('::');
+  return comps.length === 3;
+}
+
+export function getFunctionComponents(s: string): [string, string, string] {
+  const comps = s.split('::');
+  if (comps.length !== 3) {
+    throw new Error("invalid full function name");
+  }
+  return [comps[0], comps[1], comps[2]];
+}
+
 export function printTxDetails(txData: MSafeTxnInfo) {
   switch (txData.txType) {
     case (MSafeTxnType.APTCoinTransfer):
