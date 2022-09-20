@@ -61,10 +61,10 @@ export type RevertArgs = {
 
 export enum MSafeTxnType {
   Unknown = "Unknown transaction",
-  APTCoinTransfer = "Coin transfer (APT)",
-  AnyCoinTransfer = "Coin transfer (Any coin)",
-  AnyCoinRegister = "Coin register (Any coin)",
-  AnyCoinMinter = "coin mint",
+  APTCoinTransfer = "Transfer APT",
+  AnyCoinTransfer = "Transfer COIN",
+  AnyCoinRegister = "Register COIN",
+  AnyCoinMinter = "Mint COIN",
   Revert = "Revert transaction",
   CustomInteraction = "custom module interaction",
 }
@@ -137,7 +137,7 @@ export async function makeMSafeAnyCoinRegisterTx(
   const structTag = typeTagStructFromName(args.coinType);
   const txn = txBuilder
     .addr(APTOS_FRAMEWORK_HS)
-    .module(MODULES.COIN)
+    .module(MODULES.MANAGED_COIN)
     .method(FUNCTIONS.COIN_REGISTER)
     .from(sender)
     .chainId(config.chainID!)
@@ -330,8 +330,8 @@ function isCoinTransferTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunct
 function isCoinRegisterTx(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): boolean {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
-  return isHexEqual(deployer, "0x1")
-    && module === MODULES.COIN
+  return isHexEqual(deployer, APTOS_FRAMEWORK_HS)
+    && module === MODULES.MANAGED_COIN
     && fnName === FUNCTIONS.COIN_REGISTER;
 }
 

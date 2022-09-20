@@ -7,6 +7,8 @@ import {APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES, typeTagStructFromName} from "../
 
 const DEF_SEND_AMOUNT = "100000000";
 
+const DEPLOYER = HexString.ensure("be836d132840c6380a97342a46e09c75ca30d1cbf561bc4161e20f71e644692c");
+
 const program = new Command();
 const cli = program
   .version("0.0.2")
@@ -39,9 +41,6 @@ async function main() {
     await Aptos.fundAddress(MY_ACCOUNT.address(), 1000000000);
   }
 
-  console.log(await Aptos.getBalance(HexString.ensure("b26049431dd7a4b383beda1459f8ae16751498d3609d054b804288d2afe17387")));
-  console.log(await Aptos.getBalance(MY_ACCOUNT.address()));
-
   const targetAddress = HexString.ensure(cli.opts().to);
   const amount = BigInt(cli.opts().amount);
 
@@ -73,7 +72,7 @@ async function mintTestToken(to: HexString, amount: bigint) {
   const tx = txBuilder
     .from(MY_ACCOUNT.address())
     .addr(APTOS_FRAMEWORK_HS)
-    .module(MODULES.COIN)
+    .module(MODULES.MANAGED_COIN)
     .method(FUNCTIONS.COIN_MINT)
     .chainId(chainID)
     .sequenceNumber(sn)
@@ -98,7 +97,7 @@ async function registerTestToken() {
   const tx = txBuilder
     .from(MY_ACCOUNT.address())
     .addr(APTOS_FRAMEWORK_HS)
-    .module(MODULES.COIN)
+    .module(MODULES.MANAGED_COIN)
     .method(FUNCTIONS.COIN_REGISTER)
     .chainId(chainID)
     .sequenceNumber(sn)
@@ -112,7 +111,7 @@ async function registerTestToken() {
 }
 
 function getTestCoinResource(): string {
-  return `${MY_ACCOUNT.address()}::test_coin::TestCoin`;
+  return `${DEPLOYER}::test_coin::TestCoin`;
 }
 
 (async () => main())();

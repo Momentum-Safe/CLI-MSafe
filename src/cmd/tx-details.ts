@@ -102,6 +102,7 @@ async function txDetails(c: {address: HexString, txHash: string}) {
     tx = await msafe.submitTxSignature(MY_ACCOUNT, txHash);
   }
   console.log(`\tTransaction ${tx.hash} submitted. Waiting for confirmation`);
+  await Aptos.waitForTransaction(tx.hash);
   console.log(`\tTransaction confirmed on chain.`);
 
   printSeparator();

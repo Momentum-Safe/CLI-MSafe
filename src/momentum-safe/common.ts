@@ -16,7 +16,8 @@ export const MODULES = {
   MOMENTUM_SAFE: 'momentum_safe',
   CREATOR: 'creator',
   REGISTRY: 'registry',
-  COIN: 'managed_coin',
+  COIN: 'coin',
+  MANAGED_COIN: 'managed_coin',
   APTOS_COIN: "aptos_coin",
 };
 
