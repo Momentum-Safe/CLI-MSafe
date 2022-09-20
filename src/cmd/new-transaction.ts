@@ -55,7 +55,7 @@ async function newTransaction(c: {address: HexString}) {
   }
 
   // Submit transaction
-  const [txHash, res] = await msafe.initTransaction(MY_ACCOUNT, tx);
+  const {plHash: txHash, pendingTx: res} = await msafe.initTransaction(MY_ACCOUNT, tx);
   const myHash = (res as any).hash;
   console.log();
   console.log(`\tTransaction ${myHash} submitted to blockchain`);

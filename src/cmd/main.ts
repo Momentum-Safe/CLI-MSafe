@@ -28,6 +28,7 @@ import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
 import {registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";
+import {registerRevertTransaction} from "./revert-transaction";
 
 const program = new Command();
 
@@ -69,6 +70,7 @@ function registerAllStates() {
   registerMSafeDetails();
   registerInitCoinTransfer();
   registerTxDetails();
+  registerRevertTransaction();
 }
 
 async function fundWithFaucetIfNotSetup() {

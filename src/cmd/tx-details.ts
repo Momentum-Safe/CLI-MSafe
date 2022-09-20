@@ -3,7 +3,8 @@ import {
   CmdOption,
   executeCmdOptions,
   printMyMessage,
-  printSeparator, printTxDetails,
+  printSeparator,
+  printTxDetails,
   promptForYN,
   registerState,
   setState,
@@ -13,13 +14,7 @@ import {MomentumSafe, TransactionType} from "../momentum-safe/momentum-safe";
 import * as Aptos from "../web3/global";
 import {MY_ACCOUNT} from "../web3/global";
 import * as Gen from 'aptos/src/generated';
-import {
-  APTTransferArgs,
-  CoinRegisterArgs,
-  CoinTransferArgs,
-  MSafeTxnInfo,
-  MSafeTxnType
-} from "../momentum-safe/msafe-txn";
+import {MSafeTxnInfo, MSafeTxnType} from "../momentum-safe/msafe-txn";
 
 export function registerTxDetails() {
   registerState(State.PendingCoinTransfer, txDetails);
@@ -82,11 +77,19 @@ async function txDetails(c: {address: HexString, txHash: string}) {
   if (!isMeSigned) {
     opts.push({shortage: 's', showText: 'Sign', handleFunc: () => { isReturn = false }});
   }
+  if (txData.txType !== MSafeTxnType.Revert) {
+    opts.push({
+      shortage: 'rv',
+      showText: 'ReVert',
+      handleFunc: () => setState(State.RevertTransaction, {address: addr, txHash: txHash})
+    });
+  }
+
   opts.push(
     {shortage: 'r', showText: 'Refresh', handleFunc: () =>
         setState(State.PendingCoinTransfer, {address: addr, txHash: txHash})},
     {shortage: 'b', showText: 'Back', handleFunc: () =>
-        setState(State.MSafeDetails, {address: addr})}
+        setState(State.MSafeDetails, {address: addr})},
   );
 
   await executeCmdOptions(optionPromptStr, opts);

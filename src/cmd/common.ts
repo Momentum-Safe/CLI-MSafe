@@ -24,6 +24,7 @@ export enum State {
   PendingCreate,
   InitCoinTransfer,
   PendingCoinTransfer,
+  RevertTransaction,
 }
 
 export function registerState(state: State, cb: (arg?: any) => void) {
@@ -258,7 +259,6 @@ function printTxCommonData(txInfo: MSafeTxnInfo) {
 function printAPTCoinTransfer(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as APTTransferArgs;
-
   console.log(`To:\t\t\t${args.to}`);
   console.log(`Amount:\t\t\t${args.amount}`);
 }
@@ -266,7 +266,6 @@ function printAPTCoinTransfer(txInfo: MSafeTxnInfo) {
 function printAnyCoinTransfer(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as CoinTransferArgs;
-  console.log();
   console.log(`Coin:\t\t\t${args.coinType}`);
   console.log(`To:\t\t\t${args.to}`);
   console.log(`Amount:\t\t\t${args.amount}`);
@@ -275,6 +274,5 @@ function printAnyCoinTransfer(txInfo: MSafeTxnInfo) {
 function printAnyCoinRegister(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as CoinRegisterArgs;
-  console.log();
   console.log(`Coin:\t\t\t${args.coinType}`);
 }
