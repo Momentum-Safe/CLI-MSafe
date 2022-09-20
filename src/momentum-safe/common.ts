@@ -17,6 +17,7 @@ export const MODULES = {
   CREATOR: 'creator',
   REGISTRY: 'registry',
   COIN: 'coin',
+  MANAGED_COIN: 'managed_coin',
   APTOS_COIN: "aptos_coin",
 };
 

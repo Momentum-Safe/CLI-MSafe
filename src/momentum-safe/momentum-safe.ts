@@ -103,7 +103,7 @@ export class MomentumSafe {
     const signedInitTx = signer.sign(initTx);
 
     const txRes = await Aptos.sendSignedTransactionAsync(signedInitTx);
-    return [tmpHash, txRes];
+    return {plHash: tmpHash, pendingTx: txRes};
   }
 
   async isReadyToSubmit(txHash: string | HexString, extraPubKey?: HexString) {

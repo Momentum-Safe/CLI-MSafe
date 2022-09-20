@@ -1,5 +1,7 @@
 import {AptosClient, FaucetClient, HexString, BCS, ApiError} from 'aptos';
 import {Account} from "./account";
+import {load} from "js-yaml";
+import {readFile} from "fs/promises";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -14,7 +16,9 @@ interface Config {
   address: string,
 }
 
-export async function fundAddress(address: string, amount: number) {
+export const defaultConfigPath = `.aptos/config.yaml`;
+
+export async function fundAddress(address: HexString | string, amount: number) {
   if (FAUCET === undefined) {
     throw new Error("faucet not set");
   }
@@ -70,6 +74,18 @@ export async function waitForTransaction(txnHash: string) {
   return tx;
 }
 
+export async function isAccountExist(addr: HexString) {
+  try {
+    await APTOS.getAccount(addr);
+  } catch (e) {
+    if (e instanceof ApiError && e.message.includes("Resource not found")) {
+      return false;
+    }
+    throw e;
+  }
+  return true;
+}
+
 export async function getAccount(addr: HexString) {
   return await APTOS.getAccount(addr);
 }
@@ -83,4 +99,46 @@ export async function getBalance(addr: string | HexString): Promise<number> {
   const resources = await APTOS.getAccountResources(address);
   const coinResource = resources.find((r) => r.type == APTOS_COIN_RESOURCE_TYPE);
   return parseInt((coinResource?.data as any).coin.value);
+}
+
+
+type loadConfig = {
+  configFilePath: string,
+  profile: string,
+}
+
+export async function loadConfigAndApply(c: loadConfig) {
+  let yaml: any;
+  try {
+    yaml = await loadAptosYaml(c.configFilePath);
+  } catch (e) {
+    printSetupWalletMsg();
+    process.exit(1);
+  }
+  const profile = yaml.profiles[c.profile];
+  if (!profile) {
+    console.log(`cannot find profile ${c.profile}`);
+    process.exit(1);
+  }
+  setGlobal({
+    nodeURL: profile.rest_url,
+    faucetURL: profile.faucet_url,
+    privateKey: profile.private_key,
+    address: profile.account,
+  });
+}
+
+function printSetupWalletMsg() {
+  console.log('');
+  console.log("Have you set up your Aptos address? Run the following command to setup your wallet\n");
+  console.log("\taptos init\n");
+  process.exit(1001);
+}
+
+async function loadAptosYaml(filePath: string) {
+  return load(await readFile(filePath, 'utf-8'));
+}
+
+async function loadDefault() {
+  return loadAptosYaml(defaultConfigPath);
 }

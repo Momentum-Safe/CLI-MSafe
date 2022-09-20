@@ -1,10 +1,8 @@
 // TODO: apply the use case for 1/x signature momentum safe wallet
 // TODO: APT token amount change to decimal and use bigint
-// TODO: Coin register call
 // TODO: Module publish
 // TODO: Arbitrary function call
-// TODO: View assets list (get from resources)
-// TODO: Revert transaction
+// TODO: View assets list (get from resources) and coin transfer
 // TODO: Sequential pending transaction
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
 // TODO: Make address / public key type
@@ -18,7 +16,7 @@ import {registerCreation} from "./create";
 import {Command} from "commander";
 import {printSeparator, prompt, promptForYN, printMyMessage, setState, State} from "./common";
 import {Registry} from "../momentum-safe/registry";
-import {MY_ACCOUNT} from "../web3/global";
+import {defaultConfigPath, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
 import {registerEntry} from "./entry";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
@@ -28,8 +26,7 @@ import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
 import {registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";
-
-export const defaultConfigPath = `.aptos/config.yaml`;
+import {registerRevertTransaction} from "./revert-transaction";
 
 const program = new Command();
 
@@ -46,7 +43,10 @@ async function main() {
   console.clear();
 
   try {
-    await loadConfigAndApply();
+    await loadConfigAndApply({
+      configFilePath: cli.opts().config,
+      profile: cli.opts().profile,
+    });
   } catch (e) {
     if ((e as ApiError).message.includes('Account not found by Address')) {
       console.log('Wallet must have some initial fund to interact with');
@@ -68,34 +68,7 @@ function registerAllStates() {
   registerMSafeDetails();
   registerInitCoinTransfer();
   registerTxDetails();
-}
-
-async function loadConfigAndApply() {
-  let yaml: any;
-  try {
-    yaml = await loadAptosYaml(cli.opts().config);
-  } catch (e) {
-    printSetupWalletMsg();
-    process.exit(1);
-  }
-  const profile = yaml.profiles[cli.opts().profile];
-  if (!profile) {
-    console.log(`cannot find profile ${cli.opts().profile}`);
-    process.exit(1);
-  }
-  Aptos.setGlobal({
-    nodeURL: profile.rest_url,
-    faucetURL: profile.faucet_url,
-    privateKey: profile.private_key,
-    address: profile.account,
-  });
-}
-
-function printSetupWalletMsg() {
-  console.log('');
-  console.log("Have you set up your Aptos address? Run the following command to setup your wallet\n");
-  console.log("\taptos init\n");
-  process.exit(1001);
+  registerRevertTransaction();
 }
 
 async function fundWithFaucetIfNotSetup() {
@@ -136,14 +109,6 @@ async function registerIfNotRegistered() {
     printSeparator();
     await prompt('continue');
   }
-}
-
-async function loadAptosYaml(filePath: string) {
-  return load(await readFile(filePath, 'utf-8'));
-}
-
-async function loadDefault() {
-  return loadAptosYaml(defaultConfigPath);
 }
 
 (async () => main())();
