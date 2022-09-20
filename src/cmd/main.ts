@@ -1,10 +1,8 @@
 // TODO: apply the use case for 1/x signature momentum safe wallet
 // TODO: APT token amount change to decimal and use bigint
-// TODO: Coin register call
 // TODO: Module publish
 // TODO: Arbitrary function call
-// TODO: View assets list (get from resources)
-// TODO: Revert transaction
+// TODO: View assets list (get from resources) and coin transfer
 // TODO: Sequential pending transaction
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
 // TODO: Make address / public key type
