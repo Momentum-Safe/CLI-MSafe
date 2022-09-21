@@ -3,8 +3,8 @@ import {Buffer} from "buffer/"; // the trailing slash is important!
 import * as SHA3 from "js-sha3";
 import {HexBuffer} from "../momentum-safe/common";
 
-// TODO: make this single
-export const DEPLOYER = '0x648877a0d16c79403eec543d588856f4e6edfe114564a7b37aadafe509ab9c14';
+// TODO: make this single config
+export const DEPLOYER = 'cc8d582ac7a85543cab86b7dd76a554714ce19eee51de19a12a93c06ef56e955';
 
 
 // MomentumSafe public key is a blend of owners and a nonce (as address)

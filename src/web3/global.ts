@@ -142,3 +142,7 @@ async function loadAptosYaml(filePath: string) {
 async function loadDefault() {
   return loadAptosYaml(defaultConfigPath);
 }
+
+export async function getAccountModule(addr: HexString, moduleName: string) {
+  return APTOS.getAccountModule(addr, moduleName);
+}

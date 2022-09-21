@@ -2,10 +2,12 @@
 // TODO: APT token amount change to decimal and use bigint
 // TODO: Module publish
 // TODO: Arbitrary function call
+// TODO: handle transaction execution error during assemble and submit
 // TODO: View assets list (get from resources) and coin transfer
 // TODO: Sequential pending transaction
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
 // TODO: Make address / public key type
+// TODO: apply the gas fee and max gas estimation
 // TODO: data sync issue
 // TODO: Add private key encryption
 // TODO: (Need to update smart contract first) Key rotation
@@ -16,11 +18,11 @@ import {registerCreation} from "./create";
 import {Command} from "commander";
 import {printSeparator, prompt, promptForYN, printMyMessage, setState, State} from "./common";
 import {Registry} from "../momentum-safe/registry";
-import {defaultConfigPath, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
+import {defaultConfigPath, getAccountModule, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
 import {registerEntry} from "./entry";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
-import {ApiError} from "aptos";
+import {ApiError, HexString} from "aptos";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
@@ -81,7 +83,7 @@ async function fundWithFaucetIfNotSetup() {
       if (!opt) {
         process.exit(1);
       }
-      await Aptos.fundAddress(MY_ACCOUNT.address().hex(), 1000000);
+      await Aptos.fundAddress(MY_ACCOUNT.address().hex(), 100000000000);
     } else {
       throw e;
     }
@@ -111,4 +113,21 @@ async function registerIfNotRegistered() {
   }
 }
 
+// async function test() {
+//   try {
+//     await loadConfigAndApply({
+//       configFilePath: cli.opts().config,
+//       profile: cli.opts().profile,
+//     });
+//   } catch (e) {
+//     if ((e as ApiError).message.includes('Account not found by Address')) {
+//       console.log('Wallet must have some initial fund to interact with');
+//       process.exit(1);
+//     }
+//     throw e;
+//   }
+//   await promptAndBuildForCustomTx(HexString.ensure("0"), 0);
+// }
+
 (async () => main())();
+// (async () => test())();

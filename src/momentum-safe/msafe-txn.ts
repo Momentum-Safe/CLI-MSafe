@@ -22,8 +22,8 @@ const WEEK_SECONDS = DAY_SECONDS * 7;
 const MONTH_SECONDS = DAY_SECONDS * 30;
 const YEAR_SECONDS = DAY_SECONDS *365;
 
-const DEFAULT_UNIT_PRICE = 1;
-const DEFAULT_REGISTER_MAX_GAS = 2000;
+const DEFAULT_UNIT_PRICE = 100;
+const DEFAULT_REGISTER_MAX_GAS = 5000;
 const DEFAULT_EXPIRATION = MONTH_SECONDS;
 
 
@@ -56,7 +56,15 @@ export type APTTransferArgs = {
 }
 
 export type RevertArgs = {
-  sn: number, // The sn will override option
+  sn: number, // The sn will override option.sequenceNumber
+}
+
+export type CustomInteractionArgs = {
+  deployer: HexString,
+  moduleName: string,
+  fnName: string,
+  typeArgs: string[],
+  args: BCS.Bytes[], // encoded bytes
 }
 
 export enum MSafeTxnType {
@@ -66,10 +74,11 @@ export enum MSafeTxnType {
   AnyCoinRegister = "Register COIN",
   AnyCoinMinter = "Mint COIN",
   Revert = "Revert transaction",
-  CustomInteraction = "custom module interaction",
+  CustomInteraction = "Custom module interaction",
 }
 
-export type FunArgs = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs | RevertArgs | any
+export type FunArgs = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs
+  | RevertArgs | CustomInteractionArgs
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType,
@@ -201,6 +210,29 @@ export async function makeMSafeRevertTx(
     .args([])
     .build();
   return new MSafeTransaction(txn.raw);
+}
+
+export async function makeCustomInteractionTx(
+  sender: HexString,
+  args: CustomInteractionArgs,
+  opts?: Options
+): Promise<MSafeTransaction> {
+  const config = await applyDefaultOptions(sender, opts);
+  const txBuilder = new AptosEntryTxnBuilder();
+  const tx = txBuilder
+    .addr(args.deployer)
+    .module(args.moduleName)
+    .method(args.fnName)
+    .from(sender)
+    .chainId(config.chainID!)
+    .sequenceNumber(config.sequenceNumber!)
+    .gasPrice(BigInt(config.gasPrice!))
+    .maxGas(BigInt(config.maxGas!))
+    .expiration(config.expirationSec!)
+    .type_args(args.typeArgs.map(ta => typeTagStructFromName(ta)))
+    .args(args.args)
+    .build();
+  return new MSafeTransaction(tx.raw);
 }
 
 async function applyDefaultOptions(sender: HexString, opts?: Options) {
