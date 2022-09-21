@@ -2,7 +2,7 @@ import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
 import {APTOS_TOKEN, Transaction} from "../web3/transaction";
 
-export const DEPLOYER = '0x648877a0d16c79403eec543d588856f4e6edfe114564a7b37aadafe509ab9c14';
+export const DEPLOYER = '0xcc8d582ac7a85543cab86b7dd76a554714ce19eee51de19a12a93c06ef56e955';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
