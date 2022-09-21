@@ -17,15 +17,15 @@ import {registerCreation} from "./create";
 import {Command} from "commander";
 import {printSeparator, prompt, promptForYN, printMyMessage, setState, State} from "./common";
 import {Registry} from "../momentum-safe/registry";
-import {defaultConfigPath, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
+import {defaultConfigPath, getAccountModule, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
 import {registerEntry} from "./entry";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
-import {ApiError} from "aptos";
+import {ApiError, HexString} from "aptos";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
-import {registerInitCoinTransfer} from "./new-transaction";
+import {promptAndBuildForCustomTx, registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";
 import {registerRevertTransaction} from "./revert-transaction";
 
@@ -112,4 +112,21 @@ async function registerIfNotRegistered() {
   }
 }
 
+// async function test() {
+//   try {
+//     await loadConfigAndApply({
+//       configFilePath: cli.opts().config,
+//       profile: cli.opts().profile,
+//     });
+//   } catch (e) {
+//     if ((e as ApiError).message.includes('Account not found by Address')) {
+//       console.log('Wallet must have some initial fund to interact with');
+//       process.exit(1);
+//     }
+//     throw e;
+//   }
+//   await promptAndBuildForCustomTx(HexString.ensure("0"), 0);
+// }
+
 (async () => main())();
+// (async () => test())();

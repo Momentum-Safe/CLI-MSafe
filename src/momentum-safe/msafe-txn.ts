@@ -216,7 +216,7 @@ export async function makeCustomInteractionTx(
   sender: HexString,
   args: CustomInteractionArgs,
   opts?: Options
-) {
+): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosEntryTxnBuilder();
   const tx = txBuilder

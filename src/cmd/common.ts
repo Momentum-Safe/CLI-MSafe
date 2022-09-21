@@ -61,6 +61,22 @@ export async function promptForNumber(s: string): Promise<number> {
   return Number(valStr);
 }
 
+export async function promptUntilBigInt(pmp: string, npmp: string, validate: (v: bigint) => boolean): Promise<bigint> {
+  let res = await promptForBigInt(pmp);
+  while (!validate(res)) {
+    res = await promptForBigInt(npmp);
+  }
+  return res;
+}
+
+export async function promptForBigInt(s: string): Promise<bigint> {
+  const valStr = await prompt(s);
+  if (valStr.length == 0) {
+    return -1n;
+  }
+  return BigInt(valStr);
+}
+
 export async function promptUntilString(pmp: string, npmp: string, validate: (s: string) => boolean): Promise<string> {
   let res = await prompt(pmp);
   while (!validate(res)) {
@@ -89,6 +105,17 @@ function ynClause(defVal: boolean): string {
 function validateYN(s: string): boolean {
   const sl = s.toLowerCase();
   return sl === '' || sl === 'y' || sl === 'n' || sl === 'yes' || sl === 'no';
+}
+
+export async function promptUntilTrueFalse(s: string) {
+  let res = await prompt(s + 'true/false:\t');
+  let resLower = res.toLowerCase();
+  const validate = (val: string) => val === 'true' || val === 'false' || val === 't' || val === 'f';
+  while (!validate(resLower)) {
+    res = await prompt(s);
+    resLower = res.toLowerCase();
+  }
+  return resLower === 'true' || resLower === 't';
 }
 
 function getValueYN(s: string, defVal: boolean): boolean {
@@ -234,17 +261,27 @@ export function isStringTypeStruct(s: string): boolean {
   return true;
 }
 
-export function isStringFunction(s: string): boolean {
+const numModuleComps = 2;
+
+export function isStringFullModule(s: string): boolean {
   const comps = s.split('::');
-  return comps.length === 3;
+  if (comps.length != numModuleComps) {
+    return false;
+  }
+  try {
+    HexString.ensure(comps[0]);
+  } catch (e) {
+    return false;
+  }
+  return true;
 }
 
-export function getFunctionComponents(s: string): [string, string, string] {
+export function splitModuleComponents(s: string): [HexString, string] {
   const comps = s.split('::');
-  if (comps.length !== 3) {
+  if (comps.length !== numModuleComps) {
     throw new Error("invalid full function name");
   }
-  return [comps[0], comps[1], comps[2]];
+  return [HexString.ensure(comps[0]), comps[1]];
 }
 
 export function printTxDetails(txData: MSafeTxnInfo) {
