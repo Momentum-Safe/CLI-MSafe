@@ -1,3 +1,5 @@
+// TODO: make use of this ABI parser.
+
 import {BCS, HexString} from "aptos";
 import * as Aptos from "../web3/global";
 

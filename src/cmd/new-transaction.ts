@@ -19,7 +19,7 @@ import {
   State,
 } from "./common";
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
-import {BCS, HexString} from "aptos";
+import {BCS, HexString, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
 import {MY_ACCOUNT} from '../web3/global';
 import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
@@ -189,6 +189,7 @@ async function promptAndBuildForCustomTx(
   );
   const [contractAddr, moduleName] = splitModuleComponents(fullFnName);
 
+  console.log();
   console.log("Pulling ABI from chain...");
 
   printSeparator();
@@ -220,12 +221,15 @@ async function promptAndBuildForCustomTx(
   if (!selectedFn) {
     throw new Error("User aborted");
   }
-  console.log("selectedFn", selectedFn.generic_type_params);
-  console.log(selectedFn.generic_type_params[0].constraints);
 
   printSeparator();
 
   const typeArgs = await promptForTypeArgs();
+
+  printSeparator();
+
+  console.log("Start to input arguments:");
+  console.log();
   const args = await promptForArgs(selectedFn.params);
 
   const ciArgs = {
@@ -248,7 +252,7 @@ async function promptForTypeArgs() {
   const tyArgs: string[] = [];
   for (let i = 0; i != numTypeArgs; i = i+1) {
     const ta = await promptUntilString(
-      `\t${i+1} th:\t\t`,
+      `\t${i+1} th:\t\t\t`,
       "\tInvalid type arg:\t",
       isStringTypeStruct,
     );
@@ -277,27 +281,32 @@ async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefine
       return undefined;
     }
     case ("u64"): {
-      const val = await promptUntilBigInt(`\t${i}:\t${param}`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilBigInt(`\t${i}: ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeUint64(val);
     }
     case ("u32"): {
-      const val = await promptUntilNumber(`\t${i}:\t${param}`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU32(val);
     }
     case ("u16"): {
-      const val = await promptUntilNumber(`\t${i}:\t${param}`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU16(val);
     }
     case ("u8"): {
-      const val = await promptUntilNumber(`\t${i}:\t${param}`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU8(val);
     }
     case ("bool"): {
-      const val = await promptUntilTrueFalse(`\t${i}:\t${param}`);
+      const val = await promptUntilTrueFalse(`\t${i}: ${param}\t\t`);
       return BCS.bcsSerializeBool(val);
     }
-    default:
-      throw new Error(`Unsupported type ${param}`);
+    case ("address"): {
+      const val = await promptUntilString(`\t${i}: ${param}\t`, `\tIncorrect value:`, isStringAddress);
+      return BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(val));
+    }
+    default: {
+      throw new Error(`Unsupported type: `+param);
+    }
   }
 }
 

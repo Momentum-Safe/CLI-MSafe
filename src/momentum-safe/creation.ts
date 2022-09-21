@@ -228,7 +228,6 @@ export class CreationHelper {
       .method(FUNCTIONS.CREATOR_INIT_WALLET)
       .from(signer)
       .chainId(chainID)
-      .maxGas(2000n)
       .sequenceNumber(sn)
       .args([
         serializeOwners(this.owners),

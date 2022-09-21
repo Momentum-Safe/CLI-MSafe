@@ -252,6 +252,11 @@ export function isStringAddress(s: string): boolean {
   return byteLength == 32; // SHA3_256 length
 }
 
+export function isStringShortAddress(s: string) :boolean {
+  const byteLength = HexString.ensure(s).toUint8Array().length;
+  return byteLength <= 32; // SHA3_256 length
+}
+
 export function isStringTypeStruct(s: string): boolean {
   try {
     TxnBuilderTypes.StructTag.fromString(s);

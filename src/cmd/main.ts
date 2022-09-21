@@ -7,6 +7,7 @@
 // TODO: Sequential pending transaction
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
 // TODO: Make address / public key type
+// TODO: apply the gas fee and max gas estimation
 // TODO: data sync issue
 // TODO: Add private key encryption
 // TODO: (Need to update smart contract first) Key rotation
@@ -25,7 +26,7 @@ import {ApiError, HexString} from "aptos";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
-import {promptAndBuildForCustomTx, registerInitCoinTransfer} from "./new-transaction";
+import {registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";
 import {registerRevertTransaction} from "./revert-transaction";
 
@@ -82,7 +83,7 @@ async function fundWithFaucetIfNotSetup() {
       if (!opt) {
         process.exit(1);
       }
-      await Aptos.fundAddress(MY_ACCOUNT.address().hex(), 1000000);
+      await Aptos.fundAddress(MY_ACCOUNT.address().hex(), 100000000000);
     } else {
       throw e;
     }
