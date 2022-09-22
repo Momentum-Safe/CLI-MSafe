@@ -304,7 +304,7 @@ export class MSafeTransaction extends Transaction {
     if (isRevertTxn(payload)) {
       return MSafeTxnType.Revert;
     }
-    return MSafeTxnType.Unknown;
+    return MSafeTxnType.CustomInteraction;
   }
 
   private getTxnFuncArgs(): FunArgs {
@@ -321,7 +321,7 @@ export class MSafeTransaction extends Transaction {
       }
 
       case MSafeTxnType.AnyCoinTransfer: {
-        const coinType = decodeAptosCoinType(payload);
+        const coinType = decodeCoinType(payload);
         const [toAddress, amount] = decodeCoinTransferArgs(payload);
         const res: CoinTransferArgs = {
           coinType: coinType,
@@ -332,7 +332,7 @@ export class MSafeTransaction extends Transaction {
       }
 
       case MSafeTxnType.AnyCoinRegister: {
-        const coinType = decodeAptosCoinType(payload);
+        const coinType = decodeCoinType(payload);
         const res: CoinRegisterArgs = {
           coinType: coinType,
         };
@@ -342,6 +342,20 @@ export class MSafeTransaction extends Transaction {
       case MSafeTxnType.Revert: {
         const sn = this.raw.sequence_number;
         const res: RevertArgs = {sn: Number(sn)};
+        return res;
+      }
+
+      case MSafeTxnType.CustomInteraction: {
+        const [addr, moduleName, fnName] = getModuleComponents(payload);
+        const tArgs = decodeTypeArgs(payload);
+        const args = payload.value.args;
+        const res: CustomInteractionArgs = {
+          deployer: addr,
+          moduleName: moduleName,
+          fnName: fnName,
+          typeArgs: tArgs,
+          args: args,
+        };
         return res;
       }
 
@@ -403,7 +417,114 @@ function getModuleComponents(payload: TxnBuilderTypes.TransactionPayloadEntryFun
   ];
 }
 
-function decodeAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): string {
+function decodeTypeArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): string[] {
+  const tArgs = payload.value.ty_args;
+  return tArgs.map( tArg => decodeTypeTag(tArg) );
+}
+
+function decodeTypeTag(tArg: TxnBuilderTypes.TypeTag): string {
+  if (tArg instanceof TxnBuilderTypes.TypeTagStruct) {
+    return parseTypeStructTag(tArg);
+  }
+  if (tArg instanceof TxnBuilderTypes.TypeTagU8) {
+    return "u8";
+  }
+  if (tArg instanceof TxnBuilderTypes.TypeTagU64) {
+    return "u64";
+  }
+  if (tArg instanceof TxnBuilderTypes.TypeTagU128) {
+    return "u128";
+  }
+  if (tArg instanceof TxnBuilderTypes.TypeTagAddress) {
+    return "address";
+  }
+  if (tArg instanceof TxnBuilderTypes.TypeTagBool) {
+    return "bool";
+  }
+  if (tArg instanceof TxnBuilderTypes.TypeTagVector) {
+    const innerType = decodeTypeTag(tArg);
+    return `vector<${innerType}>`;
+  }
+  if (tArg instanceof TxnBuilderTypes.TypeTagSigner) {
+    return "&signer";
+  }
+  throw new Error("unknown type tag");
+}
+
+export async function decodeCustomArgs(
+  deployer: HexString,
+  moduleName: string,
+  fnName: string,
+  args: BCS.Bytes[]
+) {
+  const params = await getFunctionABI(deployer, moduleName, fnName);
+  const filteredParams = params.filter(param => param != 'signer' && param != '&signer');
+  if (filteredParams.length != args.length) {
+    throw new Error("argument size does not match param size");
+  }
+  return args.map((arg, i) => {
+    return decodeCustomArg(arg, filteredParams[i]);
+  });
+}
+
+function decodeCustomArg(data: Uint8Array, paramType: string) {
+  const deserializer = new BCS.Deserializer(data);
+
+  switch (paramType) {
+    case "&signer": {
+      return ["&signer", "&signer"];
+    }
+    case "signer": {
+      return ["signer", "signer"];
+    }
+    case ("u128"): {
+      return ["u128", deserializer.deserializeU128()];
+    }
+    case ("u64"): {
+      return ["u64", deserializer.deserializeU64()];
+    }
+    case ("u32"): {
+      return ["u32", deserializer.deserializeU32()];
+    }
+    case ("u16"): {
+      return ["u16", deserializer.deserializeU16()];
+    }
+    case ("u8"): {
+      return ["u8", deserializer.deserializeU8()];
+    }
+    case ("bool"): {
+      return ["bool", deserializer.deserializeBool()];
+    }
+    case ("address"): {
+      return ["address", HexString.fromUint8Array(deserializer.deserializeBytes())];
+    }
+    case ("vector<u8>"): {
+      return ["vector<u8>", HexString.fromUint8Array(deserializer.deserializeBytes())];
+    }
+    case ("0x1::string::String"): {
+      return ["string", deserializer.deserializeStr()];
+    }
+    default:
+      return [paramType, HexString.fromUint8Array(data).hex()];
+  }
+}
+
+export async function getFunctionABI(contract: HexString, moduleName: string, fnName: string){
+  const moduleData = await Aptos.getAccountModule(contract, moduleName);
+  if (!moduleData.abi) {
+    throw new Error(`${contract}::${moduleName} has no ABI exposed`);
+  }
+  if (!moduleData.abi.exposed_functions) {
+    throw new Error(`${contract}::${moduleName} has no exposed function`);
+  }
+  const abi = moduleData.abi.exposed_functions.find(fn => fn.name === fnName);
+  if (!abi) {
+    throw new Error(`${contract}::${moduleName}::${fnName} not found`);
+  }
+  return abi.params.map(param => String(param));
+}
+
+function decodeCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): string {
   const tArgs = payload.value.ty_args;
   if (tArgs.length !== 1) {
     throw new Error("length is not 1");

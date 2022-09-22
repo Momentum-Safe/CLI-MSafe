@@ -17,6 +17,7 @@ import {
   setState,
   splitModuleComponents,
   State,
+  prompt,
 } from "./common";
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import {BCS, HexString, TxnBuilderTypes} from "aptos";
@@ -54,7 +55,7 @@ async function newTransaction(c: {address: HexString}) {
   const tx = await promptForNewTransaction(msafe.address, sn);
   printSeparator();
 
-  printTxConfirmation(tx.getTxnInfo());
+  await printTxConfirmation(tx.getTxnInfo());
   printSeparator();
 
   const userConfirmed = await promptForYN("Transaction information correct?", true);
@@ -201,7 +202,7 @@ async function promptAndBuildForCustomTx(
   if (!moduleData.abi.exposed_functions) {
     throw new Error(`${fullFnName} has no exposed function`);
   }
-  const entryFns =moduleData.abi.exposed_functions.filter(fn => fn.is_entry && fn.visibility === 'public');
+  const entryFns = moduleData.abi.exposed_functions.filter(fn => fn.is_entry && fn.visibility === 'public');
 
   let i = 1;
   let selectedFn: any;
@@ -228,15 +229,17 @@ async function promptAndBuildForCustomTx(
 
   printSeparator();
 
-  console.log("Start to input arguments:");
-  console.log();
-  const args = await promptForArgs(selectedFn.params);
-
   console.log("Note in this version, only limited arguments are supported. Including:");
   console.log("\t1. u128, u64, u32, u16, u8");
   console.log("\t2. address");
   console.log("\t3. &signer");
   console.log("\t4. vector<u8>");
+  console.log();
+
+  console.log("Start to input arguments:");
+  console.log();
+
+  const args = await promptForArgs(selectedFn.params);
 
   const ciArgs = {
     deployer: contractAddr,
@@ -283,40 +286,46 @@ async function promptForArgs(params: any[]): Promise<BCS.Bytes[]> {
 // TODO: add vector, address, vector<u8>
 async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefined> {
   switch (param) {
-    case ("&signer"): {
+    case ("&signer"):
+    case ("signer"): {
+      console.log(`\t${i}: Type ${param}\t\t\t&signer`);
       return undefined;
     }
     case ("u128"): {
-      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0);
+      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0);
       return BCS.bcsSerializeU128(val);
     }
     case ("u64"): {
-      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeUint64(val);
     }
     case ("u32"): {
-      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU32(val);
     }
     case ("u16"): {
-      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU16(val);
     }
     case ("u8"): {
-      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU8(val);
     }
     case ("bool"): {
-      const val = await promptUntilTrueFalse(`\t${i}: Type ${param}\t\t`);
+      const val = await promptUntilTrueFalse(`\t${i}: Type ${param}\t\t\t`);
       return BCS.bcsSerializeBool(val);
     }
     case ("address"): {
-      const val = await promptUntilString(`\t${i}: Type ${param}\t`, `\tIncorrect value:`, isStringAddress);
+      const val = await promptUntilString(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, isStringAddress);
       return BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(val));
     }
     case ("vector<u8>"): {
-      const val = await promptUntilString(`\t${i}: Type ${param}\t`, `\tIncorrect value:`, isStringHex);
+      const val = await promptUntilString(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, isStringHex);
       return BCS.bcsSerializeBytes(HexString.ensure(val).toUint8Array());
+    }
+    case ("0x1::string::String"): {
+      const val = await prompt(`\t${i}: Type ${param}\t`);
+      return BCS.bcsSerializeStr(val);
     }
     default: {
       throw new Error(`Unsupported type: `+param);
@@ -341,8 +350,8 @@ function stringToBytes(s: string): Uint8Array {
   return Buffer.from(s, 'base64');
 }
 
-function printTxConfirmation(txData: MSafeTxnInfo) {
+async function printTxConfirmation(txData: MSafeTxnInfo) {
   console.log("Transaction confirmation:");
   console.log();
-  printTxDetails(txData);
+  await printTxDetails(txData);
 }

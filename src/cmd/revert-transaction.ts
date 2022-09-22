@@ -40,7 +40,7 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
 
   console.log("Transaction to be reverted:");
   console.log();
-  printTxDetails(tx);
+  await printTxDetails(tx);
   printSeparator();
 
   const userConfirm = promptForYN("Are you sure your want to revert the transaction?", true);

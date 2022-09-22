@@ -46,7 +46,7 @@ async function txDetails(c: {address: HexString, txHash: string}) {
 
   console.log("Transaction details:");
   console.log();
-  printTxDetails(txData);
+  await printTxDetails(txData);
   printSeparator();
 
   const userBreak = await checkTxnEnoughSigsAndAssemble(msafe, txHash);
@@ -79,8 +79,8 @@ async function txDetails(c: {address: HexString, txHash: string}) {
   }
   if (txData.txType !== MSafeTxnType.Revert) {
     opts.push({
-      shortage: 'rv',
-      showText: 'ReVert',
+      shortage: 'v',
+      showText: 'reVert',
       handleFunc: () => setState(State.RevertTransaction, {address: addr, txHash: txHash})
     });
   }
