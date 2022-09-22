@@ -6,9 +6,9 @@ import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 import {
   APTTransferArgs,
   CoinRegisterArgs,
-  CoinTransferArgs,
+  CoinTransferArgs, CustomInteractionArgs, decodeCustomArgs, getFunctionABI,
   MSafeTxnInfo,
-  MSafeTxnType
+  MSafeTxnType, RevertArgs
 } from "../momentum-safe/msafe-txn";
 
 const SEPARATOR_LENGTH = 20;
@@ -294,7 +294,7 @@ export function splitModuleComponents(s: string): [HexString, string] {
   return [HexString.ensure(comps[0]), comps[1]];
 }
 
-export function printTxDetails(txData: MSafeTxnInfo) {
+export async function printTxDetails(txData: MSafeTxnInfo) {
   switch (txData.txType) {
     case (MSafeTxnType.APTCoinTransfer):
       printAPTCoinTransfer(txData);
@@ -304,6 +304,13 @@ export function printTxDetails(txData: MSafeTxnInfo) {
       break;
     case (MSafeTxnType.AnyCoinRegister):
       printAnyCoinRegister(txData);
+      break;
+    case (MSafeTxnType.Revert):
+      printRevertTxn(txData);
+      break;
+    case (MSafeTxnType.CustomInteraction):
+      await printCustomTxn(txData);
+      break;
   }
   printTxCommonData(txData);
 }
@@ -335,4 +342,34 @@ function printAnyCoinRegister(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as CoinRegisterArgs;
   console.log(`Coin:\t\t\t${args.coinType}`);
+}
+
+function printRevertTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const args = txInfo.args as RevertArgs;
+  console.log(`Revert SN:\t\t${args.sn}`);
+}
+
+async function printCustomTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const cia = txInfo.args as CustomInteractionArgs;
+  console.log(`Call function:\t\t${cia.deployer}::${cia.moduleName}::${cia.fnName}`);
+  // print type arguments
+  for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
+    console.log(`Type Arguments (${i+1}):\t${cia.typeArgs[i]}`);
+  }
+  // print arguments
+  const args = await getBCSArgValue(cia);
+  for (let i = 0; i != args.length; i = i + 1) {
+    const [argType, argValue] = args[i];
+    console.log(`Arguments (${i+1}):\t\t[${argType}]\t${argValue}`);
+  }
+}
+
+async function getBCSArgValue(cia: CustomInteractionArgs) {
+  const deployer = cia.deployer;
+  const moduleName = cia.moduleName;
+  const fnName = cia.fnName;
+
+  return decodeCustomArgs(deployer, moduleName, fnName, cia.args);
 }

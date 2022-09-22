@@ -144,5 +144,5 @@ async function loadDefault() {
 }
 
 export async function getAccountModule(addr: HexString, moduleName: string) {
-  return APTOS.getAccountModule(addr, moduleName);
+  return await APTOS.getAccountModule(addr, moduleName);
 }
