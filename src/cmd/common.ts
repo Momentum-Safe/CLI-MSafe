@@ -1,14 +1,16 @@
 import readline from "readline-sync";
-import clear from 'clear';
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes} from "aptos";
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 import {
   APTTransferArgs,
   CoinRegisterArgs,
-  CoinTransferArgs, CustomInteractionArgs, decodeCustomArgs, getFunctionABI,
+  CoinTransferArgs,
+  CustomInteractionArgs,
+  decodeCustomArgs, ModulePublishInfo,
   MSafeTxnInfo,
-  MSafeTxnType, RevertArgs
+  MSafeTxnType,
+  RevertArgs
 } from "../momentum-safe/msafe-txn";
 
 const SEPARATOR_LENGTH = 20;
@@ -41,7 +43,7 @@ export function setState(state: State, arg?: any) {
 
 export async function prompt(s: string): Promise<string> {
   return new Promise((resolve) => {
-    return resolve(readline.question(s));
+    return resolve(readline.question(s+'\t'));
   });
 }
 
@@ -258,7 +260,7 @@ export function isStringShortAddress(s: string) :boolean {
 }
 
 export function isStringHex(s: string): boolean {
-  const re = /[0-9A-Fa-f]{6}/g;
+  const re = /^(0x)?[0-9A-Fa-f]+$/g;
   return re.test(s);
 }
 
@@ -310,6 +312,9 @@ export async function printTxDetails(txData: MSafeTxnInfo) {
       break;
     case (MSafeTxnType.CustomInteraction):
       await printCustomTxn(txData);
+      break;
+    case (MSafeTxnType.ModulePublish):
+      printModulePublishTxn(txData);
       break;
   }
   printTxCommonData(txData);
@@ -364,6 +369,23 @@ async function printCustomTxn(txInfo: MSafeTxnInfo) {
     const [argType, argValue] = args[i];
     console.log(`Arguments (${i+1}):\t\t[${argType}]\t${argValue}`);
   }
+}
+
+function printModulePublishTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const mpi = txInfo.args as ModulePublishInfo;
+  console.log(`Verify Hash:\t\t${mpi.hash}`);
+  console.log(`Deployer:\t\t${txInfo.sender}`);
+  console.log(`Package:\t\t${mpi.metadata.name}`);
+  console.log(`Upgrade Policy:\t\t${mpi.metadata.upgrade_policy.name()}`);
+  console.log(`Upgrade Number:\t\t${mpi.metadata.upgrade_number}`);
+  console.log(`Source Digest:\t\t${mpi.metadata.source_digest}`);
+  console.log(`Modules:\t\t${mpi.metadata.modules.map(
+    module => `${txInfo.sender}::${module.name}`
+  ).join('\n\t\t\t')}`);
+  console.log(`Dependency:\t\t${mpi.metadata.deps.map(
+    dep => `${HexString.fromUint8Array(dep.account.address)}::${dep.package_name}`
+  ).join('\n\t\t\t')}`);
 }
 
 async function getBCSArgValue(cia: CustomInteractionArgs) {

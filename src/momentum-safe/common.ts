@@ -1,6 +1,6 @@
 import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
-import {APTOS_TOKEN, Transaction} from "../web3/transaction";
+import {Transaction} from "../web3/transaction";
 
 export const DEPLOYER = '0xcc8d582ac7a85543cab86b7dd76a554714ce19eee51de19a12a93c06ef56e955';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
@@ -19,6 +19,7 @@ export const MODULES = {
   COIN: 'coin',
   MANAGED_COIN: 'managed_coin',
   APTOS_COIN: "aptos_coin",
+  CODE: "code",
 };
 
 export const FUNCTIONS = {
@@ -35,6 +36,8 @@ export const FUNCTIONS = {
   COIN_MINT: "mint",
 
   REGISTRY_REGISTER: "register",
+
+  PUBLISH_PACKAGE: "publish_package_txn",
 };
 
 export const STRUCTS = {
@@ -123,3 +126,11 @@ export function typeTagStructFromName(name: string) {
   return new TxnBuilderTypes.TypeTagStruct(structTag);
 }
 
+// TODO: replace with bigint
+export type Options = {
+  maxGas?: number,
+  gasPrice?: number,
+  expirationSec?: number, // target = time.now() + expiration
+  sequenceNumber?: number,
+  chainID?: number,
+}

@@ -1,4 +1,4 @@
-import {APTOS_TOKEN, AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
+import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
 import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
 import {Buffer} from "buffer/";
@@ -6,13 +6,15 @@ import {
   APTOS_FRAMEWORK_HS,
   DEPLOYER_HS,
   FUNCTIONS,
-  HexBuffer,
   isHexEqual,
   MODULES,
+  Options,
   secToDate,
   STRUCTS,
   typeTagStructFromName
 } from "./common";
+import * as SHA3 from "js-sha3";
+import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
 import {sha3_256} from "../web3/crypto";
 
 const MINUTE_SECONDS = 60;
@@ -24,17 +26,8 @@ const YEAR_SECONDS = DAY_SECONDS *365;
 
 const DEFAULT_UNIT_PRICE = 100;
 const DEFAULT_REGISTER_MAX_GAS = 5000;
-const DEFAULT_EXPIRATION = MONTH_SECONDS;
+const DEFAULT_EXPIRATION = WEEK_SECONDS;
 
-
-// TODO: replace with bigint
-export type Options = {
-  maxGas?: number,
-  gasPrice?: number,
-  expirationSec?: number, // target = time.now() + expiration
-  sequenceNumber?: number,
-  chainID?: number,
-}
 
 export type MSafeRegisterArgs = {
   metadata: string,
@@ -67,18 +60,31 @@ export type CustomInteractionArgs = {
   args: BCS.Bytes[], // encoded bytes
 }
 
+export type ModulePublishArgs = {
+  moveDir: string,
+  artifacts: IncludedArtifacts,
+  deployerAddressName: string, // address name in Move.toml
+}
+
+export type ModulePublishInfo = {
+  hash: HexString,
+  metadata: PackageMetadata,
+  byteCode: Buffer,
+}
+
 export enum MSafeTxnType {
   Unknown = "Unknown transaction",
   APTCoinTransfer = "Transfer APT",
   AnyCoinTransfer = "Transfer COIN",
   AnyCoinRegister = "Register COIN",
-  AnyCoinMinter = "Mint COIN",
   Revert = "Revert transaction",
   CustomInteraction = "Custom module interaction",
+  ModulePublish = "Module publish",
 }
 
-export type FunArgs = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs
-  | RevertArgs | CustomInteractionArgs
+// TODO: add module publish payload info
+export type payloadInfo = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs
+  | RevertArgs | CustomInteractionArgs | ModulePublishInfo
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType,
@@ -89,7 +95,7 @@ export type MSafeTxnInfo = {
   chainID: number,
   gasPrice: bigint,
   maxGas: bigint,
-  args: FunArgs,
+  args: payloadInfo,
   numSigs?: number,
 }
 
@@ -235,6 +241,21 @@ export async function makeCustomInteractionTx(
   return new MSafeTransaction(tx.raw);
 }
 
+export async function compileAndMakeModulePublishTx(
+  sender: HexString,
+  args: ModulePublishArgs,
+  opts?: Options,
+): Promise<MSafeTransaction> {
+  const config = await applyDefaultOptions(sender, opts);
+  const namedAddress = {
+    addrName: args.deployerAddressName,
+    addrValue: sender,
+  };
+  const mp = await MovePublisher.fromMoveDir(args.moveDir, args.artifacts, namedAddress);
+  const tx = mp.getDeployTransaction(sender, config);
+  return new MSafeTransaction(tx.raw);
+}
+
 async function applyDefaultOptions(sender: HexString, opts?: Options) {
   if (!opts) {
     opts = {};
@@ -304,10 +325,13 @@ export class MSafeTransaction extends Transaction {
     if (isRevertTxn(payload)) {
       return MSafeTxnType.Revert;
     }
+    if (isModulePublishTxn(payload)) {
+      return MSafeTxnType.ModulePublish;
+    }
     return MSafeTxnType.CustomInteraction;
   }
 
-  private getTxnFuncArgs(): FunArgs {
+  private getTxnFuncArgs(): payloadInfo {
     const payload = this.payload;
 
     switch (this.txType) {
@@ -359,6 +383,10 @@ export class MSafeTransaction extends Transaction {
         return res;
       }
 
+      case MSafeTxnType.ModulePublish: {
+        return decodeModulePublishArgs(payload);
+      }
+
       default:
         throw new Error("unhandled transaction type");
     }
@@ -402,6 +430,14 @@ function isRevertTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
   return isHexEqual(deployer, DEPLOYER_HS)
     && module === MODULES.MOMENTUM_SAFE
     && fnName === FUNCTIONS.MSAFE_REVERT;
+}
+
+function isModulePublishTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
+  const [deployer, module, fnName] = getModuleComponents(payload);
+
+  return isHexEqual(deployer, APTOS_FRAMEWORK_HS)
+    && module === MODULES.CODE
+    && fnName === FUNCTIONS.PUBLISH_PACKAGE;
 }
 
 // Return address, module, and function name
@@ -558,4 +594,26 @@ function decodeCoinTransferArgs(payload: TxnBuilderTypes.TransactionPayloadEntry
   const amount = (new BCS.Deserializer(amountArg)).deserializeU64();
 
   return [toAddress, amount.valueOf()];
+}
+
+function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): ModulePublishInfo {
+  const args = payload.value.args;
+  if (args.length != 2) {
+    throw new Error("unexpected argument size for publish_module_tx");
+  }
+  const bcsMetadata = (new BCS.Deserializer(args[0])).deserializeBytes();
+  const codes = Buffer.from(args[1]);
+  const metadata = PackageMetadata.deserialize(new BCS.Deserializer(bcsMetadata));
+  return {
+    hash: getModulePublishHash(bcsMetadata, codes),
+    metadata: metadata,
+    byteCode: codes,
+  };
+}
+
+function getModulePublishHash(metadataRaw: Uint8Array, codes: Uint8Array): HexString {
+  const hash = SHA3.sha3_256.create();
+  hash.update(metadataRaw);
+  hash.update(codes);
+  return new HexString(hash.hex());
 }
