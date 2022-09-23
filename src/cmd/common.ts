@@ -1,14 +1,16 @@
 import readline from "readline-sync";
-import clear from 'clear';
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes} from "aptos";
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 import {
   APTTransferArgs,
   CoinRegisterArgs,
-  CoinTransferArgs, CustomInteractionArgs, decodeCustomArgs, getFunctionABI,
+  CoinTransferArgs,
+  CustomInteractionArgs,
+  decodeCustomArgs,
   MSafeTxnInfo,
-  MSafeTxnType, RevertArgs
+  MSafeTxnType,
+  RevertArgs
 } from "../momentum-safe/msafe-txn";
 
 const SEPARATOR_LENGTH = 20;
@@ -311,6 +313,9 @@ export async function printTxDetails(txData: MSafeTxnInfo) {
     case (MSafeTxnType.CustomInteraction):
       await printCustomTxn(txData);
       break;
+    case (MSafeTxnType.ModulePublish):
+      printModulePublishTxn(txData);
+      break;
   }
   printTxCommonData(txData);
 }
@@ -364,6 +369,10 @@ async function printCustomTxn(txInfo: MSafeTxnInfo) {
     const [argType, argValue] = args[i];
     console.log(`Arguments (${i+1}):\t\t[${argType}]\t${argValue}`);
   }
+}
+
+function printModulePublishTxn(txData: MSafeTxnInfo) {
+
 }
 
 async function getBCSArgValue(cia: CustomInteractionArgs) {

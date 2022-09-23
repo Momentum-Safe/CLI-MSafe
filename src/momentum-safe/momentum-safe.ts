@@ -9,11 +9,11 @@ import {
   DEPLOYER_HS,
   HexBuffer,
   RESOURCES,
-  MODULES, FUNCTIONS, assembleMultiSigTxn, isHexEqual, formatAddress
+  MODULES, FUNCTIONS, assembleMultiSigTxn, isHexEqual, formatAddress, Options
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-import {MSafeTransaction, MSafeTxnInfo, Options} from "./msafe-txn";
+import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
 
 
 // Data stored in MomentumSafe.move

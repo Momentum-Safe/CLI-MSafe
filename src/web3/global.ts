@@ -33,11 +33,7 @@ export function setGlobal(c: Config) {
     }
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
-  MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
-}
-
-export function setMyAccount(privateKey: string, address: string) {
-  MY_ACCOUNT = new Account(HexString.ensure(privateKey).toUint8Array(), address);
+  MY_ACCOUNT = new Account(HexString.ensure(c.privateKey!).toUint8Array(), c.address!);
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<number> {
