@@ -7,7 +7,7 @@ import {
   CoinRegisterArgs,
   CoinTransferArgs,
   CustomInteractionArgs,
-  decodeCustomArgs,
+  decodeCustomArgs, ModulePublishInfo,
   MSafeTxnInfo,
   MSafeTxnType,
   RevertArgs
@@ -43,7 +43,7 @@ export function setState(state: State, arg?: any) {
 
 export async function prompt(s: string): Promise<string> {
   return new Promise((resolve) => {
-    return resolve(readline.question(s));
+    return resolve(readline.question(s+'\t'));
   });
 }
 
@@ -260,7 +260,7 @@ export function isStringShortAddress(s: string) :boolean {
 }
 
 export function isStringHex(s: string): boolean {
-  const re = /[0-9A-Fa-f]{6}/g;
+  const re = /^(0x)?[0-9A-Fa-f]+$/g;
   return re.test(s);
 }
 
@@ -371,8 +371,21 @@ async function printCustomTxn(txInfo: MSafeTxnInfo) {
   }
 }
 
-function printModulePublishTxn(txData: MSafeTxnInfo) {
-
+function printModulePublishTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const mpi = txInfo.args as ModulePublishInfo;
+  console.log(`Verify Hash:\t\t${mpi.hash}`);
+  console.log(`Deployer:\t\t\t${txInfo.sender}`);
+  console.log(`Package:\t\t\t${mpi.metadata.name}`);
+  console.log(`Upgrade Policy:\t${mpi.metadata.upgrade_policy.name()}`);
+  console.log(`Upgrade Number:\t${mpi.metadata.upgrade_number}`);
+  console.log(`Source Digest:\t${mpi.metadata.source_digest}`);
+  console.log(`Modules:\t\t\t${mpi.metadata.modules.map(
+    module => `${txInfo.sender}::${module.name}`
+  ).join('\n\t\t\t\t')}`);
+  console.log(`Dependency:\t\t${mpi.metadata.deps.map(
+    dep => `${dep.account.address}::${dep.package_name}`
+  ).join('\n\t\t\t\t')}`);
 }
 
 async function getBCSArgValue(cia: CustomInteractionArgs) {

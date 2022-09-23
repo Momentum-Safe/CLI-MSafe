@@ -33,6 +33,8 @@ type NamedAddress = {
   addrValue: HexString,
 }
 
+
+// Move publisher is only used in CLI tools.
 export class MovePublisher {
   constructor(public readonly moveInfo: MoveProject) { }
 
@@ -88,7 +90,7 @@ export class MovePublisher {
     cmd = cmd + ` --package-dir=${moveDir} --save-metadata`;
     cmd = cmd +  ` --included-artifacts ${includedArtifacts}`;
     cmd = cmd + ` --named-addresses ${namedAddress.addrName}=${namedAddress.addrValue}`;
-    console.log("Running compile:");
+    console.log("Compiling:");
     console.log();
     console.log("\t"+cmd);
     console.log();
@@ -117,7 +119,16 @@ export class MovePublisher {
     };
   }
 
-  private static loadMoveTomlFile(moveDir: string): MoveToml {
+  static isDirValid(moveDir: string): boolean {
+    try {
+      MovePublisher.loadMoveTomlFile(moveDir);
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+
+  static loadMoveTomlFile(moveDir: string): MoveToml {
     const moveTomlFile = path.join(moveDir, 'Move.toml');
     if (!fs.existsSync(moveTomlFile)) {
       throw new Error(`can't find 'Move.toml' in ${moveDir}`);
@@ -275,5 +286,40 @@ class UpgradePolicy {
 
   serialize(serializer: BCS.Serializer): void {
     serializer.serializeU8(this.policy);
+  }
+
+  name(): string {
+    switch (this.policy) {
+      case (0):
+        return 'arbitrary';
+      case (1):
+        return 'compatible';
+      case (2):
+        return 'immutable';
+      default:
+        return 'unknown';
+    }
+  }
+}
+
+export function isStrIncludedArtifacts(s: string): boolean {
+  try {
+    strToIncludedArtifacts(s);
+  } catch (e) {
+    return false;
+  }
+  return true;
+}
+
+export function strToIncludedArtifacts(s: string): IncludedArtifacts {
+  switch (s) {
+    case (IncludedArtifacts.Sparse):
+      return IncludedArtifacts.Sparse;
+    case (IncludedArtifacts.All):
+      return IncludedArtifacts.All;
+    case (IncludedArtifacts.None):
+      return IncludedArtifacts.None;
+    default:
+      throw new Error("unknown included artifacts");
   }
 }

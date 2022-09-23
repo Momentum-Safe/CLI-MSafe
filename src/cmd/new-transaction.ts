@@ -2,12 +2,14 @@ import {
   CmdOption,
   executeCmdOptions,
   isStringAddress,
-  isStringFullModule, isStringHex,
+  isStringFullModule,
+  isStringHex,
   isStringTypeStruct,
   printMSafeMessage,
   printMyMessage,
   printSeparator,
   printTxDetails,
+  prompt,
   promptForYN,
   promptUntilBigInt,
   promptUntilNumber,
@@ -17,7 +19,6 @@ import {
   setState,
   splitModuleComponents,
   State,
-  prompt,
 } from "./common";
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import {BCS, HexString, TxnBuilderTypes} from "aptos";
@@ -28,6 +29,7 @@ import {
   APTTransferArgs,
   CoinRegisterArgs,
   CoinTransferArgs,
+  compileAndMakeModulePublishTx,
   makeCustomInteractionTx,
   makeMSafeAnyCoinRegisterTx,
   makeMSafeAnyCoinTransferTx,
@@ -36,6 +38,7 @@ import {
   MSafeTxnInfo,
   MSafeTxnType
 } from "../momentum-safe/msafe-txn";
+import {isStrIncludedArtifacts, MovePublisher, strToIncludedArtifacts} from "../momentum-safe/move-publisher";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, newTransaction);
@@ -97,6 +100,7 @@ async function promptForNewTransaction(sender: HexString, sn: number): Promise<M
       {shortage: 2, showText: MSafeTxnType.AnyCoinTransfer, handleFunc: () => txType = MSafeTxnType.AnyCoinTransfer},
       {shortage: 3, showText: MSafeTxnType.AnyCoinRegister, handleFunc: () => txType = MSafeTxnType.AnyCoinRegister},
       {shortage: 4, showText: MSafeTxnType.CustomInteraction, handleFunc: () => txType = MSafeTxnType.CustomInteraction},
+      {shortage: 5, showText: MSafeTxnType.ModulePublish, handleFunc: () => txType = MSafeTxnType.ModulePublish},
     ]
   );
 
@@ -118,6 +122,8 @@ async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: num
       return await promptAndBuildForAnyCoinRegister(sender, sn);
     case MSafeTxnType.CustomInteraction:
       return await promptAndBuildForCustomTx(sender, sn);
+    case MSafeTxnType.ModulePublish:
+      return await promptCompileAndBuildModulePublishTx(sender, sn);
     default:
       throw new Error("Invalid type");
   }
@@ -333,6 +339,42 @@ async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefine
   }
 }
 
+async function promptCompileAndBuildModulePublishTx(
+  sender: HexString,
+  sn: number
+): Promise<MSafeTransaction> {
+  console.log("Compile and publish move modules.");
+  console.log();
+  console.log("Please confirm for prerequisites:");
+  console.log("\t1) Have `aptos` installed in $PATH.");
+  console.log("\t2) Have the deployer address set to `_` in Move.toml.");
+  console.log();
+  const moveDir = await promptUntilString(
+    "Please input your target move directory (with Move.toml)",
+    "Invalid directory - Move.toml not found",
+    MovePublisher.isDirValid,
+  );
+  const ia = await promptUntilString(
+    "Included artifacts (none, sparse, all)",
+    "Allowed arguments: none, sparse, all",
+    isStrIncludedArtifacts
+  );
+  const includedArtifacts = strToIncludedArtifacts(ia);
+  const addrToReplace = await promptUntilString(
+    "Deployer address name in Move.toml\t",
+    "",
+    () => true,
+  );
+
+  printSeparator();
+  const args = {
+    moveDir: moveDir,
+    artifacts: includedArtifacts,
+    deployerAddressName: addrToReplace,
+  };
+  return await compileAndMakeModulePublishTx(sender, args, {sequenceNumber: sn});
+}
+
 function isHexString(s: string): boolean {
   try {
     HexString.ensure(s);
@@ -354,4 +396,10 @@ async function printTxConfirmation(txData: MSafeTxnInfo) {
   console.log("Transaction confirmation:");
   console.log();
   await printTxDetails(txData);
+}
+
+function isStringInList(s: string, vals: string[]): boolean {
+  let exist = false;
+  vals.forEach( val => {if (s === val) {exist = true}});
+  return exist;
 }
