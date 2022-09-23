@@ -60,7 +60,7 @@ export class CreationHelper {
   address: HexString;
   rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey;
 
-  constructor(
+  protected constructor(
     readonly owners: HexString[],
     readonly ownerPubKeys: HexString[],
     readonly threshold: number,
@@ -138,6 +138,7 @@ export class CreationHelper {
     return await Aptos.sendSignedTransactionAsync(signedTx2);
   }
 
+  // TODO: change to address
   async collectedSignatures(): Promise<HexString[]> {
     const creation = await this.getResourceData();
     const sigs = creation!.txn.signatures.data;

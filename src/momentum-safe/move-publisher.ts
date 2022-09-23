@@ -88,7 +88,7 @@ export class MovePublisher {
 
     let cmd = `aptos move compile`;
     cmd = cmd + ` --package-dir=${moveDir} --save-metadata`;
-    cmd = cmd +  ` --included-artifacts ${includedArtifacts}`;
+    cmd = cmd + ` --included-artifacts ${includedArtifacts}`;
     cmd = cmd + ` --named-addresses ${namedAddress.addrName}=${namedAddress.addrValue}`;
     console.log("Compiling:");
     console.log();

@@ -601,7 +601,7 @@ function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntr
   if (args.length != 2) {
     throw new Error("unexpected argument size for publish_module_tx");
   }
-  const bcsMetadata = args[0];
+  const bcsMetadata = (new BCS.Deserializer(args[0])).deserializeBytes();
   const codes = Buffer.from(args[1]);
   const metadata = PackageMetadata.deserialize(new BCS.Deserializer(bcsMetadata));
   return {

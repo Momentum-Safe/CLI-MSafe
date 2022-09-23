@@ -355,13 +355,13 @@ async function promptCompileAndBuildModulePublishTx(
     MovePublisher.isDirValid,
   );
   const ia = await promptUntilString(
-    "Included artifacts (none, sparse, all)",
-    "Allowed arguments: none, sparse, all",
+    "Included artifacts (none, sparse, all)\t\t\t",
+    "Allowed arguments: none, sparse, all\t\t\t",
     isStrIncludedArtifacts
   );
   const includedArtifacts = strToIncludedArtifacts(ia);
   const addrToReplace = await promptUntilString(
-    "Deployer address name in Move.toml\t",
+    "Deployer address name in Move.toml\t\t\t",
     "",
     () => true,
   );

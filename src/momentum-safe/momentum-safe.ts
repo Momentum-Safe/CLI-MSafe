@@ -65,7 +65,7 @@ export class MomentumSafe {
 
   // TODO: pk, threshold, e.t.c is possible to be updated later
   // Do not construct directly through constructor. Use fromMomentumSafe instead
-  constructor(
+  protected constructor(
     owners: HexString[],
     ownerPKs: HexString[],
     threshold: number,

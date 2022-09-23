@@ -375,17 +375,17 @@ function printModulePublishTxn(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const mpi = txInfo.args as ModulePublishInfo;
   console.log(`Verify Hash:\t\t${mpi.hash}`);
-  console.log(`Deployer:\t\t\t${txInfo.sender}`);
-  console.log(`Package:\t\t\t${mpi.metadata.name}`);
-  console.log(`Upgrade Policy:\t${mpi.metadata.upgrade_policy.name()}`);
-  console.log(`Upgrade Number:\t${mpi.metadata.upgrade_number}`);
-  console.log(`Source Digest:\t${mpi.metadata.source_digest}`);
-  console.log(`Modules:\t\t\t${mpi.metadata.modules.map(
+  console.log(`Deployer:\t\t${txInfo.sender}`);
+  console.log(`Package:\t\t${mpi.metadata.name}`);
+  console.log(`Upgrade Policy:\t\t${mpi.metadata.upgrade_policy.name()}`);
+  console.log(`Upgrade Number:\t\t${mpi.metadata.upgrade_number}`);
+  console.log(`Source Digest:\t\t${mpi.metadata.source_digest}`);
+  console.log(`Modules:\t\t${mpi.metadata.modules.map(
     module => `${txInfo.sender}::${module.name}`
-  ).join('\n\t\t\t\t')}`);
+  ).join('\n\t\t\t')}`);
   console.log(`Dependency:\t\t${mpi.metadata.deps.map(
-    dep => `${dep.account.address}::${dep.package_name}`
-  ).join('\n\t\t\t\t')}`);
+    dep => `${HexString.fromUint8Array(dep.account.address)}::${dep.package_name}`
+  ).join('\n\t\t\t')}`);
 }
 
 async function getBCSArgValue(cia: CustomInteractionArgs) {
