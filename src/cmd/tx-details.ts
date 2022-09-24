@@ -55,6 +55,7 @@ async function txDetails(c: {address: HexString, txHash: string}) {
       "User break the signature submission",
       [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
     );
+    return;
   }
 
   const collectedSigs = txType.signatures.data;

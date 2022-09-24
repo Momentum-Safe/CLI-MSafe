@@ -83,6 +83,7 @@ async function newTransaction(c: {address: HexString}) {
       "User break the signature submission",
       [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
     );
+    return;
   }
   await executeCmdOptions('Choose your next step', [
     {shortage: 'v', showText: "View details", handleFunc: () =>
