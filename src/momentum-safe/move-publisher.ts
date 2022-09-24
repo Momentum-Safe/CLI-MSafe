@@ -4,7 +4,12 @@ import path from "path";
 import fs from "fs";
 import * as toml from "toml";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
-import {APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES, Options} from "./common";
+import {
+  APTOS_FRAMEWORK_HS,
+  FUNCTIONS,
+  MODULES,
+  Options
+} from "./common";
 
 
 type MoveToml = {

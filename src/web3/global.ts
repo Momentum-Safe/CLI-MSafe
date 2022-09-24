@@ -1,4 +1,10 @@
-import {AptosClient, FaucetClient, HexString, BCS, ApiError} from 'aptos';
+import {
+  AptosClient,
+  FaucetClient,
+  HexString,
+  BCS,
+  ApiError,
+} from 'aptos';
 import {Account} from "./account";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";

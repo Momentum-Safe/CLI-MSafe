@@ -1,4 +1,9 @@
-import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
+import {
+  BCS,
+  HexString,
+  TransactionBuilder,
+  TxnBuilderTypes,
+} from "aptos";
 import {Buffer} from "buffer/";
 
 const COIN_MODULE = "0x1::coin";

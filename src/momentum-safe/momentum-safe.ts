@@ -7,9 +7,13 @@ import {
   SimpleMap,
   HexStr,
   DEPLOYER_HS,
-  HexBuffer,
   RESOURCES,
-  MODULES, FUNCTIONS, assembleMultiSigTxn, isHexEqual, formatAddress, Options
+  MODULES,
+  FUNCTIONS,
+  assembleMultiSigTxn,
+  isHexEqual,
+  formatAddress,
+  HexBuffer,
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";

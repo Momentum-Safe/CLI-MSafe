@@ -3,7 +3,9 @@ import {
   printMSafeMessage,
   printMyMessage,
   printSeparator,
-  printTxDetails, promptForYN, registerState,
+  printTxDetails,
+  promptForYN,
+  registerState,
   setState,
   State
 } from "./common";

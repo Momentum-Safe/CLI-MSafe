@@ -21,8 +21,6 @@ import {registerEntry} from "./entry";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
 import {ApiError, HexString} from "aptos";
-import {load} from "js-yaml";
-import {readFile} from "fs/promises";
 import {registerMSafeDetails} from "./msafe-details";
 import {registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";

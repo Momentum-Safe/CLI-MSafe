@@ -3,11 +3,12 @@
 import {HexString} from "aptos";
 import {
   printMyMessage,
-  shortString,
   registerState,
-  State,
   executeCmdOptions,
-  CmdOption, setState, printMSafeMessage
+  State,
+  setState,
+  printMSafeMessage,
+  CmdOption,
 } from "./common";
 import * as Aptos from '../web3/global';
 import {MomentumSafe} from "../momentum-safe/momentum-safe";

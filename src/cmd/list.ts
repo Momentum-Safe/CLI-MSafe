@@ -5,7 +5,8 @@ import {
   registerState,
   setState,
   State,
-  executeCmdOptions, CmdOption
+  executeCmdOptions,
+  CmdOption,
 } from "./common";
 import {formatAddress} from "../momentum-safe/common";
 

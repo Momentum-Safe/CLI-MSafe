@@ -1,4 +1,4 @@
-import {HexString, TxnBuilderTypes} from "aptos";
+import {HexString} from "aptos";
 import {CreationHelper} from "../momentum-safe/creation";
 import {MY_ACCOUNT} from "../web3/global";
 import {

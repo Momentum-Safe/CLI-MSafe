@@ -4,7 +4,7 @@ import {
   promptForYN,
   promptUntilNumber,
   promptUntilString,
-  isStringPublicKey, isStringAddress,
+  isStringAddress,
 } from "./common";
 import {HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";

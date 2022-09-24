@@ -2,11 +2,15 @@ import {BCS, HexString, TxnBuilderTypes} from 'aptos';
 import {
   SimpleMap,
   DEPLOYER_HS,
-  hasDuplicateAddresses,
   MODULES,
   FUNCTIONS,
   RESOURCES,
-  MAX_NUM_OWNERS, assembleMultiSigTxn, serializeOwners, isHexEqual, formatAddress,
+  MAX_NUM_OWNERS,
+  assembleMultiSigTxn,
+  serializeOwners,
+  isHexEqual,
+  formatAddress,
+  hasDuplicateAddresses,
 } from './common';
 import {assembleMultiSig} from "./sig-helper";
 import * as Aptos from "../web3/global";
