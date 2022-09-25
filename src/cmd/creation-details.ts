@@ -8,7 +8,9 @@ import {
   setState,
   State,
   printMyMessage,
-  CmdOption, executeCmdOptions, promptForYN
+  CmdOption,
+  executeCmdOptions,
+  promptForYN
 } from "./common";
 import {Transaction} from "../web3/transaction";
 import * as Aptos from '../web3/global';
@@ -70,6 +72,7 @@ async function creationDetails(rawArg: any) {
       "User breaks the signature submission",
       [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.List)}],
     );
+    return;
   }
 
   let optionPromptStr: string;

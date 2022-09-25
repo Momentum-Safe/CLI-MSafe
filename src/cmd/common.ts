@@ -7,11 +7,11 @@ import {
   CoinRegisterArgs,
   CoinTransferArgs,
   CustomInteractionArgs,
-  decodeCustomArgs,
   ModulePublishInfo,
   MSafeTxnInfo,
   MSafeTxnType,
-  RevertArgs
+  RevertArgs,
+  decodeCustomArgs,
 } from "../momentum-safe/msafe-txn";
 
 const SEPARATOR_LENGTH = 20;

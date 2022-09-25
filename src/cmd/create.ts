@@ -92,6 +92,7 @@ async function initCreateMSafe() {
       "User breaks the signature submission",
       [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.List)}],
     );
+    return;
   }
 
   await executeCmdOptions('Choose your next step', [

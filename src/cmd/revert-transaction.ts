@@ -15,6 +15,7 @@ import {HexString} from "aptos";
 import {isHexEqual} from "../momentum-safe/common";
 import {makeMSafeRevertTx} from "../momentum-safe/msafe-txn";
 import {MY_ACCOUNT} from "../web3/global";
+import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
 
 
 export function registerRevertTransaction() {
@@ -44,6 +45,15 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
   console.log();
   await printTxDetails(tx);
   printSeparator();
+
+  const userBreak = await checkTxnEnoughSigsAndAssemble(msafe, (txHash as HexString));
+  if (userBreak) {
+    await executeCmdOptions(
+      "User break the signature submission",
+      [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
+    );
+    return;
+  }
 
   const userConfirm = promptForYN("Are you sure your want to revert the transaction?", true);
 
