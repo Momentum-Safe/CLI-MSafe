@@ -15,6 +15,9 @@ import {registerState, setState, State} from "./common";
 import {checkCreationEnoughSigsAndAssemble} from "./creation-details";
 
 const MAX_OWNERS = 32;
+const MIN_OWNERS = 2;
+const MIN_CONFIRMATION = 1;
+const MIN_INITIAL_FUND = 2000n * 100n;
 
 
 export function registerCreation() {
@@ -29,22 +32,22 @@ async function initCreateMSafe() {
   printSeparator();
 
   const numOwners = await promptUntilNumber(
-    `What is the number of owners? (2-${MAX_OWNERS})\t\t\t`,
-    `\tPlease input a valid number (2-${MAX_OWNERS}):\t`,
-    (v: number) => v >= 2 && v <= MAX_OWNERS
+    `What is the number of owners? (${MIN_OWNERS}-${MAX_OWNERS})\t\t\t`,
+    `\tPlease input a valid number (${MIN_OWNERS}-${MAX_OWNERS}):\t`,
+    (v: number) => v >= MIN_OWNERS && v <= MAX_OWNERS
   );
 
   // TODO: currently 1/x is not allowed. Extend the functionality later
   const threshold = await promptUntilNumber(
-    `What is the confirmation threshold? (2-${numOwners})\t\t`,
-    `\tPlease input a valid number (2-${numOwners}):\t`,
-    (v: number) => v >= 2 && v <= numOwners
+    `What is the confirmation threshold? (${MIN_CONFIRMATION}-${numOwners})\t\t`,
+    `\tPlease input a valid number (${MIN_CONFIRMATION}-${numOwners}):\t`,
+    (v: number) => v >= MIN_CONFIRMATION && v <= numOwners
   );
 
   const initialBalance = await promptUntilNumber(
-    "What's the amount of initial fund of MSafe? (>=2000)\t",
-    "\tPlease input a valid number (>=2000)\t",
-    v => v >= 2000,
+    "What's the amount of initial fund of MSafe? (>=200000)\t",
+    `\tPlease input a valid number (>=${MIN_INITIAL_FUND})\t`,
+    v => v >= MIN_INITIAL_FUND,
   );
 
   const owners: HexString[] = [MY_ACCOUNT.address()];
@@ -52,8 +55,8 @@ async function initCreateMSafe() {
   console.log(`\t1 th address (Self): \t${MY_ACCOUNT.address()}`);
   for (let i = 1; i < numOwners; i++) {
     const addr = await promptUntilString(
-      `\t${i + 1} th address: \t\t`,
-      `\tPlease provide a valid address\t\t`,
+      `\t${i + 1} th address: \t`,
+      `\tPlease provide a valid address\t`,
       isStringAddress,
     );
     owners.push(HexString.ensure(addr));

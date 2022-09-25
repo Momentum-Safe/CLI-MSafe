@@ -1,4 +1,3 @@
-// TODO: apply the use case for 1/x signature momentum safe wallet
 // TODO: APT token amount change to decimal and use bigint
 // TODO: handle transaction execution error during assemble and submit
 // TODO: View assets list (get from resources) and coin transfer
@@ -14,13 +13,20 @@
 import * as Aptos from '../web3/global';
 import {registerCreation} from "./create";
 import {Command} from "commander";
-import {printSeparator, prompt, promptForYN, printMyMessage, setState, State} from "./common";
+import {
+  printSeparator,
+  prompt,
+  promptForYN,
+  printMyMessage,
+  setState,
+  State,
+} from "./common";
 import {Registry} from "../momentum-safe/registry";
-import {defaultConfigPath, getAccountModule, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
+import {defaultConfigPath, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
 import {registerEntry} from "./entry";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
-import {ApiError, HexString} from "aptos";
+import {ApiError} from "aptos";
 import {registerMSafeDetails} from "./msafe-details";
 import {registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";

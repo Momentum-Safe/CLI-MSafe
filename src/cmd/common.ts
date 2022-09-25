@@ -7,7 +7,8 @@ import {
   CoinRegisterArgs,
   CoinTransferArgs,
   CustomInteractionArgs,
-  decodeCustomArgs, ModulePublishInfo,
+  decodeCustomArgs,
+  ModulePublishInfo,
   MSafeTxnInfo,
   MSafeTxnType,
   RevertArgs
@@ -250,6 +251,9 @@ export function isStringPublicKey(s: string): boolean {
 }
 
 export function isStringAddress(s: string): boolean {
+  if (!isStringHex(s)) {
+    return false;
+  }
   const byteLength = HexString.ensure(s).toUint8Array().length;
   return byteLength == 32; // SHA3_256 length
 }
