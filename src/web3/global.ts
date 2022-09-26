@@ -8,6 +8,7 @@ import {
 import {Account} from "./account";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
+import {Coin} from "./coin";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -22,6 +23,8 @@ interface Config {
   address: string,
 }
 
+export let APT_COIN: Coin;
+
 export const defaultConfigPath = `.aptos/config.yaml`;
 
 export async function fundAddress(address: HexString | string, amount: number) {
@@ -31,7 +34,7 @@ export async function fundAddress(address: HexString | string, amount: number) {
   await FAUCET!.fundAccount(address, amount);
 }
 
-export function setGlobal(c: Config) {
+export async function setGlobal(c: Config) {
   APTOS = new AptosClient(c.nodeURL);
   if (c.faucetURL) {
     if (c.faucetURL.endsWith('/')) {
@@ -40,6 +43,7 @@ export function setGlobal(c: Config) {
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey!).toUint8Array(), c.address!);
+  APT_COIN = await Coin.new("0x01::aptos_coin::AptosCoin");
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<number> {
@@ -122,7 +126,7 @@ export async function loadConfigAndApply(c: loadConfig) {
     console.log(`cannot find profile ${c.profile}`);
     process.exit(1);
   }
-  setGlobal({
+  await setGlobal({
     nodeURL: profile.rest_url,
     faucetURL: profile.faucet_url,
     privateKey: profile.private_key,
