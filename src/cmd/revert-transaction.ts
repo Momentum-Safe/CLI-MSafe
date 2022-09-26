@@ -12,10 +12,10 @@ import {
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import * as Aptos from "../web3/global";
 import {HexString} from "aptos";
-import {isHexEqual} from "../momentum-safe/common";
 import {makeMSafeRevertTx} from "../momentum-safe/msafe-txn";
 import {MY_ACCOUNT} from "../web3/global";
 import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
+import {isHexEqual} from "../utils/check";
 
 
 export function registerRevertTransaction() {

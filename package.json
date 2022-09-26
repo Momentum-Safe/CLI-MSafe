@@ -20,6 +20,7 @@
     "commander": "^9.4.0",
     "js-yaml": "^4.1.0",
     "mocha": "^10.0.0",
+    "nyc": "^15.1.0",
     "process": "^0.11.10",
     "readline-sync": "^1.4.10",
     "toml": "^3.0.0",
@@ -29,10 +30,10 @@
   "scripts": {
     "start": "ts-node ./src/cmd/main.ts",
     "lint": "eslint . --ext .ts --fix",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
+    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.test.ts'",
     "faucet": "aptos account fund-with-faucet --amount 1000000000000",
-    "test-coin": "ts-node test/test-coin/test-coin.ts",
-    "test-coin-compile": "aptos move compile --package-dir ./test/move",
-    "test-coin-publish": "aptos move publish --package-dir ./test/move"
+    "run-test-coin": "ts-node tests/test-coin/test-coin.ts",
+    "run-test-coin-compile": "aptos tests/move compile --package-dir move",
+    "run-test-coin-publish": "aptos tests/move publish --package-dir move"
   }
 }

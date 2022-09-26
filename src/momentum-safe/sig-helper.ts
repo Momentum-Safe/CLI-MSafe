@@ -1,11 +1,11 @@
 import {
   HexBuffer,
-  isHexEqual,
   SimpleMap,
   HexStr,
 } from "./common";
 import {HexString, TxnBuilderTypes} from "aptos";
 import {Account} from "../web3/account";
+import {isHexEqual} from "../utils/check";
 
 type SigAdded = {
   pubKey: HexString,

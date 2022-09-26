@@ -6,16 +6,15 @@ import {
   APTOS_FRAMEWORK_HS,
   DEPLOYER_HS,
   FUNCTIONS,
-  isHexEqual,
   MODULES,
   Options,
-  secToDate,
-  STRUCTS,
-  typeTagStructFromName
+  STRUCTS
 } from "./common";
 import * as SHA3 from "js-sha3";
 import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
 import {sha3_256} from "../web3/crypto";
+import {secToDate, typeTagStructFromName} from "../utils/parse";
+import {isHexEqual} from "../utils/check";
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = MINUTE_SECONDS * 60;

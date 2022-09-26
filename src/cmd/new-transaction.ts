@@ -1,10 +1,6 @@
 import {
   CmdOption,
   executeCmdOptions,
-  isStringAddress,
-  isStringFullModule,
-  isStringHex,
-  isStringTypeStruct,
   printMSafeMessage,
   printMyMessage,
   printSeparator,
@@ -17,7 +13,6 @@ import {
   promptUntilTrueFalse,
   registerState,
   setState,
-  splitModuleComponents,
   State,
 } from "./common";
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
@@ -39,6 +34,13 @@ import {
   MSafeTxnType
 } from "../momentum-safe/msafe-txn";
 import {isStrIncludedArtifacts, MovePublisher, strToIncludedArtifacts} from "../momentum-safe/move-publisher";
+import {
+  isStringAddress,
+  isStringFullModule,
+  isStringHex,
+  isStringTypeStruct
+} from "../utils/check";
+import {splitModuleComponents} from "../utils/parse";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, newTransaction);

@@ -4,7 +4,7 @@ import {
   promptForYN,
   promptUntilNumber,
   promptUntilString,
-  isStringAddress,
+
 } from "./common";
 import {HexString} from "aptos";
 import {MY_ACCOUNT} from "../web3/global";
@@ -13,6 +13,7 @@ import * as Aptos from "../web3/global";
 import {printMyMessage} from "./common";
 import {registerState, setState, State} from "./common";
 import {checkCreationEnoughSigsAndAssemble} from "./creation-details";
+import {isStringAddress} from "../utils/check";
 
 const MAX_OWNERS = 32;
 const MIN_OWNERS = 2;

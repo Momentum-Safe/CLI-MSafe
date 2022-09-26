@@ -2,7 +2,6 @@ import {ApiError, BCS, HexString} from "aptos";
 import * as Aptos from "../web3/global";
 import {
   DEPLOYER_HS,
-  formatAddress,
   FUNCTIONS,
   MODULES,
   RESOURCES,
@@ -11,6 +10,7 @@ import {
 } from "./common";
 import {Account} from "../web3/account";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
+import {formatAddress} from "../utils/parse";
 
 // Data in registry
 type OwnerMomentumSafes = {

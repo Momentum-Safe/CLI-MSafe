@@ -11,13 +11,13 @@ import {
   MODULES,
   FUNCTIONS,
   assembleMultiSigTxn,
-  isHexEqual,
-  formatAddress,
   HexBuffer,
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
 import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
+import {formatAddress} from "../utils/parse";
+import {isHexEqual} from "../utils/check";
 
 
 // Data stored in MomentumSafe.move

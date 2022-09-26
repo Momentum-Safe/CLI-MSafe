@@ -45,6 +45,7 @@ export const STRUCTS = {
   CREATOR: "PendingMultiSigCreations",
   REGISTRY: "OwnerMomentumSafes",
   APTOS_COIN: "AptosCoin",
+  COIN_INFO: "CoinInfo"
 };
 
 export const RESOURCES = {
@@ -101,31 +102,6 @@ export function serializeOwners(addrs: HexString[]): BCS.Bytes {
   return serializer.getBytes();
 }
 
-export function isHexEqual(hex1: HexString | string, hex2: HexString | string): boolean {
-  const hs1 = (hex1 instanceof HexString)? hex1: HexString.ensure(hex1);
-  const hs2 = (hex2 instanceof HexString)? hex2: HexString.ensure(hex2);
-  return hs1.toShortString() === hs2.toShortString();
-}
-
-// Add zeros if size is not 32
-export function formatAddress(s: HexString | string): HexString {
-  let hexStr = s instanceof HexString? s.hex(): s.startsWith('0x')? s.substring(2): s;
-  if (hexStr.length < ADDRESS_HEX_LENGTH) {
-    hexStr = ''.concat('0'.repeat(ADDRESS_HEX_LENGTH - hexStr.length), hexStr);
-  }
-  return HexString.ensure(hexStr);
-}
-
-export function secToDate(sec: BCS.Uint64) {
-  const ms = Number(sec) * 1000;
-  return new Date(ms);
-}
-
-export function typeTagStructFromName(name: string) {
-  const structTag = TxnBuilderTypes.StructTag.fromString(name);
-  return new TxnBuilderTypes.TypeTagStruct(structTag);
-}
-
 // TODO: replace with bigint
 export type Options = {
   maxGas?: number,
@@ -134,3 +110,4 @@ export type Options = {
   sequenceNumber?: number,
   chainID?: number,
 }
+

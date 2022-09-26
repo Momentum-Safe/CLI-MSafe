@@ -8,8 +8,6 @@ import {
   MAX_NUM_OWNERS,
   assembleMultiSigTxn,
   serializeOwners,
-  isHexEqual,
-  formatAddress,
   hasDuplicateAddresses,
 } from './common';
 import {assembleMultiSig} from "./sig-helper";
@@ -21,6 +19,8 @@ import {HexBuffer} from "./common";
 import {MultiSigHelper} from "./sig-helper";
 import {Registry} from "./registry";
 import {makeMSafeRegisterTx} from "./msafe-txn";
+import {formatAddress} from "../utils/parse";
+import {isHexEqual} from "../utils/check";
 
 
 // Data stored in creator

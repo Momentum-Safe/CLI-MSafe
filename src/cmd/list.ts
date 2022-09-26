@@ -8,7 +8,7 @@ import {
   executeCmdOptions,
   CmdOption,
 } from "./common";
-import {formatAddress} from "../momentum-safe/common";
+import {formatAddress} from "../utils/parse";
 
 export function registerList() {
   registerState(State.List, () => list());

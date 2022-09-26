@@ -1,17 +1,17 @@
 import readline from "readline-sync";
 import * as Aptos from "../web3/global";
-import {HexString, TxnBuilderTypes} from "aptos";
+import {HexString} from "aptos";
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 import {
   APTTransferArgs,
   CoinRegisterArgs,
   CoinTransferArgs,
   CustomInteractionArgs,
+  decodeCustomArgs,
   ModulePublishInfo,
   MSafeTxnInfo,
   MSafeTxnType,
   RevertArgs,
-  decodeCustomArgs,
 } from "../momentum-safe/msafe-txn";
 
 const SEPARATOR_LENGTH = 20;
@@ -166,16 +166,6 @@ export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, ba
   console.log();
 }
 
-export function shortString(val: HexString | string) {
-  if (typeof val === 'string' && val.length < 15) {
-    return val;
-  } else if (val instanceof HexString && val.toShortString().length < 15) {
-    return val.hex();
-  }
-  const s = typeof val === 'string'? val: val.hex();
-  return `${s.substring(0, 8)}...${s.substring(s.length-5)}`;
-}
-
 export interface CmdOption {
   shortage: number | string;
   showText: string;
@@ -238,66 +228,6 @@ class CmdOptionHelper {
     );
     return res!;
   }
-}
-
-export function isStringPublicKey(s: string): boolean {
-  let byteLength;
-  try {
-    byteLength = HexString.ensure(s).toUint8Array().length;
-  } catch (e) {
-    return false;
-  }
-  return byteLength == TxnBuilderTypes.Ed25519PublicKey.LENGTH;
-}
-
-export function isStringAddress(s: string): boolean {
-  if (!isStringHex(s)) {
-    return false;
-  }
-  const byteLength = HexString.ensure(s).toUint8Array().length;
-  return byteLength == 32; // SHA3_256 length
-}
-
-export function isStringShortAddress(s: string) :boolean {
-  const byteLength = HexString.ensure(s).toUint8Array().length;
-  return byteLength <= 32; // SHA3_256 length
-}
-
-export function isStringHex(s: string): boolean {
-  const re = /^(0x)?[0-9A-Fa-f]+$/g;
-  return re.test(s);
-}
-
-export function isStringTypeStruct(s: string): boolean {
-  try {
-    TxnBuilderTypes.StructTag.fromString(s);
-  } catch (e) {
-    return false;
-  }
-  return true;
-}
-
-const numModuleComps = 2;
-
-export function isStringFullModule(s: string): boolean {
-  const comps = s.split('::');
-  if (comps.length != numModuleComps) {
-    return false;
-  }
-  try {
-    HexString.ensure(comps[0]);
-  } catch (e) {
-    return false;
-  }
-  return true;
-}
-
-export function splitModuleComponents(s: string): [HexString, string] {
-  const comps = s.split('::');
-  if (comps.length !== numModuleComps) {
-    throw new Error("invalid full function name");
-  }
-  return [HexString.ensure(comps[0]), comps[1]];
 }
 
 export async function printTxDetails(txData: MSafeTxnInfo) {
