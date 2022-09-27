@@ -3,11 +3,12 @@
 import {HexString} from "aptos";
 import {
   printMyMessage,
-  shortString,
   registerState,
-  State,
   executeCmdOptions,
-  CmdOption, setState, printMSafeMessage
+  State,
+  setState,
+  printMSafeMessage,
+  CmdOption,
 } from "./common";
 import * as Aptos from '../web3/global';
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
@@ -23,10 +24,10 @@ async function showMSafeDetails(c: {address: HexString}) {
   const addr = c.address;
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
   const info = await msafe.getMomentumSafeInfo();
-  const balance = await Aptos.getBalance(addr);
+  const balance = await Aptos.getBalanceAPT(addr);
   await printMSafeMessage(addr, info, balance);
 
-  let pmpText = '';
+  let pmpText: string;
   if (info.pendingTxs.length != 0) {
     pmpText = 'Pending transactions:\n\n\t\t| SN\t| Action\t\t\t| Confirmation\t|';
   } else {

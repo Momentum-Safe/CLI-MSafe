@@ -1,20 +1,26 @@
 import {
   executeCmdOptions,
   printSeparator,
-  promptForYN,
+  promptForYN, promptUntilBigNumber,
   promptUntilNumber,
   promptUntilString,
-  isStringPublicKey, isStringAddress,
+
 } from "./common";
 import {HexString} from "aptos";
-import {MY_ACCOUNT} from "../web3/global";
+import {APT_COIN_INFO, MY_ACCOUNT} from "../web3/global";
 import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";
 import {printMyMessage} from "./common";
 import {registerState, setState, State} from "./common";
 import {checkCreationEnoughSigsAndAssemble} from "./creation-details";
+import {isStringAddress} from "../utils/check";
+import {BigNumber} from "bignumber.js";
+import {toDust} from "../utils/bignumber";
 
 const MAX_OWNERS = 32;
+const MIN_OWNERS = 2;
+const MIN_CONFIRMATION = 1;
+const MIN_INITIAL_FUND = BigNumber(0.001);
 
 
 export function registerCreation() {
@@ -29,31 +35,32 @@ async function initCreateMSafe() {
   printSeparator();
 
   const numOwners = await promptUntilNumber(
-    `What is the number of owners? (2-${MAX_OWNERS})\t\t\t`,
-    `\tPlease input a valid number (2-${MAX_OWNERS}):\t`,
-    (v: number) => v >= 2 && v <= MAX_OWNERS
+    `What is the number of owners? (${MIN_OWNERS}-${MAX_OWNERS})\t\t\t`,
+    `\tPlease input a valid number (${MIN_OWNERS}-${MAX_OWNERS}):\t`,
+    (v: number) => v >= MIN_OWNERS && v <= MAX_OWNERS
   );
 
   // TODO: currently 1/x is not allowed. Extend the functionality later
   const threshold = await promptUntilNumber(
-    `What is the confirmation threshold? (2-${numOwners})\t\t`,
-    `\tPlease input a valid number (2-${numOwners}):\t`,
-    (v: number) => v >= 2 && v <= numOwners
+    `What is the confirmation threshold? (${MIN_CONFIRMATION}-${numOwners})\t\t`,
+    `\tPlease input a valid number (${MIN_CONFIRMATION}-${numOwners}):\t`,
+    (v: number) => v >= MIN_CONFIRMATION && v <= numOwners
   );
 
-  const initialBalance = await promptUntilNumber(
-    "What's the amount of initial fund of MSafe? (>=2000)\t",
-    "\tPlease input a valid number (>=2000)\t",
-    v => v >= 2000,
+  const initialBalanceBN = await promptUntilBigNumber(
+    `What's the amount of initial fund of MSafe (Used for gas)? (>=${MIN_INITIAL_FUND} APT)\n\t\t\t\t\t\t\t`,
+    `\tPlease input a valid number (>=${MIN_INITIAL_FUND})\t`,
+    v => v >= MIN_INITIAL_FUND,
   );
+  const initialBalance = toDust(initialBalanceBN, APT_COIN_INFO.decimals);
 
   const owners: HexString[] = [MY_ACCOUNT.address()];
 
   console.log(`\t1 th address (Self): \t${MY_ACCOUNT.address()}`);
   for (let i = 1; i < numOwners; i++) {
     const addr = await promptUntilString(
-      `\t${i + 1} th address: \t\t`,
-      `\tPlease provide a valid address\t\t`,
+      `\t${i + 1} th address: \t`,
+      `\tPlease provide a valid address\t`,
       isStringAddress,
     );
     owners.push(HexString.ensure(addr));
@@ -61,7 +68,7 @@ async function initCreateMSafe() {
 
   printSeparator();
 
-  const creation = await CreationHelper.fromUserRequest(owners, threshold, BigInt(initialBalance));
+  const creation = await CreationHelper.fromUserRequest(owners, threshold, initialBalance);
 
   console.log(`Creating ${creation.threshold} / ${creation.ownerPubKeys.length} Momentum Safe wallet`);
   console.log(`\tAddress:\t${creation.address}`);
@@ -89,6 +96,7 @@ async function initCreateMSafe() {
       "User breaks the signature submission",
       [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.List)}],
     );
+    return;
   }
 
   await executeCmdOptions('Choose your next step', [

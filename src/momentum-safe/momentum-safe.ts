@@ -7,13 +7,17 @@ import {
   SimpleMap,
   HexStr,
   DEPLOYER_HS,
-  HexBuffer,
   RESOURCES,
-  MODULES, FUNCTIONS, assembleMultiSigTxn, isHexEqual, formatAddress, Options
+  MODULES,
+  FUNCTIONS,
+  assembleMultiSigTxn,
+  HexBuffer,
 } from './common';
 import {assembleMultiSig} from './sig-helper';
 import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
 import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
+import {formatAddress} from "../utils/parse";
+import {isHexEqual} from "../utils/check";
 
 
 // Data stored in MomentumSafe.move
@@ -49,9 +53,10 @@ export type MomentumSafeInfo = {
   pubKeys: HexString[],
   creationNonce: number,
   threshold: number,
-  curSN: number,
+  curSN: bigint,
+  nextSN: bigint,
   metadata: string,
-  balance: number,
+  balance: bigint,
   pendingTxs: MSafeTxnInfo[],
 }
 
@@ -150,7 +155,11 @@ export class MomentumSafe {
   // TODO: do not query for resource
   async findTx(txHash: HexString | string) {
     const res = await this.getResource();
-    return res.txn_book.pendings.data.find(entry => isHexEqual(entry.key, txHash))!.value;
+    const tx = res.txn_book.pendings.data.find(entry => isHexEqual(entry.key, txHash));
+    if (!tx) {
+      throw new Error("txHash not found: " + txHash);
+    }
+    return tx.value;
   }
 
   // TODO: do not query for resource
@@ -242,9 +251,10 @@ export class MomentumSafe {
         pendings.push(decodedTx.getTxnInfo(e.value.signatures.data.length));
       }
     });
+    const nextSN = this.getNextSequenceNumberFromResourceData(data);
     pendings.sort( (a, b) => {
       if (a.sn != b.sn) {
-        return a.sn - b.sn;
+        return Number(a.sn - b.sn);
       } else {
         return a.expiration.getUTCSeconds() - b.expiration.getUTCSeconds();
       }
@@ -255,16 +265,18 @@ export class MomentumSafe {
       creationNonce: data.info.nonce,
       threshold: data.info.threshold,
       curSN: sn,
+      nextSN: nextSN,
       metadata: data.info.metadata as string,
       balance: balance,
       pendingTxs: pendings,
     };
   }
 
-  private static isTxValid(txType: TransactionType, curSN: number): boolean {
+  private static isTxValid(txType: TransactionType, curSN: bigint): boolean {
     // Add expiration
     const tx = Transaction.deserialize(HexBuffer(txType.payload));
-    return Number(tx.raw.sequence_number) >= curSN;
+    return tx.raw.sequence_number >= curSN
+      && tx.raw.expiration_timestamp_secs >= new Date().getUTCSeconds();
   }
 
   private getIndex(target: HexString): number {
@@ -283,7 +295,7 @@ export class MomentumSafe {
   }
 
   private getNextSequenceNumberFromResourceData(momentum: Momentum) {
-    return Number(momentum.txn_book.max_sequence_number) + 1;
+    return BigInt(momentum.txn_book.max_sequence_number) + 1n;
   }
 }
 

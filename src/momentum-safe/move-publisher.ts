@@ -4,7 +4,12 @@ import path from "path";
 import fs from "fs";
 import * as toml from "toml";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
-import {APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES, Options} from "./common";
+import {
+  APTOS_FRAMEWORK_HS,
+  FUNCTIONS,
+  MODULES,
+  Options
+} from "./common";
 
 
 type MoveToml = {
@@ -56,8 +61,8 @@ export class MovePublisher {
       .method(FUNCTIONS.PUBLISH_PACKAGE)
       .from(sender)
       .sequenceNumber(config.sequenceNumber!)
-      .maxGas(BigInt(config.maxGas!))
-      .gasPrice(BigInt(config.gasPrice!))
+      .maxGas(config.maxGas!)
+      .gasPrice(config.gasPrice!)
       .chainId(config.chainID!)
       .expiration(config.expirationSec!)
       .args([
@@ -128,7 +133,7 @@ export class MovePublisher {
     return true;
   }
 
-  static loadMoveTomlFile(moveDir: string): MoveToml {
+  private static loadMoveTomlFile(moveDir: string): MoveToml {
     const moveTomlFile = path.join(moveDir, 'Move.toml');
     if (!fs.existsSync(moveTomlFile)) {
       throw new Error(`can't find 'Move.toml' in ${moveDir}`);
@@ -152,8 +157,7 @@ export class MovePublisher {
   private static loadByteCode(moveDir: string, mt: MoveToml, metadata: PackageMetadata): Buffer[] {
     const packageName = mt.package.name;
     const bytecodeDir = path.join(moveDir, 'build', packageName, 'bytecode_modules');
-    const bytecodes = metadata.modules.map(module=>fs.readFileSync(path.join(bytecodeDir, `${module.name}.mv`)));
-    return bytecodes;
+    return metadata.modules.map(module=>fs.readFileSync(path.join(bytecodeDir, `${module.name}.mv`)));
   }
 }
 

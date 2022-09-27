@@ -1,4 +1,10 @@
-import {printMyMessage, executeCmdOptions, registerState, setState, State} from "./common";
+import {
+  printMyMessage,
+  executeCmdOptions,
+  registerState,
+  setState,
+  State,
+} from "./common";
 
 
 export function registerEntry() {

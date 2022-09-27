@@ -2,7 +2,7 @@ import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
 import {Transaction} from "../web3/transaction";
 
-export const DEPLOYER = '0xcc8d582ac7a85543cab86b7dd76a554714ce19eee51de19a12a93c06ef56e955';
+export const DEPLOYER = '0x0341bf50ae6c33622979a728fa21c5b274408f66c6683303f6d39685566f1c1d';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -45,6 +45,7 @@ export const STRUCTS = {
   CREATOR: "PendingMultiSigCreations",
   REGISTRY: "OwnerMomentumSafes",
   APTOS_COIN: "AptosCoin",
+  COIN_INFO: "CoinInfo"
 };
 
 export const RESOURCES = {
@@ -101,36 +102,20 @@ export function serializeOwners(addrs: HexString[]): BCS.Bytes {
   return serializer.getBytes();
 }
 
-export function isHexEqual(hex1: HexString | string, hex2: HexString | string): boolean {
-  const hs1 = (hex1 instanceof HexString)? hex1: HexString.ensure(hex1);
-  const hs2 = (hex2 instanceof HexString)? hex2: HexString.ensure(hex2);
-  return hs1.toShortString() === hs2.toShortString();
-}
-
-// Add zeros if size is not 32
-export function formatAddress(s: HexString | string): HexString {
-  let hexStr = s instanceof HexString? s.hex(): s.startsWith('0x')? s.substring(2): s;
-  if (hexStr.length < ADDRESS_HEX_LENGTH) {
-    hexStr = ''.concat('0'.repeat(ADDRESS_HEX_LENGTH - hexStr.length), hexStr);
-  }
-  return HexString.ensure(hexStr);
-}
-
-export function secToDate(sec: BCS.Uint64) {
-  const ms = Number(sec) * 1000;
-  return new Date(ms);
-}
-
-export function typeTagStructFromName(name: string) {
-  const structTag = TxnBuilderTypes.StructTag.fromString(name);
-  return new TxnBuilderTypes.TypeTagStruct(structTag);
-}
-
-// TODO: replace with bigint
 export type Options = {
-  maxGas?: number,
-  gasPrice?: number,
+  maxGas?: bigint,
+  gasPrice?: bigint,
   expirationSec?: number, // target = time.now() + expiration
-  sequenceNumber?: number,
+  sequenceNumber?: bigint,
   chainID?: number,
 }
+
+// Parsed tx config from Options
+export type TxConfig = {
+  maxGas: bigint,
+  gasPrice: bigint,
+  expirationSec: number, // target = time.now() + expiration
+  sequenceNumber: bigint,
+  chainID: number,
+}
+

@@ -2,11 +2,13 @@ import {BCS, HexString, TxnBuilderTypes} from 'aptos';
 import {
   SimpleMap,
   DEPLOYER_HS,
-  hasDuplicateAddresses,
   MODULES,
   FUNCTIONS,
   RESOURCES,
-  MAX_NUM_OWNERS, assembleMultiSigTxn, serializeOwners, isHexEqual, formatAddress,
+  MAX_NUM_OWNERS,
+  assembleMultiSigTxn,
+  serializeOwners,
+  hasDuplicateAddresses,
 } from './common';
 import {assembleMultiSig} from "./sig-helper";
 import * as Aptos from "../web3/global";
@@ -17,6 +19,8 @@ import {HexBuffer} from "./common";
 import {MultiSigHelper} from "./sig-helper";
 import {Registry} from "./registry";
 import {makeMSafeRegisterTx} from "./msafe-txn";
+import {formatAddress} from "../utils/parse";
+import {isHexEqual} from "../utils/check";
 
 
 // Data stored in creator
@@ -126,8 +130,9 @@ export class CreationHelper {
     }
 
     // Sign on the multi-sig transaction
-    const txArg = {metadata: 'Wallet test'};
-    const options = {sequenceNumber: 0};
+    // TODO: expose the metadata
+    const txArg = {metadata: 'Momentum Safe'};
+    const options = {sequenceNumber: 0n};
     const tx = await makeMSafeRegisterTx(this.address, txArg, options);
     const [payload, sig] = signer.getSigData(tx);
 
@@ -141,13 +146,13 @@ export class CreationHelper {
   // TODO: change to address
   async collectedSignatures(): Promise<HexString[]> {
     const creation = await this.getResourceData();
-    const sigs = creation!.txn.signatures.data;
+    const sigs = creation.txn.signatures.data;
     return sigs.map( entry => HexString.ensure(entry.key));
   }
 
   async isReadyToSubmit(extraPubKey?: HexString) {
     const creation = await this.getResourceData();
-    const sigs = creation!.txn.signatures;
+    const sigs = creation.txn.signatures;
     const msHelper = new MultiSigHelper(this.ownerPubKeys, sigs);
     let collectedSigs = sigs.data.length;
 
@@ -220,6 +225,10 @@ export class CreationHelper {
   }
 
   private async makeInitCreationTxn(signer: HexString, payload: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature) {
+    if (!this.initBalance) {
+      throw new Error("init balance not specified for init creation");
+    }
+
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer);
     const txBuilder = new AptosEntryTxnBuilder();
@@ -233,7 +242,7 @@ export class CreationHelper {
       .args([
         serializeOwners(this.owners),
         BCS.bcsSerializeU8(this.threshold),
-        BCS.bcsSerializeUint64(this.initBalance!),
+        BCS.bcsSerializeUint64(this.initBalance),
         BCS.bcsSerializeBytes(payload as Uint8Array),
         BCS.bcsToBytes(signature),
       ])
@@ -267,7 +276,7 @@ export class CreationHelper {
     if (!creation) {
       throw new Error(`Momentum Safe creation data not found`);
     }
-    return creation!.value;
+    return creation.value;
   }
 
   private static async getResourceData(): Promise<PendingMultiSigCreations> {
