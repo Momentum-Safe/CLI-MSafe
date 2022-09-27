@@ -61,8 +61,8 @@ export class MovePublisher {
       .method(FUNCTIONS.PUBLISH_PACKAGE)
       .from(sender)
       .sequenceNumber(config.sequenceNumber!)
-      .maxGas(BigInt(config.maxGas!))
-      .gasPrice(BigInt(config.gasPrice!))
+      .maxGas(config.maxGas!)
+      .gasPrice(config.gasPrice!)
       .chainId(config.chainID!)
       .expiration(config.expirationSec!)
       .args([

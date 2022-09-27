@@ -28,7 +28,7 @@ describe('big number', () => {
     });
 
     it ('error', () => {
-      throw expect(bigNumberToBigInt("1e-1")).to.throw('Cannot convert 0.1 to a BigInt');
+      expect(bigNumberToBigInt("1e-1")).to.throw('Cannot convert 0.1 to a BigInt');
     });
   });
 });

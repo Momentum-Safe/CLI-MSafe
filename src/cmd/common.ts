@@ -20,7 +20,6 @@ const STATE_MAP = new Map<State, (arg: any) => void>();
 
 export enum State {
   Entry,
-  Register,
   List,
   Create,
   MSafeDetails,
@@ -152,7 +151,7 @@ export async function printMyMessage() {
   console.log();
 }
 
-export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: number) {
+export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: bigint) {
   console.log(`Momentum Safe Info:`);
   console.log();
   console.log(`Address:\t${address}`);

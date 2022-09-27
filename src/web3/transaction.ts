@@ -18,7 +18,7 @@ const DEFAULT_EXPIRATION = 3600;
 
 abstract class AptosTxnBuilder {
   private _fromAddress: HexString | undefined;
-  private _sequenceNumber: number | undefined;
+  private _sequenceNumber: bigint | undefined;
   private _chainId: number | undefined;
   private _maxGas: bigint | undefined;
   private _gasPrice: bigint | undefined;
@@ -33,7 +33,7 @@ abstract class AptosTxnBuilder {
     return this;
   }
 
-  sequenceNumber(sn: number): this {
+  sequenceNumber(sn: bigint): this {
     this._sequenceNumber = sn;
     return this;
   }
@@ -92,15 +92,15 @@ abstract class AptosTxnBuilder {
       TxnBuilderTypes.AccountAddress.fromHex(this._fromAddress as HexString),
       this.getSequenceNumber(),
       this.payload(),
-      this._maxGas as bigint,
-      this._gasPrice as bigint,
+      this._maxGas!,
+      this._gasPrice!,
       this.getTargetExpiration(),
       this.getChainId(),
     );
   }
 
   private getSequenceNumber(): bigint {
-    return BigInt(this._sequenceNumber as number);
+    return this._sequenceNumber!;
   }
 
   // Current time plus expiration
@@ -115,9 +115,9 @@ abstract class AptosTxnBuilder {
 
 export class AptosCoinTransferTxnBuilder extends AptosTxnBuilder {
   private _toAddress: HexString | undefined;
-  private _amount: number | undefined;
+  private _amount: bigint | undefined;
 
-  amount(n: number): this {
+  amount(n: bigint): this {
     this._amount = n;
     return this;
   }
@@ -142,7 +142,7 @@ export class AptosCoinTransferTxnBuilder extends AptosTxnBuilder {
       COIN_MODULE, TRANSFER_METHOD, [token],
       [
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this._toAddress as HexString)),
-        BCS.bcsSerializeUint64(this._amount as number),
+        BCS.bcsSerializeUint64(this._amount!),
       ],
     );
     return new TxnBuilderTypes.TransactionPayloadEntryFunction(scriptFn);

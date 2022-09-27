@@ -102,12 +102,20 @@ export function serializeOwners(addrs: HexString[]): BCS.Bytes {
   return serializer.getBytes();
 }
 
-// TODO: replace with bigint
 export type Options = {
-  maxGas?: number,
-  gasPrice?: number,
+  maxGas?: bigint,
+  gasPrice?: bigint,
   expirationSec?: number, // target = time.now() + expiration
-  sequenceNumber?: number,
+  sequenceNumber?: bigint,
   chainID?: number,
+}
+
+// Parsed tx config from Options
+export type TxConfig = {
+  maxGas: bigint,
+  gasPrice: bigint,
+  expirationSec: number, // target = time.now() + expiration
+  sequenceNumber: bigint,
+  chainID: number,
 }
 

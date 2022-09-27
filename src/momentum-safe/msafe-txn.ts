@@ -8,7 +8,7 @@ import {
   FUNCTIONS,
   MODULES,
   Options,
-  STRUCTS
+  STRUCTS, TxConfig
 } from "./common";
 import * as SHA3 from "js-sha3";
 import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
@@ -20,11 +20,11 @@ const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = MINUTE_SECONDS * 60;
 const DAY_SECONDS = HOUR_SECONDS * 24;
 const WEEK_SECONDS = DAY_SECONDS * 7;
-const MONTH_SECONDS = DAY_SECONDS * 30;
-const YEAR_SECONDS = DAY_SECONDS *365;
+// const MONTH_SECONDS = DAY_SECONDS * 30;
+// const YEAR_SECONDS = DAY_SECONDS *365;
 
-const DEFAULT_UNIT_PRICE = 100;
-const DEFAULT_REGISTER_MAX_GAS = 5000;
+const DEFAULT_UNIT_PRICE = 100n;
+const DEFAULT_REGISTER_MAX_GAS = 5000n;
 const DEFAULT_EXPIRATION = WEEK_SECONDS;
 
 
@@ -35,7 +35,7 @@ export type MSafeRegisterArgs = {
 export type CoinTransferArgs = {
   coinType: string,
   to: HexString,
-  amount: number
+  amount: bigint
 }
 
 export type CoinRegisterArgs = {
@@ -44,11 +44,11 @@ export type CoinRegisterArgs = {
 
 export type APTTransferArgs = {
   to: HexString,
-  amount: number, //TODO: replace with big number
+  amount: bigint,
 }
 
 export type RevertArgs = {
-  sn: number, // The sn will override option.sequenceNumber
+  sn: bigint, // The sn will override option.sequenceNumber
 }
 
 export type CustomInteractionArgs = {
@@ -89,7 +89,7 @@ export type MSafeTxnInfo = {
   txType: MSafeTxnType,
   hash: HexString,
   sender: HexString,
-  sn: number,
+  sn: bigint,
   expiration: Date,
   chainID: number,
   gasPrice: bigint,
@@ -111,11 +111,11 @@ export async function makeMSafeRegisterTx(
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REGISTER)
     .from(sender)
-    .chainId(config.chainID!)
-    .sequenceNumber(config.sequenceNumber!)
-    .maxGas(BigInt(config.maxGas!))
-    .gasPrice(BigInt(config.gasPrice!))
-    .expiration(config.expirationSec!)
+    .chainId(config.chainID)
+    .sequenceNumber(config.sequenceNumber)
+    .maxGas(config.maxGas)
+    .gasPrice(config.gasPrice)
+    .expiration(config.expirationSec)
     .args([BCS.bcsSerializeStr(args.metadata)])
     .build();
   return new MSafeTransaction(txn.raw);
@@ -130,11 +130,11 @@ export async function makeMSafeAPTTransferTx(
   const txBuilder = new AptosCoinTransferTxnBuilder();
   const txn = txBuilder
     .from(sender)
-    .chainId(config.chainID!)
-    .sequenceNumber(config.sequenceNumber!)
-    .maxGas(BigInt(config.maxGas!))
-    .gasPrice(BigInt(config.gasPrice!))
-    .expiration(config.expirationSec!)
+    .chainId(config.chainID)
+    .sequenceNumber(config.sequenceNumber)
+    .maxGas(config.maxGas)
+    .gasPrice(config.gasPrice)
+    .expiration(config.expirationSec)
     .to(args.to)
     .amount(args.amount)
     .build();
@@ -154,11 +154,11 @@ export async function makeMSafeAnyCoinRegisterTx(
     .module(MODULES.MANAGED_COIN)
     .method(FUNCTIONS.COIN_REGISTER)
     .from(sender)
-    .chainId(config.chainID!)
-    .sequenceNumber(config.sequenceNumber!)
-    .gasPrice(BigInt(config.gasPrice!))
-    .maxGas(BigInt(config.maxGas!))
-    .expiration(config.expirationSec!)
+    .chainId(config.chainID)
+    .sequenceNumber(config.sequenceNumber)
+    .gasPrice(config.gasPrice)
+    .maxGas(config.maxGas)
+    .expiration(config.expirationSec)
     .type_args([structTag])
     .args([])
     .build();
@@ -179,11 +179,11 @@ export async function makeMSafeAnyCoinTransferTx(
     .module(MODULES.COIN)
     .method(FUNCTIONS.COIN_TRANSFER)
     .from(sender)
-    .chainId(config.chainID!)
-    .sequenceNumber(config.sequenceNumber!)
-    .gasPrice(BigInt(config.gasPrice!))
-    .maxGas(BigInt(config.maxGas!))
-    .expiration(config.expirationSec!)
+    .chainId(config.chainID)
+    .sequenceNumber(config.sequenceNumber)
+    .gasPrice(config.gasPrice)
+    .maxGas(config.maxGas)
+    .expiration(config.expirationSec)
     .type_args([structTag])
     .args([
       BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(args.to)),
@@ -207,11 +207,11 @@ export async function makeMSafeRevertTx(
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REVERT)
     .from(sender)
-    .chainId(config.chainID!)
-    .sequenceNumber(config.sequenceNumber!)
-    .gasPrice(BigInt(config.gasPrice!))
-    .maxGas(BigInt(config.maxGas!))
-    .expiration(config.expirationSec!)
+    .chainId(config.chainID)
+    .sequenceNumber(config.sequenceNumber)
+    .gasPrice(config.gasPrice)
+    .maxGas(config.maxGas)
+    .expiration(config.expirationSec)
     .args([])
     .build();
   return new MSafeTransaction(txn.raw);
@@ -229,11 +229,11 @@ export async function makeCustomInteractionTx(
     .module(args.moduleName)
     .method(args.fnName)
     .from(sender)
-    .chainId(config.chainID!)
-    .sequenceNumber(config.sequenceNumber!)
-    .gasPrice(BigInt(config.gasPrice!))
-    .maxGas(BigInt(config.maxGas!))
-    .expiration(config.expirationSec!)
+    .chainId(config.chainID)
+    .sequenceNumber(config.sequenceNumber)
+    .gasPrice(config.gasPrice)
+    .maxGas(config.maxGas)
+    .expiration(config.expirationSec)
     .type_args(args.typeArgs.map(ta => typeTagStructFromName(ta)))
     .args(args.args)
     .build();
@@ -255,26 +255,34 @@ export async function compileAndMakeModulePublishTx(
   return new MSafeTransaction(tx.raw);
 }
 
-async function applyDefaultOptions(sender: HexString, opts?: Options) {
+async function applyDefaultOptions(sender: HexString, opts?: Options): Promise<TxConfig> {
   if (!opts) {
     opts = {};
   }
-  if (!opts.maxGas) {
-    opts.maxGas = DEFAULT_REGISTER_MAX_GAS;
+  const maxGas = opts.maxGas? opts.maxGas: DEFAULT_REGISTER_MAX_GAS;
+  const gasPrice = opts.gasPrice? opts.gasPrice: DEFAULT_UNIT_PRICE;
+  const expirationSec = opts.expirationSec? opts.expirationSec: DEFAULT_EXPIRATION;
+
+  let sequenceNumber: bigint;
+  if (opts.sequenceNumber !== undefined) {
+    sequenceNumber = opts.sequenceNumber;
+  } else {
+    sequenceNumber = await Aptos.getSequenceNumber(sender);
   }
-  if (!opts.gasPrice) {
-    opts.gasPrice = DEFAULT_UNIT_PRICE;
+
+  let chainID: number;
+  if (opts.chainID !== undefined) {
+    chainID = opts.chainID;
+  } else {
+    chainID = await Aptos.getChainId();
   }
-  if (!opts.expirationSec) {
-    opts.expirationSec = DEFAULT_EXPIRATION;
-  }
-  if (!opts.sequenceNumber) {
-    opts.sequenceNumber = await Aptos.getSequenceNumber(sender);
-  }
-  if (!opts.chainID) {
-    opts.chainID = await Aptos.getChainId();
-  }
-  return opts;
+  return {
+    maxGas: maxGas,
+    gasPrice: gasPrice,
+    expirationSec: expirationSec,
+    sequenceNumber: sequenceNumber,
+    chainID: chainID,
+  };
 }
 
 export class MSafeTransaction extends Transaction {
@@ -301,7 +309,7 @@ export class MSafeTransaction extends Transaction {
       txType: this.txType,
       hash: sha3_256(TransactionBuilder.getSigningMessage(tx)),
       sender: HexString.fromUint8Array(tx.sender.address),
-      sn: Number(tx.sequence_number),
+      sn: tx.sequence_number,
       expiration: secToDate(tx.expiration_timestamp_secs),
       chainID: tx.chain_id.value,
       gasPrice: tx.gas_unit_price,
@@ -336,50 +344,45 @@ export class MSafeTransaction extends Transaction {
     switch (this.txType) {
       case MSafeTxnType.APTCoinTransfer: {
         const [toAddress, amount] = decodeCoinTransferArgs(payload);
-        const res: APTTransferArgs = {
+        return {
           to: toAddress,
-          amount: Number(amount),
+          amount: amount,
         };
-        return res;
       }
 
       case MSafeTxnType.AnyCoinTransfer: {
         const coinType = decodeCoinType(payload);
         const [toAddress, amount] = decodeCoinTransferArgs(payload);
-        const res: CoinTransferArgs = {
+        return {
           coinType: coinType,
           to: toAddress,
-          amount: Number(amount),
+          amount: amount,
         };
-        return res;
       }
 
       case MSafeTxnType.AnyCoinRegister: {
         const coinType = decodeCoinType(payload);
-        const res: CoinRegisterArgs = {
+        return {
           coinType: coinType,
         };
-        return res;
       }
 
       case MSafeTxnType.Revert: {
         const sn = this.raw.sequence_number;
-        const res: RevertArgs = {sn: Number(sn)};
-        return res;
+        return {sn: BigInt(sn)};
       }
 
       case MSafeTxnType.CustomInteraction: {
         const [addr, moduleName, fnName] = getModuleComponents(payload);
         const tArgs = decodeTypeArgs(payload);
         const args = payload.value.args;
-        const res: CustomInteractionArgs = {
+        return {
           deployer: addr,
           moduleName: moduleName,
           fnName: fnName,
           typeArgs: tArgs,
           args: args,
         };
-        return res;
       }
 
       case MSafeTxnType.ModulePublish: {
@@ -592,7 +595,7 @@ function decodeCoinTransferArgs(payload: TxnBuilderTypes.TransactionPayloadEntry
   const amountArg = args[1];
   const amount = (new BCS.Deserializer(amountArg)).deserializeU64();
 
-  return [toAddress, amount.valueOf()];
+  return [toAddress, amount];
 }
 
 function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): ModulePublishInfo {

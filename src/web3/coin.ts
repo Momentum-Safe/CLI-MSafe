@@ -1,7 +1,6 @@
 import * as Aptos from './global';
-import {APTOS_FRAMEWORK_HS, MODULES, RESOURCES, STRUCTS} from "../momentum-safe/common";
+import {APTOS_FRAMEWORK_HS, MODULES, STRUCTS} from "../momentum-safe/common";
 import {isStringResource} from "../utils/check";
-import {setGlobal} from "./global";
 import {splitResourceComponents} from "../utils/parse";
 
 export class Coin {

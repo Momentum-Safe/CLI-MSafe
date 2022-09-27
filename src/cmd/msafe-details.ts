@@ -27,7 +27,7 @@ async function showMSafeDetails(c: {address: HexString}) {
   const balance = await Aptos.getBalance(addr);
   await printMSafeMessage(addr, info, balance);
 
-  let pmpText = '';
+  let pmpText: string;
   if (info.pendingTxs.length != 0) {
     pmpText = 'Pending transactions:\n\n\t\t| SN\t| Action\t\t\t| Confirmation\t|';
   } else {

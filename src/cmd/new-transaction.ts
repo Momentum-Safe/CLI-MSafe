@@ -94,7 +94,7 @@ async function newTransaction(c: {address: HexString}) {
     ]);
 }
 
-async function promptForNewTransaction(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptForNewTransaction(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   let txType = MSafeTxnType.Unknown;
   await executeCmdOptions(
     "Please choose your transaction type",
@@ -115,7 +115,7 @@ async function promptForNewTransaction(sender: HexString, sn: number): Promise<M
   return await promptAndBuildTx(sender, txType, sn);
 }
 
-async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: bigint): Promise<MSafeTransaction> {
   switch (txType) {
     case MSafeTxnType.APTCoinTransfer:
       return await promptAndBuildAPTCoinTransfer(sender, sn);
@@ -132,7 +132,7 @@ async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: num
   }
 }
 
-async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   const toAddressStr = await promptUntilString(
     '\tTo address:\t',
     '\tAddress not valid:\t',
@@ -140,17 +140,16 @@ async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: number): Pro
   );
   const toAddress = HexString.ensure(toAddressStr);
 
-  const amountStr = await promptUntilNumber(
+  const amount = await promptUntilBigInt(
     '\tAmount:\t\t',
     "\tAmount not valid:\t",
-    val => Number(val) > 0,
+    val => val > 0,
   );
-  const amount = Number(amountStr);
   const txArgs: APTTransferArgs = {to: toAddress, amount: amount};
   return await makeMSafeAPTTransferTx(sender, txArgs, {sequenceNumber: sn});
 }
 
-async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   const coinType = await promptUntilString(
     '\tCoin type:\t',
     '\tCoin type not valid:\t',
@@ -164,12 +163,11 @@ async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: number): Pro
   );
   const toAddress = HexString.ensure(toAddressStr);
 
-  const amountStr = await promptUntilNumber(
+  const amount = await promptUntilBigInt(
     '\tAmount:\t\t',
     "\tAmount not valid:\t",
     val => Number(val) > 0,
   );
-  const amount = Number(amountStr);
   const txArgs: CoinTransferArgs = {
     coinType: coinType,
     to: toAddress,
@@ -178,7 +176,7 @@ async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: number): Pro
   return await makeMSafeAnyCoinTransferTx(sender, txArgs, {sequenceNumber: sn});
 }
 
-async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   const coinType = await promptUntilString(
     '\tCoin type:\t',
     '\tCoin type not valid:\t',
@@ -190,7 +188,7 @@ async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: number): 
 
 async function promptAndBuildForCustomTx(
   sender: HexString,
-  sn: number
+  sn: bigint
 ): Promise<MSafeTransaction> {
   const fullFnName = await promptUntilString(
     '\tModule name (E.g. 0x1::coin):\t',
@@ -344,7 +342,7 @@ async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefine
 
 async function promptCompileAndBuildModulePublishTx(
   sender: HexString,
-  sn: number
+  sn: bigint,
 ): Promise<MSafeTransaction> {
   console.log("Compile and publish move modules.");
   console.log();
@@ -378,31 +376,8 @@ async function promptCompileAndBuildModulePublishTx(
   return await compileAndMakeModulePublishTx(sender, args, {sequenceNumber: sn});
 }
 
-function isHexString(s: string): boolean {
-  try {
-    HexString.ensure(s);
-  } catch (e) {
-    return false;
-  }
-  return true;
-}
-
-function hexStringToBytes(s: string): Uint8Array {
-  return HexString.ensure(s).toUint8Array();
-}
-
-function stringToBytes(s: string): Uint8Array {
-  return Buffer.from(s, 'base64');
-}
-
 async function printTxConfirmation(txData: MSafeTxnInfo) {
   console.log("Transaction confirmation:");
   console.log();
   await printTxDetails(txData);
-}
-
-function isStringInList(s: string, vals: string[]): boolean {
-  let exist = false;
-  vals.forEach( val => {if (s === val) {exist = true}});
-  return exist;
 }

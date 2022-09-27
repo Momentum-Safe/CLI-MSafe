@@ -62,7 +62,6 @@ async function creationDetails(rawArg: any) {
   printSeparator();
 
   const res = await creation.getResourceData();
-  const des_tx = Transaction.deserialize(HexBuffer(res.txn.payload));
 
   // Do the check first. Corner case when the transaction was not executed last
   // time even enough signature was collected.
