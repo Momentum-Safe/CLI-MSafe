@@ -7,7 +7,7 @@ import {
   printTxDetails,
   prompt,
   promptForYN,
-  promptUntilBigInt,
+  promptUntilBigInt, promptUntilBigNumber,
   promptUntilNumber,
   promptUntilString,
   promptUntilTrueFalse,
@@ -18,7 +18,7 @@ import {
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import {BCS, HexString, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
-import {MY_ACCOUNT} from '../web3/global';
+import {APT_COIN_INFO, MY_ACCOUNT} from '../web3/global';
 import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
 import {
   APTTransferArgs,
@@ -41,6 +41,8 @@ import {
   isStringTypeStruct
 } from "../utils/check";
 import {splitModuleComponents} from "../utils/parse";
+import {BigNumber} from "bignumber.js";
+import {toDust} from "../utils/bignumber";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, newTransaction);
@@ -53,7 +55,7 @@ async function newTransaction(c: {address: HexString}) {
   const addr = c.address;
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
   const info = await msafe.getMomentumSafeInfo();
-  const balance = await Aptos.getBalance(addr);
+  const balance = await Aptos.getBalanceAPT(addr);
   await printMSafeMessage(addr, info, balance);
 
   const sn = await msafe.getNextSN();
@@ -140,11 +142,12 @@ async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: bigint): Pro
   );
   const toAddress = HexString.ensure(toAddressStr);
 
-  const amount = await promptUntilBigInt(
-    '\tAmount:\t\t',
-    "\tAmount not valid:\t",
-    val => val > 0,
+  const amountBN = await promptUntilBigNumber(
+    '\tAmount (APT):\t\t',
+    "\tAmount not valid (APT):\t",
+    val => val > BigNumber(0),
   );
+  const amount = toDust(amountBN, APT_COIN_INFO.decimals);
   const txArgs: APTTransferArgs = {to: toAddress, amount: amount};
   return await makeMSafeAPTTransferTx(sender, txArgs, {sequenceNumber: sn});
 }

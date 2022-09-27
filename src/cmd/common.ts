@@ -1,6 +1,7 @@
 import readline from "readline-sync";
 import * as Aptos from "../web3/global";
 import {HexString} from "aptos";
+import {BigNumber} from 'bignumber.js';
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 import {
   APTTransferArgs,
@@ -13,6 +14,8 @@ import {
   MSafeTxnType,
   RevertArgs,
 } from "../momentum-safe/msafe-txn";
+import {bigIntToBigNumber, fromDust} from "../utils/bignumber";
+import {APT_COIN_INFO} from "../web3/global";
 
 const SEPARATOR_LENGTH = 20;
 
@@ -63,7 +66,11 @@ export async function promptForNumber(s: string): Promise<number> {
   return Number(valStr);
 }
 
-export async function promptUntilBigInt(pmp: string, npmp: string, validate: (v: bigint) => boolean): Promise<bigint> {
+export async function promptUntilBigInt(
+  pmp: string,
+  npmp: string,
+  validate: (v: bigint) => boolean,
+): Promise<bigint> {
   let res = await promptForBigInt(pmp);
   while (!validate(res)) {
     res = await promptForBigInt(npmp);
@@ -94,6 +101,26 @@ export async function promptForYN(s: string, defVal: boolean): Promise<boolean> 
     res = await prompt(`${s} ${clause}\t`);
   }
   return getValueYN(res, defVal);
+}
+
+export async function promptUntilBigNumber(
+  pmp: string,
+  npmp: string,
+  validate: (v: BigNumber) => boolean,
+) {
+  let res = await promptForBigNumber(pmp);
+  while (!validate(res)) {
+    res = await promptForBigNumber(npmp);
+  }
+  return res;
+}
+
+export async function promptForBigNumber(s: string): Promise<BigNumber> {
+  const valStr = await prompt(s);
+  if (valStr.length == 0) {
+    return BigNumber(-1);
+  }
+  return BigNumber(valStr);
 }
 
 function ynClause(defVal: boolean): string {
@@ -146,12 +173,12 @@ export async function printMyMessage() {
   console.log();
   console.log(`My Address: \t${Aptos.MY_ACCOUNT.address()}`);
   console.log(`My PubKey: \t${Aptos.MY_ACCOUNT.publicKey()}`);
-  console.log(`My Balance: \t${await Aptos.getBalance(Aptos.MY_ACCOUNT.address())}`);
+  console.log(`My Balance: \t${await Aptos.getBalanceAPT(Aptos.MY_ACCOUNT.address())}`);
   console.log("-".repeat(process.stdout.columns));
   console.log();
 }
 
-export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: bigint) {
+export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: BigNumber) {
   console.log(`Momentum Safe Info:`);
   console.log();
   console.log(`Address:\t${address}`);
@@ -265,7 +292,7 @@ function printAPTCoinTransfer(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as APTTransferArgs;
   console.log(`To:\t\t\t${args.to}`);
-  console.log(`Amount:\t\t\t${args.amount}`);
+  console.log(`Amount:\t\t\t${fromDust(args.amount, APT_COIN_INFO.decimals)} APT`);
 }
 
 function printAnyCoinTransfer(txInfo: MSafeTxnInfo) {

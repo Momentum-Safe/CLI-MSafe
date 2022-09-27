@@ -1,24 +1,26 @@
 import {
   executeCmdOptions,
   printSeparator,
-  promptForYN,
+  promptForYN, promptUntilBigNumber,
   promptUntilNumber,
   promptUntilString,
 
 } from "./common";
 import {HexString} from "aptos";
-import {MY_ACCOUNT} from "../web3/global";
+import {APT_COIN_INFO, MY_ACCOUNT} from "../web3/global";
 import {CreationHelper} from "../momentum-safe/creation";
 import * as Aptos from "../web3/global";
 import {printMyMessage} from "./common";
 import {registerState, setState, State} from "./common";
 import {checkCreationEnoughSigsAndAssemble} from "./creation-details";
 import {isStringAddress} from "../utils/check";
+import {BigNumber} from "bignumber.js";
+import {toDust} from "../utils/bignumber";
 
 const MAX_OWNERS = 32;
 const MIN_OWNERS = 2;
 const MIN_CONFIRMATION = 1;
-const MIN_INITIAL_FUND = 2000n * 100n;
+const MIN_INITIAL_FUND = BigNumber(0.001);
 
 
 export function registerCreation() {
@@ -45,11 +47,12 @@ async function initCreateMSafe() {
     (v: number) => v >= MIN_CONFIRMATION && v <= numOwners
   );
 
-  const initialBalance = await promptUntilNumber(
-    "What's the amount of initial fund of MSafe? (>=200000)\t",
+  const initialBalanceBN = await promptUntilBigNumber(
+    `What's the amount of initial fund of MSafe (Used for gas)? (>=${MIN_INITIAL_FUND} APT)\n\t\t\t\t\t`,
     `\tPlease input a valid number (>=${MIN_INITIAL_FUND})\t`,
     v => v >= MIN_INITIAL_FUND,
   );
+  const initialBalance = toDust(initialBalanceBN, APT_COIN_INFO.decimals);
 
   const owners: HexString[] = [MY_ACCOUNT.address()];
 
@@ -65,7 +68,7 @@ async function initCreateMSafe() {
 
   printSeparator();
 
-  const creation = await CreationHelper.fromUserRequest(owners, threshold, BigInt(initialBalance));
+  const creation = await CreationHelper.fromUserRequest(owners, threshold, initialBalance);
 
   console.log(`Creating ${creation.threshold} / ${creation.ownerPubKeys.length} Momentum Safe wallet`);
   console.log(`\tAddress:\t${creation.address}`);

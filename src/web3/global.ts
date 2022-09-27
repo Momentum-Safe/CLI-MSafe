@@ -10,6 +10,8 @@ import {Account} from "./account";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {Coin} from "./coin";
+import {BigNumber} from "bignumber.js";
+import {bigIntToBigNumber} from "../utils/bignumber";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -24,7 +26,7 @@ interface Config {
   address: string,
 }
 
-export let APT_COIN: Coin;
+export let APT_COIN_INFO: Coin;
 
 export const defaultConfigPath = `.aptos/config.yaml`;
 
@@ -44,7 +46,7 @@ export async function setGlobal(c: Config) {
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
-  APT_COIN = await Coin.new("0x01::aptos_coin::AptosCoin");
+  APT_COIN_INFO = await Coin.new("0x01::aptos_coin::AptosCoin");
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<bigint> {
@@ -104,6 +106,10 @@ export async function getBalance(addr: string | HexString): Promise<bigint> {
   return BigInt((coinResource?.data as any).coin.value);
 }
 
+export async function getBalanceAPT(addr: string | HexString): Promise<BigNumber> {
+  const bal = await getBalance(addr);
+  return bigIntToBigNumber(bal);
+}
 
 type loadConfig = {
   configFilePath: string,

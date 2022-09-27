@@ -30,7 +30,7 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
   const txHash = c.txHash;
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
   const info = await msafe.getMomentumSafeInfo();
-  const balance = await Aptos.getBalance(addr);
+  const balance = await Aptos.getBalanceAPT(addr);
   await printMSafeMessage(addr, info, balance);
 
   const tx = info.pendingTxs.find( tx => isHexEqual(tx.hash, txHash));
