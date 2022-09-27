@@ -48,7 +48,7 @@ async function initCreateMSafe() {
   );
 
   const initialBalanceBN = await promptUntilBigNumber(
-    `What's the amount of initial fund of MSafe (Used for gas)? (>=${MIN_INITIAL_FUND} APT)\n\t\t\t\t\t\t`,
+    `What's the amount of initial fund of MSafe (Used for gas)? (>=${MIN_INITIAL_FUND} APT)\n\t\t\t\t\t\t\t`,
     `\tPlease input a valid number (>=${MIN_INITIAL_FUND})\t`,
     v => v >= MIN_INITIAL_FUND,
   );
