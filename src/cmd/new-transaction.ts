@@ -143,7 +143,7 @@ async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: bigint): Pro
   const toAddress = HexString.ensure(toAddressStr);
 
   const amountBN = await promptUntilBigNumber(
-    '\tAmount (APT):\t\t',
+    '\tAmount (APT):\t',
     "\tAmount not valid (APT):\t",
     val => val > BigNumber(0),
   );

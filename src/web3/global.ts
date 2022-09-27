@@ -11,7 +11,7 @@ import {load} from "js-yaml";
 import {readFile} from "fs/promises";
 import {Coin} from "./coin";
 import {BigNumber} from "bignumber.js";
-import {bigIntToBigNumber} from "../utils/bignumber";
+import {bigIntToBigNumber, fromDust} from "../utils/bignumber";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -108,7 +108,7 @@ export async function getBalance(addr: string | HexString): Promise<bigint> {
 
 export async function getBalanceAPT(addr: string | HexString): Promise<BigNumber> {
   const bal = await getBalance(addr);
-  return bigIntToBigNumber(bal);
+  return fromDust(bal, APT_COIN_INFO.decimals);
 }
 
 type loadConfig = {

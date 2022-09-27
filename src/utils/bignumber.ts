@@ -7,11 +7,7 @@ export function toDust(val: BigNumber | number | string, decimal: number): bigin
   return bigNumberToBigInt(toDustBN(val, decimal));
 }
 
-export function fromDust(val: bigint | number | string, decimal: number): bigint {
-  return bigNumberToBigInt(fromDustBN(val, decimal));
-}
-
-function fromDustBN(val: bigint | number | string, decimal: number): BigNumber {
+export function fromDust(val: bigint | number | string, decimal: number): BigNumber {
   return toBigNumber(val).div(new BigNumber(10).pow(decimal));
 }
 

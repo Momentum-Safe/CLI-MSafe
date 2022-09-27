@@ -173,7 +173,7 @@ export async function printMyMessage() {
   console.log();
   console.log(`My Address: \t${Aptos.MY_ACCOUNT.address()}`);
   console.log(`My PubKey: \t${Aptos.MY_ACCOUNT.publicKey()}`);
-  console.log(`My Balance: \t${await Aptos.getBalanceAPT(Aptos.MY_ACCOUNT.address())}`);
+  console.log(`My Balance: \t${await Aptos.getBalanceAPT(Aptos.MY_ACCOUNT.address())} APT`);
   console.log("-".repeat(process.stdout.columns));
   console.log();
 }
@@ -187,7 +187,7 @@ export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, ba
   info.owners.forEach( (owner, i) => {
     console.log(`\t\t(${i+1}/${info.owners.length}) ${owner}`);
   });
-  console.log(`Balance:\t${balance}`);
+  console.log(`Balance:\t${balance} APT`);
   console.log("-".repeat(process.stdout.columns));
   console.log();
 }
