@@ -25,7 +25,7 @@ import {
   CoinRegisterArgs,
   CoinTransferArgs,
   compileAndMakeModulePublishTx,
-  makeCustomInteractionTx,
+  makeCustomInteractionTx, makeModulePublishTx,
   makeMSafeAnyCoinRegisterTx,
   makeMSafeAnyCoinTransferTx,
   makeMSafeAPTTransferTx,
@@ -128,7 +128,7 @@ async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: big
     case MSafeTxnType.CustomInteraction:
       return await promptAndBuildForCustomTx(sender, sn);
     case MSafeTxnType.ModulePublish:
-      return await promptCompileAndBuildModulePublishTx(sender, sn);
+      return await promptPublishTx(sender, sn);
     default:
       throw new Error("Invalid type");
   }
@@ -341,6 +341,31 @@ async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefine
       throw new Error(`Unsupported type: `+param);
     }
   }
+}
+
+async function promptPublishTx(sender: HexString, sn: bigint) {
+  const res = await promptForYN("Do you want to compile the MOVE module?", false);
+  console.log();
+  if (res) {
+    return promptCompileAndBuildModulePublishTx(sender, sn);
+  } else {
+    return promptBuildModulePublishTx(sender, sn);
+  }
+}
+
+async function promptBuildModulePublishTx(sender: HexString, sn: bigint) {
+  console.log("Publish move modules.");
+  console.log();
+  console.log('Please confirm for prerequisite:');
+  console.log("\t1. MOVE module has already been compiled with flag `--save-metadata`");
+  console.log(`\t2. The deployer's address has been set to momentum safe ${sender}`);
+  console.log();
+  const moveDir = await promptUntilString(
+    "Please input your target move directory (with Move.toml)",
+    "Invalid directory - Move.toml not found",
+    MovePublisher.isDirValid,
+  );
+  return await makeModulePublishTx(sender, {moveDir: moveDir}, {sequenceNumber: sn});
 }
 
 async function promptCompileAndBuildModulePublishTx(

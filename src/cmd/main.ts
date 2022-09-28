@@ -1,5 +1,4 @@
 // TODO: Any coin decimal
-// TODO: Remove compile option from move publish
 // TODO: handle transaction execution error during assemble and submit
 // TODO: View assets list (get from resources) and coin transfer
 // TODO: More customized parameters, e.g. gas price, max price, expiration, e.t.c
