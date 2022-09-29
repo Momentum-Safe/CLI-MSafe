@@ -43,14 +43,17 @@ type NamedAddress = {
 export class MovePublisher {
   constructor(public readonly moveInfo: MoveProject) { }
 
-  static async fromMoveDir(
-    moveDir: string,
-    artifacts: IncludedArtifacts,
-    namedAddress: NamedAddress,
-  ): Promise<MovePublisher> {
-    await MovePublisher.moveCompile(moveDir, artifacts, namedAddress);
+  static async fromMoveDir(moveDir: string) {
     const moveInfo = MovePublisher.loadCompiledMoveProject(moveDir);
     return new MovePublisher(moveInfo);
+  }
+
+  static async compile(
+    moveDir: string,
+    artifacts: IncludedArtifacts,
+    namedAddress: NamedAddress
+  ) {
+    await MovePublisher.moveCompile(moveDir, artifacts, namedAddress);
   }
 
   getDeployTransaction(sender: HexString, config: Options) {

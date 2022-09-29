@@ -59,10 +59,14 @@ export type CustomInteractionArgs = {
   args: BCS.Bytes[], // encoded bytes
 }
 
-export type ModulePublishArgs = {
+export type ModuleCompilePublishArgs = {
   moveDir: string,
   artifacts: IncludedArtifacts,
   deployerAddressName: string, // address name in Move.toml
+}
+
+export type ModulePublishArgs = {
+  moveDir: string,
 }
 
 export type ModulePublishInfo = {
@@ -242,7 +246,7 @@ export async function makeCustomInteractionTx(
 
 export async function compileAndMakeModulePublishTx(
   sender: HexString,
-  args: ModulePublishArgs,
+  args: ModuleCompilePublishArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
@@ -250,7 +254,15 @@ export async function compileAndMakeModulePublishTx(
     addrName: args.deployerAddressName,
     addrValue: sender,
   };
-  const mp = await MovePublisher.fromMoveDir(args.moveDir, args.artifacts, namedAddress);
+  await MovePublisher.compile(args.moveDir, args.artifacts, namedAddress);
+  const mp = await MovePublisher.fromMoveDir(args.moveDir);
+  const tx = mp.getDeployTransaction(sender, config);
+  return new MSafeTransaction(tx.raw);
+}
+
+export async function makeModulePublishTx(sender: HexString, args: ModulePublishArgs, opts?: Options) {
+  const config = await applyDefaultOptions(sender, opts);
+  const mp = await MovePublisher.fromMoveDir(args.moveDir);
   const tx = mp.getDeployTransaction(sender, config);
   return new MSafeTransaction(tx.raw);
 }

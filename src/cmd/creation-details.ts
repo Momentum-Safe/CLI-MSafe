@@ -61,8 +61,6 @@ async function creationDetails(rawArg: any) {
 
   printSeparator();
 
-  const res = await creation.getResourceData();
-
   // Do the check first. Corner case when the transaction was not executed last
   // time even enough signature was collected.
   const userBreak = await checkCreationEnoughSigsAndAssemble(creation);
