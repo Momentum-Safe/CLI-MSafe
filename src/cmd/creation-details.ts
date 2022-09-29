@@ -1,4 +1,4 @@
-import {HexString, TxnBuilderTypes} from "aptos";
+import {HexString} from "aptos";
 import {CreationHelper} from "../momentum-safe/creation";
 import {MY_ACCOUNT} from "../web3/global";
 import {
@@ -8,7 +8,9 @@ import {
   setState,
   State,
   printMyMessage,
-  CmdOption, executeCmdOptions, promptForYN
+  CmdOption,
+  executeCmdOptions,
+  promptForYN
 } from "./common";
 import {Transaction} from "../web3/transaction";
 import * as Aptos from '../web3/global';
@@ -59,9 +61,6 @@ async function creationDetails(rawArg: any) {
 
   printSeparator();
 
-  const res = await creation.getResourceData();
-  const des_tx = Transaction.deserialize(HexBuffer(res.txn.payload));
-
   // Do the check first. Corner case when the transaction was not executed last
   // time even enough signature was collected.
   const userBreak = await checkCreationEnoughSigsAndAssemble(creation);
@@ -70,6 +69,7 @@ async function creationDetails(rawArg: any) {
       "User breaks the signature submission",
       [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.List)}],
     );
+    return;
   }
 
   let optionPromptStr: string;

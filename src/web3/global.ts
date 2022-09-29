@@ -1,7 +1,17 @@
-import {AptosClient, FaucetClient, HexString, BCS, ApiError} from 'aptos';
+import {
+  AptosClient,
+  FaucetClient,
+  HexString,
+  BCS,
+  ApiError,
+  Types
+} from 'aptos';
 import {Account} from "./account";
 import {load} from "js-yaml";
 import {readFile} from "fs/promises";
+import {Coin} from "./coin";
+import {BigNumber} from "bignumber.js";
+import {bigIntToBigNumber, fromDust} from "../utils/bignumber";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -16,16 +26,18 @@ interface Config {
   address: string,
 }
 
+export let APT_COIN_INFO: Coin;
+
 export const defaultConfigPath = `.aptos/config.yaml`;
 
 export async function fundAddress(address: HexString | string, amount: number) {
   if (FAUCET === undefined) {
     throw new Error("faucet not set");
   }
-  await FAUCET!.fundAccount(address, amount);
+  await FAUCET.fundAccount(address, amount);
 }
 
-export function setGlobal(c: Config) {
+export async function setGlobal(c: Config) {
   APTOS = new AptosClient(c.nodeURL);
   if (c.faucetURL) {
     if (c.faucetURL.endsWith('/')) {
@@ -34,39 +46,32 @@ export function setGlobal(c: Config) {
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
+  APT_COIN_INFO = await Coin.new("0x01::aptos_coin::AptosCoin");
 }
 
-export function setMyAccount(privateKey: string, address: string) {
-  MY_ACCOUNT = new Account(HexString.ensure(privateKey).toUint8Array(), address);
-}
-
-export async function getSequenceNumber(address: HexString | string): Promise<number> {
-  let res: any;
+export async function getSequenceNumber(address: HexString | string): Promise<bigint> {
   try {
-    res = await APTOS.getAccount(address instanceof HexString ? address : HexString.ensure(address));
+    const res = await APTOS.getAccount(address instanceof HexString ? address : HexString.ensure(address));
+    return BigInt(res.sequence_number);
   } catch (e) {
     if (e instanceof ApiError && e.message.includes("Resource not found")) {
-      return 0;
+      return 0n;
     }
     throw e;
   }
-  return parseInt(res.sequence_number);
 }
-
 
 export async function getChainId(): Promise<number> {
   return await APTOS.getChainId();
 }
 
-
 export async function sendSignedTransactionAsync(message: BCS.Bytes) {
   return await APTOS.submitSignedBCSTransaction(message as Uint8Array);
 }
 
-
 export async function waitForTransaction(txnHash: string) {
   await APTOS.waitForTransaction(txnHash);
-  const tx = (await APTOS.getTransactionByHash(txnHash)) as any;
+  const tx = (await APTOS.getTransactionByHash(txnHash)) as Types.Transaction_UserTransaction;
   if (!tx.success) {
     console.log('tx failed', tx);
     throw tx.vm_status;
@@ -94,13 +99,17 @@ export async function getAccountResource(addr: HexString, resourceTag: string) {
   return APTOS.getAccountResource(addr, resourceTag);
 }
 
-export async function getBalance(addr: string | HexString): Promise<number> {
+export async function getBalance(addr: string | HexString): Promise<bigint> {
   const address = addr instanceof HexString ? addr : HexString.ensure(addr);
   const resources = await APTOS.getAccountResources(address);
   const coinResource = resources.find((r) => r.type == APTOS_COIN_RESOURCE_TYPE);
-  return parseInt((coinResource?.data as any).coin.value);
+  return BigInt((coinResource?.data as any).coin.value);
 }
 
+export async function getBalanceAPT(addr: string | HexString): Promise<BigNumber> {
+  const bal = await getBalance(addr);
+  return fromDust(bal, APT_COIN_INFO.decimals);
+}
 
 type loadConfig = {
   configFilePath: string,
@@ -120,7 +129,7 @@ export async function loadConfigAndApply(c: loadConfig) {
     console.log(`cannot find profile ${c.profile}`);
     process.exit(1);
   }
-  setGlobal({
+  await setGlobal({
     nodeURL: profile.rest_url,
     faucetURL: profile.faucet_url,
     privateKey: profile.private_key,
@@ -139,10 +148,6 @@ async function loadAptosYaml(filePath: string) {
   return load(await readFile(filePath, 'utf-8'));
 }
 
-async function loadDefault() {
-  return loadAptosYaml(defaultConfigPath);
-}
-
 export async function getAccountModule(addr: HexString, moduleName: string) {
-  return APTOS.getAccountModule(addr, moduleName);
+  return await APTOS.getAccountModule(addr, moduleName);
 }

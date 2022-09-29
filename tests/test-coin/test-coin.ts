@@ -3,7 +3,8 @@ import {defaultConfigPath, isAccountExist, loadConfigAndApply, MY_ACCOUNT} from 
 import * as Aptos from "../../src/web3/global";
 import {ApiError, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {AptosEntryTxnBuilder} from "../../src/web3/transaction";
-import {APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES, typeTagStructFromName} from "../../src/momentum-safe/common";
+import {APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES} from "../../src/momentum-safe/common";
+import {typeTagStructFromName} from "../../src/utils/parse";
 
 const DEF_SEND_AMOUNT = "100000000";
 
@@ -60,7 +61,10 @@ async function main() {
     await mintTestToken(targetAddress, amount);
     console.log("Minting success!");
   }
+}
 
+function isValidArg(): boolean {
+  return cli.opts().register || cli.opts().to;
 }
 
 async function mintTestToken(to: HexString, amount: bigint) {

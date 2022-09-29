@@ -3,16 +3,19 @@ import {
   printMSafeMessage,
   printMyMessage,
   printSeparator,
-  printTxDetails, promptForYN, registerState,
+  printTxDetails,
+  promptForYN,
+  registerState,
   setState,
   State
 } from "./common";
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import * as Aptos from "../web3/global";
 import {HexString} from "aptos";
-import {isHexEqual} from "../momentum-safe/common";
 import {makeMSafeRevertTx} from "../momentum-safe/msafe-txn";
 import {MY_ACCOUNT} from "../web3/global";
+import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
+import {isHexEqual} from "../utils/check";
 
 
 export function registerRevertTransaction() {
@@ -27,7 +30,7 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
   const txHash = c.txHash;
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
   const info = await msafe.getMomentumSafeInfo();
-  const balance = await Aptos.getBalance(addr);
+  const balance = await Aptos.getBalanceAPT(addr);
   await printMSafeMessage(addr, info, balance);
 
   const tx = info.pendingTxs.find( tx => isHexEqual(tx.hash, txHash));
@@ -40,8 +43,17 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
 
   console.log("Transaction to be reverted:");
   console.log();
-  printTxDetails(tx);
+  await printTxDetails(tx);
   printSeparator();
+
+  const userBreak = await checkTxnEnoughSigsAndAssemble(msafe, (txHash as HexString));
+  if (userBreak) {
+    await executeCmdOptions(
+      "User break the signature submission",
+      [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
+    );
+    return;
+  }
 
   const userConfirm = promptForYN("Are you sure your want to revert the transaction?", true);
 

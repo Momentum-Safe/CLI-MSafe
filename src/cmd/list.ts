@@ -5,9 +5,10 @@ import {
   registerState,
   setState,
   State,
-  executeCmdOptions, CmdOption
+  executeCmdOptions,
+  CmdOption,
 } from "./common";
-import {formatAddress} from "../momentum-safe/common";
+import {formatAddress} from "../utils/parse";
 
 export function registerList() {
   registerState(State.List, () => list());

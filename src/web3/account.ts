@@ -1,7 +1,12 @@
-import {AptosAccount, HexString, MaybeHexString, TransactionBuilderEd25519, TxnBuilderTypes} from "aptos";
+import {
+  AptosAccount,
+  HexString,
+  MaybeHexString,
+  TransactionBuilderEd25519,
+  TxnBuilderTypes,
+} from "aptos";
 import {BCS} from 'aptos';
 import {Transaction} from "./transaction";
-
 
 // SingleWallet is a single-signed wallet account
 export class Account {

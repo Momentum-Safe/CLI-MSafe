@@ -1,6 +1,6 @@
 import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Buffer} from "buffer/";
-import {APTOS_TOKEN, Transaction} from "../web3/transaction";
+import {Transaction} from "../web3/transaction";
 
 export const DEPLOYER = '0x0341bf50ae6c33622979a728fa21c5b274408f66c6683303f6d39685566f1c1d';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
@@ -19,6 +19,7 @@ export const MODULES = {
   COIN: 'coin',
   MANAGED_COIN: 'managed_coin',
   APTOS_COIN: "aptos_coin",
+  CODE: "code",
 };
 
 export const FUNCTIONS = {
@@ -35,6 +36,8 @@ export const FUNCTIONS = {
   COIN_MINT: "mint",
 
   REGISTRY_REGISTER: "register",
+
+  PUBLISH_PACKAGE: "publish_package_txn",
 };
 
 export const STRUCTS = {
@@ -42,6 +45,7 @@ export const STRUCTS = {
   CREATOR: "PendingMultiSigCreations",
   REGISTRY: "OwnerMomentumSafes",
   APTOS_COIN: "AptosCoin",
+  COIN_INFO: "CoinInfo"
 };
 
 export const RESOURCES = {
@@ -98,28 +102,20 @@ export function serializeOwners(addrs: HexString[]): BCS.Bytes {
   return serializer.getBytes();
 }
 
-export function isHexEqual(hex1: HexString | string, hex2: HexString | string): boolean {
-  const hs1 = (hex1 instanceof HexString)? hex1: HexString.ensure(hex1);
-  const hs2 = (hex2 instanceof HexString)? hex2: HexString.ensure(hex2);
-  return hs1.toShortString() === hs2.toShortString();
+export type Options = {
+  maxGas?: bigint,
+  gasPrice?: bigint,
+  expirationSec?: number, // target = time.now() + expiration
+  sequenceNumber?: bigint,
+  chainID?: number,
 }
 
-// Add zeros if size is not 32
-export function formatAddress(s: HexString | string): HexString {
-  let hexStr = s instanceof HexString? s.hex(): s.startsWith('0x')? s.substring(2): s;
-  if (hexStr.length < ADDRESS_HEX_LENGTH) {
-    hexStr = ''.concat('0'.repeat(ADDRESS_HEX_LENGTH - hexStr.length), hexStr);
-  }
-  return HexString.ensure(hexStr);
-}
-
-export function secToDate(sec: BCS.Uint64) {
-  const ms = Number(sec) * 1000;
-  return new Date(ms);
-}
-
-export function typeTagStructFromName(name: string) {
-  const structTag = TxnBuilderTypes.StructTag.fromString(name);
-  return new TxnBuilderTypes.TypeTagStruct(structTag);
+// Parsed tx config from Options
+export type TxConfig = {
+  maxGas: bigint,
+  gasPrice: bigint,
+  expirationSec: number, // target = time.now() + expiration
+  sequenceNumber: bigint,
+  chainID: number,
 }
 

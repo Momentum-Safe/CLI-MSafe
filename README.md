@@ -42,14 +42,6 @@ Choose all default settings to create a new wallet with the devnet endpoint sett
 The command will create a config file `.aptos/config.yaml` under the current directory, which includes 
 the wallet information as well as the network endpoint message.
 
-### (Optional) Add some initial funding
-
-Use aptos faucet to get some extra balance for the wallet.
-
-```
-aptos account fund-with-faucet --account ${YOUR_ACCOUNT} --amount 1000000
-```
-
 ### Start Momentum Safe CLI 
 
 ```
@@ -66,13 +58,17 @@ The following features are currently supported by Momentum Safe:
 2. APT coin transfer
 3. View momentum safe owned by the account
 4. View pending transactions of the momentum safe
+5. Coin registry.
+6. Coin transfer of any coin type.
+7. Custom MOVE module interaction (For simple types).
+8. MOVE module publish.
+9. Revert transaction.
+10. Asset list.
 
 We will add more features shortly:
 
-1. Aptos coin registry.
-2. Coin transfer of any coin type.
-3. General MOVE module interaction.
-4. MOVE module publish.
-5. Revert transaction.
-6. Asset list.
+1. Add coin decimal and bigint
+2. Add more custom ABI, struct, e.t.c.
+
+
 

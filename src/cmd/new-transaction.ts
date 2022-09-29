@@ -1,33 +1,31 @@
 import {
   CmdOption,
   executeCmdOptions,
-  isStringAddress,
-  isStringFullModule, isStringHex,
-  isStringTypeStruct,
   printMSafeMessage,
   printMyMessage,
   printSeparator,
   printTxDetails,
+  prompt,
   promptForYN,
-  promptUntilBigInt,
+  promptUntilBigInt, promptUntilBigNumber,
   promptUntilNumber,
   promptUntilString,
   promptUntilTrueFalse,
   registerState,
   setState,
-  splitModuleComponents,
   State,
 } from "./common";
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import {BCS, HexString, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
-import {MY_ACCOUNT} from '../web3/global';
+import {APT_COIN_INFO, MY_ACCOUNT} from '../web3/global';
 import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
 import {
   APTTransferArgs,
   CoinRegisterArgs,
   CoinTransferArgs,
-  makeCustomInteractionTx,
+  compileAndMakeModulePublishTx,
+  makeCustomInteractionTx, makeModulePublishTx,
   makeMSafeAnyCoinRegisterTx,
   makeMSafeAnyCoinTransferTx,
   makeMSafeAPTTransferTx,
@@ -35,6 +33,16 @@ import {
   MSafeTxnInfo,
   MSafeTxnType
 } from "../momentum-safe/msafe-txn";
+import {isStrIncludedArtifacts, MovePublisher, strToIncludedArtifacts} from "../momentum-safe/move-publisher";
+import {
+  isStringAddress,
+  isStringFullModule,
+  isStringHex,
+  isStringTypeStruct
+} from "../utils/check";
+import {splitModuleComponents} from "../utils/parse";
+import {BigNumber} from "bignumber.js";
+import {toDust} from "../utils/bignumber";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, newTransaction);
@@ -47,14 +55,14 @@ async function newTransaction(c: {address: HexString}) {
   const addr = c.address;
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
   const info = await msafe.getMomentumSafeInfo();
-  const balance = await Aptos.getBalance(addr);
+  const balance = await Aptos.getBalanceAPT(addr);
   await printMSafeMessage(addr, info, balance);
 
   const sn = await msafe.getNextSN();
   const tx = await promptForNewTransaction(msafe.address, sn);
   printSeparator();
 
-  printTxConfirmation(tx.getTxnInfo());
+  await printTxConfirmation(tx.getTxnInfo());
   printSeparator();
 
   const userConfirmed = await promptForYN("Transaction information correct?", true);
@@ -79,6 +87,7 @@ async function newTransaction(c: {address: HexString}) {
       "User break the signature submission",
       [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
     );
+    return;
   }
   await executeCmdOptions('Choose your next step', [
     {shortage: 'v', showText: "View details", handleFunc: () =>
@@ -87,7 +96,7 @@ async function newTransaction(c: {address: HexString}) {
     ]);
 }
 
-async function promptForNewTransaction(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptForNewTransaction(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   let txType = MSafeTxnType.Unknown;
   await executeCmdOptions(
     "Please choose your transaction type",
@@ -96,6 +105,7 @@ async function promptForNewTransaction(sender: HexString, sn: number): Promise<M
       {shortage: 2, showText: MSafeTxnType.AnyCoinTransfer, handleFunc: () => txType = MSafeTxnType.AnyCoinTransfer},
       {shortage: 3, showText: MSafeTxnType.AnyCoinRegister, handleFunc: () => txType = MSafeTxnType.AnyCoinRegister},
       {shortage: 4, showText: MSafeTxnType.CustomInteraction, handleFunc: () => txType = MSafeTxnType.CustomInteraction},
+      {shortage: 5, showText: MSafeTxnType.ModulePublish, handleFunc: () => txType = MSafeTxnType.ModulePublish},
     ]
   );
 
@@ -107,7 +117,7 @@ async function promptForNewTransaction(sender: HexString, sn: number): Promise<M
   return await promptAndBuildTx(sender, txType, sn);
 }
 
-async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: bigint): Promise<MSafeTransaction> {
   switch (txType) {
     case MSafeTxnType.APTCoinTransfer:
       return await promptAndBuildAPTCoinTransfer(sender, sn);
@@ -117,12 +127,14 @@ async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: num
       return await promptAndBuildForAnyCoinRegister(sender, sn);
     case MSafeTxnType.CustomInteraction:
       return await promptAndBuildForCustomTx(sender, sn);
+    case MSafeTxnType.ModulePublish:
+      return await promptPublishTx(sender, sn);
     default:
       throw new Error("Invalid type");
   }
 }
 
-async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   const toAddressStr = await promptUntilString(
     '\tTo address:\t',
     '\tAddress not valid:\t',
@@ -130,17 +142,17 @@ async function promptAndBuildAPTCoinTransfer(sender: HexString, sn: number): Pro
   );
   const toAddress = HexString.ensure(toAddressStr);
 
-  const amountStr = await promptUntilNumber(
-    '\tAmount:\t\t',
-    "\tAmount not valid:\t",
-    val => Number(val) > 0,
+  const amountBN = await promptUntilBigNumber(
+    '\tAmount (APT):\t',
+    "\tAmount not valid (APT):\t",
+    val => val > BigNumber(0),
   );
-  const amount = Number(amountStr);
+  const amount = toDust(amountBN, APT_COIN_INFO.decimals);
   const txArgs: APTTransferArgs = {to: toAddress, amount: amount};
   return await makeMSafeAPTTransferTx(sender, txArgs, {sequenceNumber: sn});
 }
 
-async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   const coinType = await promptUntilString(
     '\tCoin type:\t',
     '\tCoin type not valid:\t',
@@ -154,12 +166,11 @@ async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: number): Pro
   );
   const toAddress = HexString.ensure(toAddressStr);
 
-  const amountStr = await promptUntilNumber(
+  const amount = await promptUntilBigInt(
     '\tAmount:\t\t',
     "\tAmount not valid:\t",
     val => Number(val) > 0,
   );
-  const amount = Number(amountStr);
   const txArgs: CoinTransferArgs = {
     coinType: coinType,
     to: toAddress,
@@ -168,7 +179,7 @@ async function promptAndBuildAnyCoinTransfer(sender: HexString, sn: number): Pro
   return await makeMSafeAnyCoinTransferTx(sender, txArgs, {sequenceNumber: sn});
 }
 
-async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: number): Promise<MSafeTransaction> {
+async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: bigint): Promise<MSafeTransaction> {
   const coinType = await promptUntilString(
     '\tCoin type:\t',
     '\tCoin type not valid:\t',
@@ -180,7 +191,7 @@ async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: number): 
 
 async function promptAndBuildForCustomTx(
   sender: HexString,
-  sn: number
+  sn: bigint
 ): Promise<MSafeTransaction> {
   const fullFnName = await promptUntilString(
     '\tModule name (E.g. 0x1::coin):\t',
@@ -201,7 +212,7 @@ async function promptAndBuildForCustomTx(
   if (!moduleData.abi.exposed_functions) {
     throw new Error(`${fullFnName} has no exposed function`);
   }
-  const entryFns =moduleData.abi.exposed_functions.filter(fn => fn.is_entry && fn.visibility === 'public');
+  const entryFns = moduleData.abi.exposed_functions.filter(fn => fn.is_entry && fn.visibility === 'public');
 
   let i = 1;
   let selectedFn: any;
@@ -228,15 +239,17 @@ async function promptAndBuildForCustomTx(
 
   printSeparator();
 
-  console.log("Start to input arguments:");
-  console.log();
-  const args = await promptForArgs(selectedFn.params);
-
   console.log("Note in this version, only limited arguments are supported. Including:");
   console.log("\t1. u128, u64, u32, u16, u8");
   console.log("\t2. address");
   console.log("\t3. &signer");
   console.log("\t4. vector<u8>");
+  console.log();
+
+  console.log("Start to input arguments:");
+  console.log();
+
+  const args = await promptForArgs(selectedFn.params);
 
   const ciArgs = {
     deployer: contractAddr,
@@ -283,40 +296,46 @@ async function promptForArgs(params: any[]): Promise<BCS.Bytes[]> {
 // TODO: add vector, address, vector<u8>
 async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefined> {
   switch (param) {
-    case ("&signer"): {
+    case ("&signer"):
+    case ("signer"): {
+      console.log(`\t${i}: Type ${param}\t\t\t&signer`);
       return undefined;
     }
     case ("u128"): {
-      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0);
+      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0);
       return BCS.bcsSerializeU128(val);
     }
     case ("u64"): {
-      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilBigInt(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeUint64(val);
     }
     case ("u32"): {
-      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU32(val);
     }
     case ("u16"): {
-      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU16(val);
     }
     case ("u8"): {
-      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, v => v >= 0 );
+      const val = await promptUntilNumber(`\t${i}: Type ${param}\t\t\t`, `\tIncorrect value:`, v => v >= 0 );
       return BCS.bcsSerializeU8(val);
     }
     case ("bool"): {
-      const val = await promptUntilTrueFalse(`\t${i}: Type ${param}\t\t`);
+      const val = await promptUntilTrueFalse(`\t${i}: Type ${param}\t\t\t`);
       return BCS.bcsSerializeBool(val);
     }
     case ("address"): {
-      const val = await promptUntilString(`\t${i}: Type ${param}\t`, `\tIncorrect value:`, isStringAddress);
+      const val = await promptUntilString(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, isStringAddress);
       return BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(val));
     }
     case ("vector<u8>"): {
-      const val = await promptUntilString(`\t${i}: Type ${param}\t`, `\tIncorrect value:`, isStringHex);
+      const val = await promptUntilString(`\t${i}: Type ${param}\t\t`, `\tIncorrect value:`, isStringHex);
       return BCS.bcsSerializeBytes(HexString.ensure(val).toUint8Array());
+    }
+    case ("0x1::string::String"): {
+      const val = await prompt(`\t${i}: Type ${param}\t`);
+      return BCS.bcsSerializeStr(val);
     }
     default: {
       throw new Error(`Unsupported type: `+param);
@@ -324,25 +343,69 @@ async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefine
   }
 }
 
-function isHexString(s: string): boolean {
-  try {
-    HexString.ensure(s);
-  } catch (e) {
-    return false;
+async function promptPublishTx(sender: HexString, sn: bigint) {
+  const res = await promptForYN("Do you want to compile the MOVE module?", false);
+  console.log();
+  if (res) {
+    return promptCompileAndBuildModulePublishTx(sender, sn);
+  } else {
+    return promptBuildModulePublishTx(sender, sn);
   }
-  return true;
 }
 
-function hexStringToBytes(s: string): Uint8Array {
-  return HexString.ensure(s).toUint8Array();
+async function promptBuildModulePublishTx(sender: HexString, sn: bigint) {
+  console.log("Publish move modules.");
+  console.log();
+  console.log('Please confirm for prerequisite:');
+  console.log("\t1. MOVE module has already been compiled with flag `--save-metadata`");
+  console.log(`\t2. The deployer's address has been set to momentum safe ${sender}`);
+  console.log();
+  const moveDir = await promptUntilString(
+    "Please input your target move directory (with Move.toml)",
+    "Invalid directory - Move.toml not found",
+    MovePublisher.isDirValid,
+  );
+  return await makeModulePublishTx(sender, {moveDir: moveDir}, {sequenceNumber: sn});
 }
 
-function stringToBytes(s: string): Uint8Array {
-  return Buffer.from(s, 'base64');
+async function promptCompileAndBuildModulePublishTx(
+  sender: HexString,
+  sn: bigint,
+): Promise<MSafeTransaction> {
+  console.log("Compile and publish move modules.");
+  console.log();
+  console.log("Please confirm for prerequisites:");
+  console.log("\t1) Have `aptos` installed in $PATH.");
+  console.log("\t2) Have the deployer address set to `_` in Move.toml.");
+  console.log();
+  const moveDir = await promptUntilString(
+    "Please input your target move directory (with Move.toml)",
+    "Invalid directory - Move.toml not found",
+    MovePublisher.isDirValid,
+  );
+  const ia = await promptUntilString(
+    "Included artifacts (none, sparse, all)\t\t\t",
+    "Allowed arguments: none, sparse, all\t\t\t",
+    isStrIncludedArtifacts
+  );
+  const includedArtifacts = strToIncludedArtifacts(ia);
+  const addrToReplace = await promptUntilString(
+    "Deployer address name in Move.toml\t\t\t",
+    "",
+    () => true,
+  );
+
+  printSeparator();
+  const args = {
+    moveDir: moveDir,
+    artifacts: includedArtifacts,
+    deployerAddressName: addrToReplace,
+  };
+  return await compileAndMakeModulePublishTx(sender, args, {sequenceNumber: sn});
 }
 
-function printTxConfirmation(txData: MSafeTxnInfo) {
+async function printTxConfirmation(txData: MSafeTxnInfo) {
   console.log("Transaction confirmation:");
   console.log();
-  printTxDetails(txData);
+  await printTxDetails(txData);
 }

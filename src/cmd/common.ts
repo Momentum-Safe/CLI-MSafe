@@ -1,15 +1,21 @@
 import readline from "readline-sync";
-import clear from 'clear';
 import * as Aptos from "../web3/global";
-import {HexString, TxnBuilderTypes} from "aptos";
+import {HexString} from "aptos";
+import {BigNumber} from 'bignumber.js';
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 import {
   APTTransferArgs,
   CoinRegisterArgs,
   CoinTransferArgs,
+  CustomInteractionArgs,
+  decodeCustomArgs,
+  ModulePublishInfo,
   MSafeTxnInfo,
-  MSafeTxnType
+  MSafeTxnType,
+  RevertArgs,
 } from "../momentum-safe/msafe-txn";
+import {bigIntToBigNumber, fromDust} from "../utils/bignumber";
+import {APT_COIN_INFO} from "../web3/global";
 
 const SEPARATOR_LENGTH = 20;
 
@@ -17,7 +23,6 @@ const STATE_MAP = new Map<State, (arg: any) => void>();
 
 export enum State {
   Entry,
-  Register,
   List,
   Create,
   MSafeDetails,
@@ -41,7 +46,7 @@ export function setState(state: State, arg?: any) {
 
 export async function prompt(s: string): Promise<string> {
   return new Promise((resolve) => {
-    return resolve(readline.question(s));
+    return resolve(readline.question(s+'\t'));
   });
 }
 
@@ -61,7 +66,11 @@ export async function promptForNumber(s: string): Promise<number> {
   return Number(valStr);
 }
 
-export async function promptUntilBigInt(pmp: string, npmp: string, validate: (v: bigint) => boolean): Promise<bigint> {
+export async function promptUntilBigInt(
+  pmp: string,
+  npmp: string,
+  validate: (v: bigint) => boolean,
+): Promise<bigint> {
   let res = await promptForBigInt(pmp);
   while (!validate(res)) {
     res = await promptForBigInt(npmp);
@@ -92,6 +101,26 @@ export async function promptForYN(s: string, defVal: boolean): Promise<boolean> 
     res = await prompt(`${s} ${clause}\t`);
   }
   return getValueYN(res, defVal);
+}
+
+export async function promptUntilBigNumber(
+  pmp: string,
+  npmp: string,
+  validate: (v: BigNumber) => boolean,
+) {
+  let res = await promptForBigNumber(pmp);
+  while (!validate(res)) {
+    res = await promptForBigNumber(npmp);
+  }
+  return res;
+}
+
+export async function promptForBigNumber(s: string): Promise<BigNumber> {
+  const valStr = await prompt(s);
+  if (valStr.length == 0) {
+    return BigNumber(-1);
+  }
+  return BigNumber(valStr);
 }
 
 function ynClause(defVal: boolean): string {
@@ -144,12 +173,12 @@ export async function printMyMessage() {
   console.log();
   console.log(`My Address: \t${Aptos.MY_ACCOUNT.address()}`);
   console.log(`My PubKey: \t${Aptos.MY_ACCOUNT.publicKey()}`);
-  console.log(`My Balance: \t${await Aptos.getBalance(Aptos.MY_ACCOUNT.address())}`);
+  console.log(`My Balance: \t${await Aptos.getBalanceAPT(Aptos.MY_ACCOUNT.address())} APT`);
   console.log("-".repeat(process.stdout.columns));
   console.log();
 }
 
-export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: number) {
+export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: BigNumber) {
   console.log(`Momentum Safe Info:`);
   console.log();
   console.log(`Address:\t${address}`);
@@ -158,19 +187,9 @@ export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, ba
   info.owners.forEach( (owner, i) => {
     console.log(`\t\t(${i+1}/${info.owners.length}) ${owner}`);
   });
-  console.log(`Balance:\t${balance}`);
+  console.log(`Balance:\t${balance} APT`);
   console.log("-".repeat(process.stdout.columns));
   console.log();
-}
-
-export function shortString(val: HexString | string) {
-  if (typeof val === 'string' && val.length < 15) {
-    return val;
-  } else if (val instanceof HexString && val.toShortString().length < 15) {
-    return val.hex();
-  }
-  const s = typeof val === 'string'? val: val.hex();
-  return `${s.substring(0, 8)}...${s.substring(s.length-5)}`;
 }
 
 export interface CmdOption {
@@ -237,64 +256,7 @@ class CmdOptionHelper {
   }
 }
 
-export function isStringPublicKey(s: string): boolean {
-  let byteLength;
-  try {
-    byteLength = HexString.ensure(s).toUint8Array().length;
-  } catch (e) {
-    return false;
-  }
-  return byteLength == TxnBuilderTypes.Ed25519PublicKey.LENGTH;
-}
-
-export function isStringAddress(s: string): boolean {
-  const byteLength = HexString.ensure(s).toUint8Array().length;
-  return byteLength == 32; // SHA3_256 length
-}
-
-export function isStringShortAddress(s: string) :boolean {
-  const byteLength = HexString.ensure(s).toUint8Array().length;
-  return byteLength <= 32; // SHA3_256 length
-}
-
-export function isStringHex(s: string): boolean {
-  const re = /[0-9A-Fa-f]{6}/g;
-  return re.test(s);
-}
-
-export function isStringTypeStruct(s: string): boolean {
-  try {
-    TxnBuilderTypes.StructTag.fromString(s);
-  } catch (e) {
-    return false;
-  }
-  return true;
-}
-
-const numModuleComps = 2;
-
-export function isStringFullModule(s: string): boolean {
-  const comps = s.split('::');
-  if (comps.length != numModuleComps) {
-    return false;
-  }
-  try {
-    HexString.ensure(comps[0]);
-  } catch (e) {
-    return false;
-  }
-  return true;
-}
-
-export function splitModuleComponents(s: string): [HexString, string] {
-  const comps = s.split('::');
-  if (comps.length !== numModuleComps) {
-    throw new Error("invalid full function name");
-  }
-  return [HexString.ensure(comps[0]), comps[1]];
-}
-
-export function printTxDetails(txData: MSafeTxnInfo) {
+export async function printTxDetails(txData: MSafeTxnInfo) {
   switch (txData.txType) {
     case (MSafeTxnType.APTCoinTransfer):
       printAPTCoinTransfer(txData);
@@ -304,6 +266,16 @@ export function printTxDetails(txData: MSafeTxnInfo) {
       break;
     case (MSafeTxnType.AnyCoinRegister):
       printAnyCoinRegister(txData);
+      break;
+    case (MSafeTxnType.Revert):
+      printRevertTxn(txData);
+      break;
+    case (MSafeTxnType.CustomInteraction):
+      await printCustomTxn(txData);
+      break;
+    case (MSafeTxnType.ModulePublish):
+      printModulePublishTxn(txData);
+      break;
   }
   printTxCommonData(txData);
 }
@@ -320,7 +292,7 @@ function printAPTCoinTransfer(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as APTTransferArgs;
   console.log(`To:\t\t\t${args.to}`);
-  console.log(`Amount:\t\t\t${args.amount}`);
+  console.log(`Amount:\t\t\t${fromDust(args.amount, APT_COIN_INFO.decimals)} APT`);
 }
 
 function printAnyCoinTransfer(txInfo: MSafeTxnInfo) {
@@ -335,4 +307,51 @@ function printAnyCoinRegister(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as CoinRegisterArgs;
   console.log(`Coin:\t\t\t${args.coinType}`);
+}
+
+function printRevertTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const args = txInfo.args as RevertArgs;
+  console.log(`Revert SN:\t\t${args.sn}`);
+}
+
+async function printCustomTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const cia = txInfo.args as CustomInteractionArgs;
+  console.log(`Call function:\t\t${cia.deployer}::${cia.moduleName}::${cia.fnName}`);
+  // print type arguments
+  for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
+    console.log(`Type Arguments (${i+1}):\t${cia.typeArgs[i]}`);
+  }
+  // print arguments
+  const args = await getBCSArgValue(cia);
+  for (let i = 0; i != args.length; i = i + 1) {
+    const [argType, argValue] = args[i];
+    console.log(`Arguments (${i+1}):\t\t[${argType}]\t${argValue}`);
+  }
+}
+
+function printModulePublishTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const mpi = txInfo.args as ModulePublishInfo;
+  console.log(`Verify Hash:\t\t${mpi.hash}`);
+  console.log(`Deployer:\t\t${txInfo.sender}`);
+  console.log(`Package:\t\t${mpi.metadata.name}`);
+  console.log(`Upgrade Policy:\t\t${mpi.metadata.upgrade_policy.name()}`);
+  console.log(`Upgrade Number:\t\t${mpi.metadata.upgrade_number}`);
+  console.log(`Source Digest:\t\t${mpi.metadata.source_digest}`);
+  console.log(`Modules:\t\t${mpi.metadata.modules.map(
+    module => `${txInfo.sender}::${module.name}`
+  ).join('\n\t\t\t')}`);
+  console.log(`Dependency:\t\t${mpi.metadata.deps.map(
+    dep => `${HexString.fromUint8Array(dep.account.address)}::${dep.package_name}`
+  ).join('\n\t\t\t')}`);
+}
+
+async function getBCSArgValue(cia: CustomInteractionArgs) {
+  const deployer = cia.deployer;
+  const moduleName = cia.moduleName;
+  const fnName = cia.fnName;
+
+  return decodeCustomArgs(deployer, moduleName, fnName, cia.args);
 }

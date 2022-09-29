@@ -1,4 +1,8 @@
-import {TxnBuilderTypes, HexString, BCS} from "aptos";
+import {
+  TxnBuilderTypes,
+  HexString,
+  BCS
+} from "aptos";
 import {Buffer} from "buffer/"; // the trailing slash is important!
 import * as SHA3 from "js-sha3";
 import {HexBuffer, DEPLOYER} from "../momentum-safe/common";
