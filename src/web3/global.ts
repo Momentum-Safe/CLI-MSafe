@@ -6,12 +6,12 @@ import {
   ApiError,
   Types
 } from 'aptos';
-import {Account} from "./account";
-import {load} from "js-yaml";
-import {readFile} from "fs/promises";
-import {Coin} from "./coin";
-import {BigNumber} from "bignumber.js";
-import {bigIntToBigNumber, fromDust} from "../utils/bignumber";
+import { Account } from "./account";
+import { load } from "js-yaml";
+import { readFile } from "fs/promises";
+import { Coin } from "./coin";
+import { BigNumber } from "bignumber.js";
+import { bigIntToBigNumber, fromDust } from "../utils/bignumber";
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
@@ -150,4 +150,8 @@ async function loadAptosYaml(filePath: string) {
 
 export async function getAccountModule(addr: HexString, moduleName: string) {
   return await APTOS.getAccountModule(addr, moduleName);
+}
+
+export function client() {
+  return APTOS;
 }

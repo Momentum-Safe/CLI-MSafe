@@ -1,7 +1,7 @@
 import * as Aptos from "../web3/global";
-import {HexString, TxnBuilderTypes, BCS} from 'aptos';
-import {AptosEntryTxnBuilder, Transaction} from '../web3/transaction';
-import {Account} from '../web3/account';
+import { HexString, TxnBuilderTypes, BCS } from 'aptos';
+import { AptosEntryTxnBuilder, Transaction } from '../web3/transaction';
+import { Account } from '../web3/account';
 import {
   vector,
   SimpleMap,
@@ -12,12 +12,14 @@ import {
   FUNCTIONS,
   assembleMultiSigTxn,
   HexBuffer,
+  TableWithLength,
 } from './common';
-import {assembleMultiSig} from './sig-helper';
-import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
-import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
-import {formatAddress} from "../utils/parse";
-import {isHexEqual} from "../utils/check";
+
+import { assembleMultiSig } from './sig-helper';
+import { computeMultiSigAddress, sha3_256 } from "../web3/crypto";
+import { MSafeTransaction, MSafeTxnInfo } from "./msafe-txn";
+import { formatAddress } from "../utils/parse";
+import { isHexEqual } from "../utils/check";
 
 
 // Data stored in MomentumSafe.move
@@ -37,9 +39,9 @@ type Info = {
 type TxnBook = {
   min_sequence_number: string,
   max_sequence_number: string,
-  tx_hashes: SimpleMap<vector<HexStr>>, // nonce => vector<tx hash>
+  tx_hashes: TableWithLength<string, vector<HexStr>>, // nonce => vector<tx hash>
   // sequence number => a list of transactions (with the same sequence number)
-  pendings: SimpleMap<TransactionType>, // Hash => Tx
+  pendings: TableWithLength<string, TransactionType>, // Hash => Tx
 }
 
 export type TransactionType = {
@@ -94,9 +96,9 @@ export class MomentumSafe {
     address = formatAddress(address);
     const msafeData = await MomentumSafe.queryMSafeResource(address);
     const owners = msafeData.info.owners.map(ownerStr => HexString.ensure(ownerStr));
-    const threshold  = msafeData.info.threshold;
+    const threshold = msafeData.info.threshold;
     const nonce = msafeData.info.nonce;
-    const ownerPubKeys = msafeData.info.public_keys.map( pk => HexString.ensure(pk));
+    const ownerPubKeys = msafeData.info.public_keys.map(pk => HexString.ensure(pk));
     return new MomentumSafe(owners, ownerPubKeys, threshold, nonce, address);
   }
 
@@ -108,7 +110,7 @@ export class MomentumSafe {
     const signedInitTx = signer.sign(initTx);
 
     const txRes = await Aptos.sendSignedTransactionAsync(signedInitTx);
-    return {plHash: tmpHash, pendingTx: txRes};
+    return { plHash: tmpHash, pendingTx: txRes };
   }
 
   async isReadyToSubmit(txHash: string | HexString, extraPubKey?: HexString) {
@@ -153,13 +155,9 @@ export class MomentumSafe {
   }
 
   // TODO: do not query for resource
-  async findTx(txHash: HexString | string) {
+  async findTx(txHash: HexString | string): Promise<TransactionType> {
     const res = await this.getResource();
-    const tx = res.txn_book.pendings.data.find(entry => isHexEqual(entry.key, txHash));
-    if (!tx) {
-      throw new Error("txHash not found: " + txHash);
-    }
-    return tx.value;
+    return MomentumSafe.queryPendingTxByHash(res, txHash);
   }
 
   // TODO: do not query for resource
@@ -244,15 +242,17 @@ export class MomentumSafe {
     const balance = await Aptos.getBalance(this.address);
     const sn = await Aptos.getSequenceNumber(this.address);
     const pendings: MSafeTxnInfo[] = [];
-    data.txn_book.pendings.data.forEach( e => {
-      const tx = e.value;
-      if (MomentumSafe.isTxValid(tx, sn)) {
-        const decodedTx = MSafeTransaction.deserialize(HexBuffer(tx.payload));
-        pendings.push(decodedTx.getTxnInfo(e.value.signatures.data.length));
-      }
-    });
+    for (let nonce = Number(sn); nonce <= Number(data.txn_book.max_sequence_number); nonce++) {
+      const nonce_hashes = await MomentumSafe.queryPendingTxHashBySN(data, nonce);
+      const txs = await Promise.all(nonce_hashes.map(hash => MomentumSafe.queryPendingTxByHash(data, hash)));
+      const validTxs = txs.filter(tx => MomentumSafe.isTxValid(tx, sn));
+      validTxs.forEach(tx=>{
+        const msafeTx = MSafeTransaction.deserialize(HexBuffer(tx.payload));
+        pendings.push(msafeTx.getTxnInfo(tx.signatures.data.length));
+      });
+    }
     const nextSN = this.getNextSequenceNumberFromResourceData(data);
-    pendings.sort( (a, b) => {
+    pendings.sort((a, b) => {
       if (a.sn != b.sn) {
         return Number(a.sn - b.sn);
       } else {
@@ -280,7 +280,7 @@ export class MomentumSafe {
   }
 
   private getIndex(target: HexString): number {
-    const i = this.ownersPublicKeys.findIndex( pk => {
+    const i = this.ownersPublicKeys.findIndex(pk => {
       return isHexEqual(pk, target);
     });
     if (i == -1) {
@@ -296,6 +296,22 @@ export class MomentumSafe {
 
   private getNextSequenceNumberFromResourceData(momentum: Momentum) {
     return BigInt(momentum.txn_book.max_sequence_number) + 1n;
+  }
+
+  static async queryPendingTxHashBySN(momentum: Momentum, sn: number): Promise<vector<string>> {
+    return Aptos.client().getTableItem(momentum.txn_book.tx_hashes.inner.handle, {
+      key_type: 'u64',
+      value_type: 'vector<vector<u8>>',
+      key: String(sn)
+    });
+  }
+
+  static async queryPendingTxByHash(momentum: Momentum, txID: string | HexString): Promise<TransactionType> {
+    return Aptos.client().getTableItem(momentum.txn_book.pendings.inner.handle, {
+      key_type: 'vector<u8>',
+      value_type: RESOURCES.MOMENTUM_TRANSACTION,
+      key: txID.toString()
+    });
   }
 }
 

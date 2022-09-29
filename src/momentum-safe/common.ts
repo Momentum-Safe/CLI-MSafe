@@ -1,8 +1,8 @@
-import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
-import {Buffer} from "buffer/";
-import {Transaction} from "../web3/transaction";
+import { APTOS_COIN, BCS, HexString, TxnBuilderTypes } from "aptos";
+import { Buffer } from "buffer/";
+import { Transaction } from "../web3/transaction";
 
-export const DEPLOYER = '0x0341bf50ae6c33622979a728fa21c5b274408f66c6683303f6d39685566f1c1d';
+export const DEPLOYER = '0x0e5d541b27f78bc505bc2a61aff4ba6c13a35a02911ac6c0f0f40dd16ca0d338';
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -42,7 +42,9 @@ export const FUNCTIONS = {
 
 export const STRUCTS = {
   MOMENTUM: "Momentum",
+  MOMENTUM_TRANSACTION: "Transaction",
   CREATOR: "PendingMultiSigCreations",
+  CREATOR_CREATION: "MomentumSafeCreation",
   REGISTRY: "OwnerMomentumSafes",
   APTOS_COIN: "AptosCoin",
   COIN_INFO: "CoinInfo"
@@ -50,7 +52,9 @@ export const STRUCTS = {
 
 export const RESOURCES = {
   MOMENTUM: `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM}`,
+  MOMENTUM_TRANSACTION: `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM_TRANSACTION}`,
   CREATOR: `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR}`,
+  CREATOR_CREATION: `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR_CREATION}`,
   REGISTRY: `${DEPLOYER}::${MODULES.REGISTRY}::${STRUCTS.REGISTRY}`,
   APTOS_COIN: `${APTOS_COIN}::${MODULES.COIN}::${STRUCTS.APTOS_COIN}`,
 };
@@ -66,6 +70,15 @@ export type Element<V> = {
 
 export type SimpleMap<V> = {
   data: Element<V>[]
+}
+
+export type Table<K, V> = {
+  handle: string
+}
+
+export type TableWithLength<K, V> = {
+  inner: Table<K, V>,
+  length: string,
 }
 
 export function assembleMultiSigTxn(
@@ -85,7 +98,7 @@ export function HexBuffer(hex: string): Buffer {
 
 export function hasDuplicateAddresses(addrs: HexString[]): boolean {
   const s = new Set();
-  addrs.forEach( pk => {
+  addrs.forEach(pk => {
     if (s.has(pk.hex())) {
       return true;
     }
