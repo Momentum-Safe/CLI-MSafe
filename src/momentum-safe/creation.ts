@@ -261,8 +261,7 @@ export class CreationHelper {
   // getMSafeCreation get the current data for mSafe creation
   private static async getMSafeCreation(msafeAddr: HexString): Promise<MultiSigCreation> {
     const creations = await CreationHelper.getResourceData();
-    const creation = creations.creations.data.find( ({key}) =>
-      isHexEqual(key, msafeAddr));
+    const creation = creations.creations.data.find( ({key}) => isHexEqual(key, msafeAddr));
     if (!creation) {
       throw new Error(`Momentum Safe creation data not found`);
     }

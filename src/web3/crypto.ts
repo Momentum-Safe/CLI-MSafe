@@ -1,11 +1,7 @@
 import {TxnBuilderTypes, HexString, BCS} from "aptos";
 import {Buffer} from "buffer/"; // the trailing slash is important!
 import * as SHA3 from "js-sha3";
-import {HexBuffer} from "../momentum-safe/common";
-
-// TODO: make this single config
-export const DEPLOYER = 'cc8d582ac7a85543cab86b7dd76a554714ce19eee51de19a12a93c06ef56e955';
-
+import {HexBuffer, DEPLOYER} from "../momentum-safe/common";
 
 // MomentumSafe public key is a blend of owners and a nonce (as address)
 export function computeMultiSigAddress(owners: string[] | Uint8Array[] | HexString[], threshold: number, nonce: number):
