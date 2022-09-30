@@ -1,8 +1,16 @@
+<<<<<<< Updated upstream
 import { APTOS_COIN, BCS, HexString, TxnBuilderTypes } from "aptos";
 import { Buffer } from "buffer/";
 import { Transaction } from "../web3/transaction";
 
 export const DEPLOYER = '0x5890f9fea5d4c9e54724f423efb89655329db2525268e690258deaa8557f5e3c';
+=======
+import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
+import {Transaction} from "../web3/transaction";
+import {HexBuffer} from "../utils/buffer";
+
+export const DEPLOYER = '0x85537cb814a09279609315ea11d01a8a9b89c9330d82c8399c2a7f2d17ead9f6';
+>>>>>>> Stashed changes
 export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -90,10 +98,6 @@ export function assembleMultiSigTxn(
   const signingTx = Transaction.deserialize(HexBuffer(payload));
   const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);
   return BCS.bcsToBytes(signedTx);
-}
-
-export function HexBuffer(hex: string): Buffer {
-  return Buffer.from(hex.startsWith('0x') ? hex.slice(2) : hex, 'hex');
 }
 
 export function hasDuplicateAddresses(addrs: HexString[]): boolean {

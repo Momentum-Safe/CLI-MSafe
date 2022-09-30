@@ -15,7 +15,7 @@ import {
 import {Transaction} from "../web3/transaction";
 import * as Aptos from '../web3/global';
 import * as Gen from "aptos/src/generated";
-import {HexBuffer} from "../momentum-safe/common";
+import {HexBuffer} from "../utils/buffer";
 
 interface creationDetailsArg {
   address: HexString,

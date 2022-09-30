@@ -17,7 +17,7 @@ import * as Aptos from "../web3/global";
 import { AptosEntryTxnBuilder, Transaction } from "../web3/transaction";
 import { Account } from "../web3/account";
 import { computeMultiSigAddress } from "../web3/crypto";
-import { HexBuffer } from "./common";
+import { HexBuffer } from "../utils/buffer";
 import { MultiSigHelper } from "./sig-helper";
 import { Registry } from "./registry";
 import { makeMSafeRegisterTx } from "./msafe-txn";

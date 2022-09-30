@@ -10,16 +10,14 @@ import {
   RESOURCES,
   MODULES,
   FUNCTIONS,
-  assembleMultiSigTxn,
-  HexBuffer,
-  TableWithLength,
+  assembleMultiSigTxn, TableWithLength,
 } from './common';
-
-import { assembleMultiSig } from './sig-helper';
-import { computeMultiSigAddress, sha3_256 } from "../web3/crypto";
-import { MSafeTransaction, MSafeTxnInfo } from "./msafe-txn";
-import { formatAddress } from "../utils/parse";
-import { isHexEqual } from "../utils/check";
+import {assembleMultiSig} from './sig-helper';
+import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
+import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
+import {formatAddress} from "../utils/parse";
+import {isHexEqual} from "../utils/check";
+import {HexBuffer} from "../utils/buffer";
 
 
 // Data stored in MomentumSafe.move

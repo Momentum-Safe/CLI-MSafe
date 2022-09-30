@@ -5,7 +5,9 @@ import {
 } from "aptos";
 import {Buffer} from "buffer/"; // the trailing slash is important!
 import * as SHA3 from "js-sha3";
-import {HexBuffer, DEPLOYER} from "../momentum-safe/common";
+import deployedContracts from "../../deployed-addr.json";
+import {HexBuffer} from "../utils/buffer";
+
 
 // MomentumSafe public key is a blend of owners and a nonce (as address)
 export function computeMultiSigAddress(owners: string[] | Uint8Array[] | HexString[], threshold: number, nonce: number):
@@ -44,7 +46,7 @@ function parsePubKey(publicKey: string | Uint8Array | HexString): TxnBuilderType
 
 function noncePubKey(nonce: number) {
   const pubKey = Buffer.alloc(TxnBuilderTypes.Ed25519PublicKey.LENGTH);
-  const deployerBuf = HexBuffer(DEPLOYER);
+  const deployerBuf = HexBuffer(deployedContracts.devnet); // TODO: replace here
   deployerBuf.copy(pubKey, 0, 0, 16);
   pubKey.writeUInt32LE(nonce, 16);
   return new TxnBuilderTypes.Ed25519PublicKey(pubKey);
