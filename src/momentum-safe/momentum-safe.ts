@@ -245,8 +245,7 @@ export class MomentumSafe {
     for (let nonce = sn; nonce <= BigInt(data.txn_book.max_sequence_number); nonce++) {
       const nonce_hashes = await MomentumSafe.queryPendingTxHashBySN(data, nonce);
       const txs = await Promise.all(nonce_hashes.map(hash => MomentumSafe.queryPendingTxByHash(data, hash)));
-      const validTxs = txs.filter(tx => MomentumSafe.isTxValid(tx, sn));
-      validTxs.forEach(tx => {
+      txs.filter(tx => MomentumSafe.isTxValid(tx, sn)).forEach(tx => {
         const msafeTx = MSafeTransaction.deserialize(HexBuffer(tx.payload));
         pendings.push(msafeTx.getTxnInfo(tx.signatures.data.length));
       });
