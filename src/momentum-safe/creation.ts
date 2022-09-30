@@ -1,6 +1,7 @@
-import {BCS, HexString, TxnBuilderTypes} from 'aptos';
+import { BCS, HexString, TxnBuilderTypes } from 'aptos';
 import {
   SimpleMap,
+  Table,
   DEPLOYER_HS,
   MODULES,
   FUNCTIONS,
@@ -9,25 +10,26 @@ import {
   assembleMultiSigTxn,
   serializeOwners,
   hasDuplicateAddresses,
+  vector,
 } from './common';
-import {assembleMultiSig} from "./sig-helper";
+import { assembleMultiSig } from "./sig-helper";
 import * as Aptos from "../web3/global";
-import {AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
-import {Account} from "../web3/account";
-import {computeMultiSigAddress} from "../web3/crypto";
-import {HexBuffer} from "./common";
-import {MultiSigHelper} from "./sig-helper";
-import {Registry} from "./registry";
-import {makeMSafeRegisterTx} from "./msafe-txn";
-import {formatAddress} from "../utils/parse";
-import {isHexEqual} from "../utils/check";
+import { AptosEntryTxnBuilder, Transaction } from "../web3/transaction";
+import { Account } from "../web3/account";
+import { computeMultiSigAddress } from "../web3/crypto";
+import { HexBuffer } from "./common";
+import { MultiSigHelper } from "./sig-helper";
+import { Registry } from "./registry";
+import { makeMSafeRegisterTx } from "./msafe-txn";
+import { formatAddress } from "../utils/parse";
+import { isHexEqual } from "../utils/check";
 
 
 // Data stored in creator
 
 type PendingMultiSigCreations = {
-  nonces: SimpleMap<number>,
-  creations: SimpleMap<MultiSigCreation>
+  nonces: Table<string, vector<string>>, // nonce=>[txids...]
+  creations: Table<string, MultiSigCreation> // hash=>MultiSigCreation
 };
 
 type MultiSigCreation = {
@@ -70,7 +72,7 @@ export class CreationHelper {
     readonly threshold: number,
     readonly creationNonce: number,
     readonly initBalance?: bigint,
-  ){
+  ) {
     // Input parameter checks
     if (owners.length != ownerPubKeys.length) {
       throw new Error("owner length does nt match public keys");
@@ -88,7 +90,7 @@ export class CreationHelper {
       throw new Error(`momentum safe supports up to ${MAX_NUM_OWNERS} owners`);
     }
     // Compute for multi-ed25519 public key and address
-    [this.rawPublicKey,, this.address] = computeMultiSigAddress(ownerPubKeys, threshold, creationNonce);
+    [this.rawPublicKey, , this.address] = computeMultiSigAddress(ownerPubKeys, threshold, creationNonce);
   }
 
   // Create the momentum safe creation from resource data
@@ -119,7 +121,7 @@ export class CreationHelper {
     try {
       creation = await this.getResourceData();
     } catch (e) {
-      if (e instanceof Error && e.message.includes("Momentum Safe creation data not found")){
+      if (e instanceof Error && e.message.includes("Table Item not found by Table handle")) {
         // Expected behavior. We do not expect creation data at this stage
       } else {
         throw e;
@@ -131,8 +133,8 @@ export class CreationHelper {
 
     // Sign on the multi-sig transaction
     // TODO: expose the metadata
-    const txArg = {metadata: 'Momentum Safe'};
-    const options = {sequenceNumber: 0n};
+    const txArg = { metadata: 'Momentum Safe' };
+    const options = { sequenceNumber: 0n };
     const tx = await makeMSafeRegisterTx(this.address, txArg, options);
     const [payload, sig] = signer.getSigData(tx);
 
@@ -147,7 +149,7 @@ export class CreationHelper {
   async collectedSignatures(): Promise<HexString[]> {
     const creation = await this.getResourceData();
     const sigs = creation.txn.signatures.data;
-    return sigs.map( entry => HexString.ensure(entry.key));
+    return sigs.map(entry => HexString.ensure(entry.key));
   }
 
   async isReadyToSubmit(extraPubKey?: HexString) {
@@ -217,7 +219,7 @@ export class CreationHelper {
   }
 
   private findPkIndex(publicKey: HexString) {
-    const index = this.ownerPubKeys.findIndex( pk => isHexEqual(pk, publicKey));
+    const index = this.ownerPubKeys.findIndex(pk => isHexEqual(pk, publicKey));
     if (index === -1) {
       throw new Error("cannot find public key");
     }
@@ -251,16 +253,15 @@ export class CreationHelper {
 
   private static async getPublicKeysFromRegistry(addrs: HexString[]) {
     return Promise.all(
-      addrs.map( addr => Registry.getRegisteredPublicKey(addr))
+      addrs.map(addr => Registry.getRegisteredPublicKey(addr))
     );
   }
 
 
   private static async getNonce(initiator: HexString): Promise<number> {
     const pendingCreations = await CreationHelper.getResourceData();
-    const nonce = pendingCreations.nonces.data.find( entry => isHexEqual(entry.key, initiator));
-    if (!nonce) {return 0}
-    return nonce.value;
+    const nonce = await CreationHelper.queryNonces(pendingCreations, initiator);
+    return Number(nonce);
   }
 
   // debug only
@@ -271,19 +272,35 @@ export class CreationHelper {
   // getMSafeCreation get the current data for mSafe creation
   private static async getMSafeCreation(msafeAddr: HexString): Promise<MultiSigCreation> {
     const creations = await CreationHelper.getResourceData();
-    const creation = creations.creations.data.find( ({key}) =>
-      isHexEqual(key, msafeAddr));
-    if (!creation) {
-      throw new Error(`Momentum Safe creation data not found`);
-    }
-    return creation.value;
+    return CreationHelper.queryMultiSigCreation(creations, msafeAddr);
   }
 
-  private static async getResourceData(): Promise<PendingMultiSigCreations> {
+  static async getResourceData(): Promise<PendingMultiSigCreations> {
     const res = await Aptos.getAccountResource(DEPLOYER_HS, RESOURCES.CREATOR);
     if (!res) {
       throw new Error("Creator contract not initialized");
     }
     return res.data as PendingMultiSigCreations;
+  }
+
+  static async queryMultiSigCreation(creations: PendingMultiSigCreations, msafeAddr: HexString): Promise<MultiSigCreation> {
+    const creation = await Aptos.client().getTableItem(creations.creations.handle, {
+      key_type: 'address',
+      value_type: RESOURCES.CREATOR_CREATION,
+      key: msafeAddr.noPrefix(),
+    });
+    return creation;
+  }
+
+  static async queryNonces(creations: PendingMultiSigCreations, initiator: HexString): Promise<string> {
+    const nonce = await Aptos.client().getTableItem(creations.nonces.handle, {
+      key_type: 'address',
+      value_type: 'u64',
+      key: initiator.noPrefix(),
+    }).catch(e => {
+      if (e.errorCode == 'table_item_not_found') return '0';
+      throw e;
+    });
+    return nonce;
   }
 }
