@@ -242,11 +242,11 @@ export class MomentumSafe {
     const balance = await Aptos.getBalance(this.address);
     const sn = await Aptos.getSequenceNumber(this.address);
     const pendings: MSafeTxnInfo[] = [];
-    for (let nonce = Number(sn); nonce <= Number(data.txn_book.max_sequence_number); nonce++) {
+    for (let nonce = sn; nonce <= BigInt(data.txn_book.max_sequence_number); nonce++) {
       const nonce_hashes = await MomentumSafe.queryPendingTxHashBySN(data, nonce);
       const txs = await Promise.all(nonce_hashes.map(hash => MomentumSafe.queryPendingTxByHash(data, hash)));
       const validTxs = txs.filter(tx => MomentumSafe.isTxValid(tx, sn));
-      validTxs.forEach(tx=>{
+      validTxs.forEach(tx => {
         const msafeTx = MSafeTransaction.deserialize(HexBuffer(tx.payload));
         pendings.push(msafeTx.getTxnInfo(tx.signatures.data.length));
       });
@@ -298,11 +298,11 @@ export class MomentumSafe {
     return BigInt(momentum.txn_book.max_sequence_number) + 1n;
   }
 
-  static async queryPendingTxHashBySN(momentum: Momentum, sn: number): Promise<vector<string>> {
+  static async queryPendingTxHashBySN(momentum: Momentum, sn: bigint): Promise<vector<string>> {
     return Aptos.client().getTableItem(momentum.txn_book.tx_hashes.inner.handle, {
       key_type: 'u64',
       value_type: 'vector<vector<u8>>',
-      key: String(sn)
+      key: sn.toString()
     });
   }
 

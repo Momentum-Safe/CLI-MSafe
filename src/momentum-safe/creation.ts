@@ -260,15 +260,7 @@ export class CreationHelper {
 
   private static async getNonce(initiator: HexString): Promise<number> {
     const pendingCreations = await CreationHelper.getResourceData();
-    console.log(pendingCreations);
-    const nonce = await Aptos.client().getTableItem(pendingCreations.nonces.handle, {
-      key_type: 'address',
-      value_type: 'u64',
-      key: initiator.noPrefix(),
-    }).catch(e=>{
-      if (e.errorCode == 'table_item_not_found') return 0;
-      throw e;
-    });
+    const nonce = await CreationHelper.queryNonces(pendingCreations, initiator);
     return Number(nonce);
   }
 
@@ -298,5 +290,17 @@ export class CreationHelper {
       key: msafeAddr.noPrefix(),
     });
     return creation;
+  }
+
+  static async queryNonces(creations: PendingMultiSigCreations, initiator: HexString): Promise<string> {
+    const nonce = await Aptos.client().getTableItem(creations.nonces.handle, {
+      key_type: 'address',
+      value_type: 'u64',
+      key: initiator.noPrefix(),
+    }).catch(e => {
+      if (e.errorCode == 'table_item_not_found') return '0';
+      throw e;
+    });
+    return nonce;
   }
 }
