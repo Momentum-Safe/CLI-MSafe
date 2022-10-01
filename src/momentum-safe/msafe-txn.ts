@@ -4,7 +4,6 @@ import * as Aptos from '../web3/global';
 import {Buffer} from "buffer/";
 import {
   APTOS_FRAMEWORK_HS,
-  DEPLOYER_HS,
   FUNCTIONS,
   MODULES,
   Options,
@@ -12,9 +11,10 @@ import {
 } from "./common";
 import * as SHA3 from "js-sha3";
 import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
-import {sha3_256} from "../web3/crypto";
+import {sha3_256} from "../utils/crypto";
 import {secToDate, typeTagStructFromName} from "../utils/parse";
 import {isHexEqual} from "../utils/check";
+import {DEPLOYER} from "../web3/global";
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = MINUTE_SECONDS * 60;
@@ -111,7 +111,7 @@ export async function makeMSafeRegisterTx(
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosEntryTxnBuilder();
   const txn = txBuilder
-    .addr(DEPLOYER_HS)
+    .addr(DEPLOYER)
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REGISTER)
     .from(sender)
@@ -207,7 +207,7 @@ export async function makeMSafeRevertTx(
   config.sequenceNumber = args.sn;
   const txBuilder = new AptosEntryTxnBuilder();
   const txn = txBuilder
-    .addr(DEPLOYER_HS)
+    .addr(DEPLOYER)
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REVERT)
     .from(sender)
@@ -441,7 +441,7 @@ function isAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunctio
 function isRevertTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
-  return isHexEqual(deployer, DEPLOYER_HS)
+  return isHexEqual(deployer, DEPLOYER)
     && module === MODULES.MOMENTUM_SAFE
     && fnName === FUNCTIONS.MSAFE_REVERT;
 }

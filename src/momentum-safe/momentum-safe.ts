@@ -6,18 +6,17 @@ import {
   vector,
   SimpleMap,
   HexStr,
-  DEPLOYER_HS,
-  RESOURCES,
   MODULES,
   FUNCTIONS,
-  assembleMultiSigTxn, TableWithLength,
+  assembleMultiSigTxn, TableWithLength, getResourceTag,
 } from './common';
 import {assembleMultiSig} from './sig-helper';
-import {computeMultiSigAddress, sha3_256} from "../web3/crypto";
+import {computeMultiSigAddress, sha3_256} from "../utils/crypto";
 import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
 import {formatAddress} from "../utils/parse";
 import {isHexEqual} from "../utils/check";
 import {HexBuffer} from "../utils/buffer";
+import {DEPLOYER} from "../web3/global";
 
 
 // Data stored in MomentumSafe.move
@@ -184,7 +183,7 @@ export class MomentumSafe {
     const pkIndex = this.getIndex(signer.publicKey());
 
     return txBuilder
-      .addr(DEPLOYER_HS)
+      .addr(DEPLOYER)
       .module(MODULES.MOMENTUM_SAFE)
       .method(FUNCTIONS.MSAFE_INIT_TRANSACTION)
       .from(signer.address())
@@ -211,7 +210,7 @@ export class MomentumSafe {
     const txBuilder = new AptosEntryTxnBuilder();
 
     return txBuilder
-      .addr(DEPLOYER_HS)
+      .addr(DEPLOYER)
       .module(MODULES.MOMENTUM_SAFE)
       .method(FUNCTIONS.MSAFE_SUBMIT_SIGNATURE)
       .from(signer.address())
@@ -227,7 +226,7 @@ export class MomentumSafe {
   }
 
   private static async queryMSafeResource(address: HexString): Promise<Momentum> {
-    const res = await Aptos.getAccountResource(address, RESOURCES.MOMENTUM);
+    const res = await Aptos.getAccountResource(address, getResourceTag('MOMENTUM'));
     return res.data as Momentum;
   }
 
@@ -306,7 +305,7 @@ export class MomentumSafe {
   static async queryPendingTxByHash(momentum: Momentum, txID: string | HexString): Promise<TransactionType> {
     return Aptos.client().getTableItem(momentum.txn_book.pendings.inner.handle, {
       key_type: 'vector<u8>',
-      value_type: RESOURCES.MOMENTUM_TRANSACTION,
+      value_type: getResourceTag('MOMENTUM_TRANSACTION'),
       key: txID.toString()
     });
   }

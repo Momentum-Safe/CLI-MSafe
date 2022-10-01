@@ -23,7 +23,7 @@ async function list() {
   let i = 1;
 
   const opts: CmdOption[] = [];
-  rd.pendings.forEach( addr => {
+  rd.pendings.forEach(addr => {
     opts.push({
       shortage: i,
       showText: `${formatAddress(addr.hex())} (Pending Creation)`,
@@ -32,7 +32,7 @@ async function list() {
     i += 1;
   });
 
-  rd.msafes.forEach ( addr => {
+  rd.msafes.forEach(addr => {
     opts.push({
       shortage: i,
       showText: `${addr}`,
@@ -42,7 +42,7 @@ async function list() {
   });
 
   opts.push(
-    {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.Entry)},
+    {shortage: 'c', showText: 'Create MSafe', handleFunc: () => setState(State.Create)},
     {shortage: 'r', showText: 'Refresh', handleFunc: () => setState(State.List)},
   );
 

@@ -77,7 +77,8 @@ async function initCreateMSafe() {
   printSeparator();
   const userContinue = await promptForYN("Initiate wallet creation?", true);
   if (!userContinue) {
-    setState(State.Entry);
+    setState(State.List);
+    return;
   }
 
   console.log();
@@ -102,6 +103,6 @@ async function initCreateMSafe() {
   await executeCmdOptions('Choose your next step', [
     {shortage: 'v', showText: 'View details', handleFunc: () =>
         setState(State.PendingCreate, {address: creation.address})},
-    {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.Entry)},
+    {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.List)},
   ]);
 }

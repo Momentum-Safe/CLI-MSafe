@@ -12,29 +12,24 @@ import { readFile } from "fs/promises";
 import { Coin } from "./coin";
 import { BigNumber } from "bignumber.js";
 import { bigIntToBigNumber, fromDust } from "../utils/bignumber";
+import {getDeployedAddrFromNodeURL} from "./config";
+
+export let MY_ACCOUNT: Account;
+export let APT_COIN_INFO: Coin;
+export let DEPLOYER: HexString;
 
 let APTOS: AptosClient;
 let FAUCET: FaucetClient;
-export let MY_ACCOUNT: Account;
 
+export const DEF_ACCOUNT_CONF = `.aptos/config.yaml`;
 const APTOS_COIN_RESOURCE_TYPE = '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>';
+
 
 interface Config {
   nodeURL: string;
   faucetURL?: string;
   privateKey: string,
   address: string,
-}
-
-export let APT_COIN_INFO: Coin;
-
-export const defaultConfigPath = `.aptos/config.yaml`;
-
-export async function fundAddress(address: HexString | string, amount: number) {
-  if (FAUCET === undefined) {
-    throw new Error("faucet not set");
-  }
-  await FAUCET.fundAccount(address, amount);
 }
 
 export async function setGlobal(c: Config) {
@@ -47,6 +42,15 @@ export async function setGlobal(c: Config) {
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
   APT_COIN_INFO = await Coin.new("0x01::aptos_coin::AptosCoin");
+  DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
+}
+
+
+export async function fundAddress(address: HexString | string, amount: number) {
+  if (FAUCET === undefined) {
+    throw new Error("faucet not set");
+  }
+  await FAUCET.fundAccount(address, amount);
 }
 
 export async function getSequenceNumber(address: HexString | string): Promise<bigint> {

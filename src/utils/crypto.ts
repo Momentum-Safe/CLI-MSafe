@@ -5,8 +5,8 @@ import {
 } from "aptos";
 import {Buffer} from "buffer/"; // the trailing slash is important!
 import * as SHA3 from "js-sha3";
-import deployedContracts from "../../deployed-addr.json";
-import {HexBuffer} from "../utils/buffer";
+import * as Aptos from "../web3/global";
+import {HexBuffer} from "./buffer";
 
 
 // MomentumSafe public key is a blend of owners and a nonce (as address)
@@ -46,7 +46,7 @@ function parsePubKey(publicKey: string | Uint8Array | HexString): TxnBuilderType
 
 function noncePubKey(nonce: number) {
   const pubKey = Buffer.alloc(TxnBuilderTypes.Ed25519PublicKey.LENGTH);
-  const deployerBuf = HexBuffer(deployedContracts.devnet); // TODO: replace here
+  const deployerBuf = HexBuffer(Aptos.DEPLOYER);
   deployerBuf.copy(pubKey, 0, 0, 16);
   pubKey.writeUInt32LE(nonce, 16);
   return new TxnBuilderTypes.Ed25519PublicKey(pubKey);
@@ -65,8 +65,4 @@ export function sha3_256(payload: Uint8Array): HexString {
   const hash = SHA3.sha3_256.create();
   hash.update(payload);
   return new HexString(hash.hex());
-}
-
-export function deriveAddress(publicKey: HexString): HexString {
-  return deriveAuthKey(publicKey);
 }

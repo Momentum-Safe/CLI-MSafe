@@ -22,8 +22,7 @@ import {
   State,
 } from "./common";
 import {Registry} from "../momentum-safe/registry";
-import {defaultConfigPath, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
-import {registerEntry} from "./entry";
+import {DEF_ACCOUNT_CONF, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
 import {ApiError} from "aptos";
@@ -37,7 +36,7 @@ const program = new Command();
 const cli = program
   .version("0.0.1")
   .description("Momentum Safe CLI")
-  .option("-c, --config <string>", "config file of aptos profile", defaultConfigPath)
+  .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
   .parse(process.argv);
 
@@ -60,12 +59,11 @@ async function main() {
   }
   await fundWithFaucetIfNotSetup();
   await registerIfNotRegistered();
-  setState(State.Entry);
+  setState(State.List);
 }
 
 
 function registerAllStates() {
-  registerEntry();
   registerList();
   registerCreation();
   registerCreationDetails();
