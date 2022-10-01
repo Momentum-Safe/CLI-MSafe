@@ -1,5 +1,5 @@
 import {Command} from "commander";
-import {defaultConfigPath, isAccountExist, loadConfigAndApply, MY_ACCOUNT} from "../../src/web3/global";
+import {DEF_ACCOUNT_CONF, isAccountExist, loadConfigAndApply, MY_ACCOUNT} from "../../src/web3/global";
 import * as Aptos from "../../src/web3/global";
 import {ApiError, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {AptosEntryTxnBuilder} from "../../src/web3/transaction";
@@ -14,7 +14,7 @@ const program = new Command();
 const cli = program
   .version("0.0.2")
   .description("Momentum Safe test coin minter.")
-  .option("-c, --config <string>", "config file of aptos profile", defaultConfigPath)
+  .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
   .option("-t --to <string>", "target account to send test coin")
   .option("-a --amount <string>", "amount of token to be sent", DEF_SEND_AMOUNT)

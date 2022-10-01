@@ -2,27 +2,26 @@ import { BCS, HexString, TxnBuilderTypes } from 'aptos';
 import {
   SimpleMap,
   Table,
-  DEPLOYER_HS,
   MODULES,
   FUNCTIONS,
-  RESOURCES,
   MAX_NUM_OWNERS,
   assembleMultiSigTxn,
   serializeOwners,
   hasDuplicateAddresses,
-  vector,
+  vector, getResourceTag,
 } from './common';
 import { assembleMultiSig } from "./sig-helper";
 import * as Aptos from "../web3/global";
 import { AptosEntryTxnBuilder, Transaction } from "../web3/transaction";
 import { Account } from "../web3/account";
-import { computeMultiSigAddress } from "../web3/crypto";
-import { HexBuffer } from "./common";
+import { computeMultiSigAddress } from "../utils/crypto";
+import { HexBuffer } from "../utils/buffer";
 import { MultiSigHelper } from "./sig-helper";
 import { Registry } from "./registry";
 import { makeMSafeRegisterTx } from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
+import {DEPLOYER} from "../web3/global";
 
 
 // Data stored in creator
@@ -205,7 +204,7 @@ export class CreationHelper {
     const index = this.findPkIndex(signer.publicKey());
 
     return txModuleBuilder
-      .addr(DEPLOYER_HS)
+      .addr(DEPLOYER)
       .module(MODULES.CREATOR)
       .method(FUNCTIONS.CREATOR_SUBMIT_SIG)
       .from(signer.address())
@@ -235,7 +234,7 @@ export class CreationHelper {
     const sn = await Aptos.getSequenceNumber(signer);
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
-      .addr(DEPLOYER_HS)
+      .addr(DEPLOYER)
       .module(MODULES.CREATOR)
       .method(FUNCTIONS.CREATOR_INIT_WALLET)
       .from(signer)
@@ -276,7 +275,7 @@ export class CreationHelper {
   }
 
   static async getResourceData(): Promise<PendingMultiSigCreations> {
-    const res = await Aptos.getAccountResource(DEPLOYER_HS, RESOURCES.CREATOR);
+    const res = await Aptos.getAccountResource(DEPLOYER, getResourceTag('CREATOR'));
     if (!res) {
       throw new Error("Creator contract not initialized");
     }
@@ -286,7 +285,7 @@ export class CreationHelper {
   static async queryMultiSigCreation(creations: PendingMultiSigCreations, msafeAddr: HexString): Promise<MultiSigCreation> {
     const creation = await Aptos.client().getTableItem(creations.creations.handle, {
       key_type: 'address',
-      value_type: RESOURCES.CREATOR_CREATION,
+      value_type: getResourceTag('CREATOR_CREATION'),
       key: msafeAddr.noPrefix(),
     });
     return creation;

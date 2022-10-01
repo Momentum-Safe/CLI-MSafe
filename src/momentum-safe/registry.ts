@@ -1,16 +1,15 @@
 import {ApiError, BCS, HexString} from "aptos";
 import * as Aptos from "../web3/global";
 import {
-  DEPLOYER_HS,
   FUNCTIONS,
   MODULES,
-  RESOURCES,
   vector,
-  HexStr,
+  HexStr, getResourceTag,
 } from "./common";
 import {Account} from "../web3/account";
 import {AptosEntryTxnBuilder} from "../web3/transaction";
 import {formatAddress} from "../utils/parse";
+import {DEPLOYER} from "../web3/global";
 
 // Data in registry
 type OwnerMomentumSafes = {
@@ -28,7 +27,7 @@ export class Registry {
     pendings: HexString[],
     msafes: HexString[]
   }> {
-    const res = await Aptos.getAccountResource(address, RESOURCES.REGISTRY);
+    const res = await Aptos.getAccountResource(address, getResourceTag('REGISTRY'));
     if (!res) {
       throw new Error(`Address not registered in momentum safe: ${address}`);
     }
@@ -49,7 +48,7 @@ export class Registry {
     address = formatAddress(address);
     let res: any;
     try {
-      res = await Aptos.getAccountResource(address, RESOURCES.REGISTRY);
+      res = await Aptos.getAccountResource(address, getResourceTag('REGISTRY'));
     } catch (e) {
       if (e instanceof ApiError && e.message.includes("Resource not found")) {
         return false;
@@ -70,7 +69,7 @@ export class Registry {
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
-      .addr(DEPLOYER_HS)
+      .addr(DEPLOYER)
       .module(MODULES.REGISTRY)
       .method(FUNCTIONS.REGISTRY_REGISTER)
       .from(signer.address())

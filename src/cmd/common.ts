@@ -14,7 +14,7 @@ import {
   MSafeTxnType,
   RevertArgs,
 } from "../momentum-safe/msafe-txn";
-import {bigIntToBigNumber, fromDust} from "../utils/bignumber";
+import {fromDust} from "../utils/bignumber";
 import {APT_COIN_INFO} from "../web3/global";
 
 const SEPARATOR_LENGTH = 20;
@@ -22,7 +22,6 @@ const SEPARATOR_LENGTH = 20;
 const STATE_MAP = new Map<State, (arg: any) => void>();
 
 export enum State {
-  Entry,
   List,
   Create,
   MSafeDetails,

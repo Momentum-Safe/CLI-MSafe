@@ -1,9 +1,8 @@
-import { APTOS_COIN, BCS, HexString, TxnBuilderTypes } from "aptos";
-import { Buffer } from "buffer/";
-import { Transaction } from "../web3/transaction";
+import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
+import {Transaction} from "../web3/transaction";
+import {HexBuffer} from "../utils/buffer";
+import {DEPLOYER} from "../web3/global";
 
-export const DEPLOYER = '0x5890f9fea5d4c9e54724f423efb89655329db2525268e690258deaa8557f5e3c';
-export const DEPLOYER_HS = HexString.ensure(DEPLOYER);
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
 export const APTOS_FRAMEWORK_HS = HexString.ensure(APTOS_FRAMEWORK);
@@ -50,14 +49,24 @@ export const STRUCTS = {
   COIN_INFO: "CoinInfo"
 };
 
-export const RESOURCES = {
-  MOMENTUM: `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM}`,
-  MOMENTUM_TRANSACTION: `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM_TRANSACTION}`,
-  CREATOR: `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR}`,
-  CREATOR_CREATION: `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR_CREATION}`,
-  REGISTRY: `${DEPLOYER}::${MODULES.REGISTRY}::${STRUCTS.REGISTRY}`,
-  APTOS_COIN: `${APTOS_COIN}::${MODULES.COIN}::${STRUCTS.APTOS_COIN}`,
-};
+// TODO: refactor all these values
+export function getResourceTag(tagName: string): string {
+  switch (tagName) {
+    case ('MOMENTUM'):
+      return `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM}`;
+    case ('MOMENTUM_TRANSACTION'):
+      return `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM_TRANSACTION}`;
+    case ('CREATOR'):
+      return `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR}`;
+    case ('CREATOR_CREATION'):
+      return `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR_CREATION}`;
+    case ('REGISTRY'):
+      return `${DEPLOYER}::${MODULES.REGISTRY}::${STRUCTS.REGISTRY}`;
+    case ('APTOS_COIN'):
+      return `${APTOS_COIN}::${MODULES.COIN}::${STRUCTS.APTOS_COIN}`;
+  }
+  throw new Error('Unknown resource type');
+}
 
 export type vector<T> = T[]
 
@@ -90,10 +99,6 @@ export function assembleMultiSigTxn(
   const signingTx = Transaction.deserialize(HexBuffer(payload));
   const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);
   return BCS.bcsToBytes(signedTx);
-}
-
-export function HexBuffer(hex: string): Buffer {
-  return Buffer.from(hex.startsWith('0x') ? hex.slice(2) : hex, 'hex');
 }
 
 export function hasDuplicateAddresses(addrs: HexString[]): boolean {

@@ -35,7 +35,12 @@ async function txDetails(c: {address: HexString, txHash: string}) {
   try {
     [txType, txData] = await msafe.getTxDetails(txHash);
   } catch (e) {
-    if (e instanceof Error && e.message.includes("Transaction is no longer valid")) {
+    if (e instanceof Error
+        && (
+          e.message.includes("Transaction is no longer valid")
+          || e.message.includes("Table Item not found by Table handle")
+        )
+    ){
       await executeCmdOptions(e.message + 'Is transaction already executed?', [
         {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}
       ]);
