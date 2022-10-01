@@ -35,7 +35,7 @@ async function creationDetails(rawArg: any) {
   try {
     creation = await CreationHelper.fromPendingCreation(address);
   } catch (e) {
-    if (e instanceof Error && e.message.includes('Momentum Safe creation data not found')) {
+    if (e instanceof Error && e.message.includes('Table Item not found by Table handle')) {
       console.log("Cannot get creation data. Is multi-sig already registered?");
       // TODO: Check with momentum safe and go to msafe detail page.
       printSeparator();
