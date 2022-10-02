@@ -25,7 +25,7 @@ import {
   CoinRegisterArgs,
   CoinTransferArgs,
   compileAndMakeModulePublishTx,
-  makeCustomInteractionTx, makeModulePublishTx,
+  makeEntryFunctionTx, makeModulePublishTx,
   makeMSafeAnyCoinRegisterTx,
   makeMSafeAnyCoinTransferTx,
   makeMSafeAPTTransferTx,
@@ -104,7 +104,7 @@ async function promptForNewTransaction(sender: HexString, sn: bigint): Promise<M
       {shortage: 1, showText: MSafeTxnType.APTCoinTransfer, handleFunc: () => txType = MSafeTxnType.APTCoinTransfer},
       {shortage: 2, showText: MSafeTxnType.AnyCoinTransfer, handleFunc: () => txType = MSafeTxnType.AnyCoinTransfer},
       {shortage: 3, showText: MSafeTxnType.AnyCoinRegister, handleFunc: () => txType = MSafeTxnType.AnyCoinRegister},
-      {shortage: 4, showText: MSafeTxnType.CustomInteraction, handleFunc: () => txType = MSafeTxnType.CustomInteraction},
+      {shortage: 4, showText: MSafeTxnType.EntryFunction, handleFunc: () => txType = MSafeTxnType.EntryFunction},
       {shortage: 5, showText: MSafeTxnType.ModulePublish, handleFunc: () => txType = MSafeTxnType.ModulePublish},
     ]
   );
@@ -125,8 +125,8 @@ async function promptAndBuildTx(sender: HexString, txType: MSafeTxnType, sn: big
       return await promptAndBuildAnyCoinTransfer(sender, sn);
     case MSafeTxnType.AnyCoinRegister:
       return await promptAndBuildForAnyCoinRegister(sender, sn);
-    case MSafeTxnType.CustomInteraction:
-      return await promptAndBuildForCustomTx(sender, sn);
+    case MSafeTxnType.EntryFunction:
+      return await promptAndBuildForEntryFnTx(sender, sn);
     case MSafeTxnType.ModulePublish:
       return await promptPublishTx(sender, sn);
     default:
@@ -189,13 +189,13 @@ async function promptAndBuildForAnyCoinRegister(sender: HexString, sn: bigint): 
   return await makeMSafeAnyCoinRegisterTx(sender, txArgs, {sequenceNumber: sn});
 }
 
-async function promptAndBuildForCustomTx(
+async function promptAndBuildForEntryFnTx(
   sender: HexString,
   sn: bigint
 ): Promise<MSafeTransaction> {
   const fullFnName = await promptUntilString(
     '\tModule name (E.g. 0x1::coin):\t',
-    '\tFunction name not valid:\t',
+    '\tModule name not valid:\t',
     isStringFullModule,
   );
   const [contractAddr, moduleName] = splitModuleComponents(fullFnName);
@@ -219,7 +219,7 @@ async function promptAndBuildForCustomTx(
   const opts: CmdOption[] = [];
   entryFns.forEach( fn => {
     opts.push({
-      shortage: i, showText: fn.name, handleFunc: () => selectedFn = fn
+      shortage: i, alternatives: [fn.name], showText: fn.name, handleFunc: () => selectedFn = fn
     });
     i = i + 1;
   });
@@ -259,7 +259,7 @@ async function promptAndBuildForCustomTx(
     args: args,
   };
 
-  return await makeCustomInteractionTx(sender, ciArgs, {sequenceNumber: sn});
+  return await makeEntryFunctionTx(sender, ciArgs, {sequenceNumber: sn});
 }
 
 async function promptForTypeArgs() {
