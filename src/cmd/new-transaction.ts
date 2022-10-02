@@ -219,7 +219,7 @@ async function promptAndBuildForEntryFnTx(
   const opts: CmdOption[] = [];
   entryFns.forEach( fn => {
     opts.push({
-      shortage: i, showText: fn.name, handleFunc: () => selectedFn = fn
+      shortage: i, alternatives: [fn.name], showText: fn.name, handleFunc: () => selectedFn = fn
     });
     i = i + 1;
   });
