@@ -51,7 +51,7 @@ export type RevertArgs = {
   sn: bigint, // The sn will override option.sequenceNumber
 }
 
-export type CustomInteractionArgs = {
+export type EntryFunctionArgs = {
   deployer: HexString,
   moduleName: string,
   fnName: string,
@@ -81,13 +81,13 @@ export enum MSafeTxnType {
   AnyCoinTransfer = "Transfer COIN",
   AnyCoinRegister = "Register COIN",
   Revert = "Revert transaction",
-  CustomInteraction = "Custom module interaction",
+  EntryFunction = "Entry function",
   ModulePublish = "Module publish",
 }
 
 // TODO: add module publish payload info
 export type payloadInfo = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs
-  | RevertArgs | CustomInteractionArgs | ModulePublishInfo
+  | RevertArgs | EntryFunctionArgs | ModulePublishInfo
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType,
@@ -221,9 +221,9 @@ export async function makeMSafeRevertTx(
   return new MSafeTransaction(txn.raw);
 }
 
-export async function makeCustomInteractionTx(
+export async function makeEntryFunctionTx(
   sender: HexString,
-  args: CustomInteractionArgs,
+  args: EntryFunctionArgs,
   opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
@@ -347,7 +347,7 @@ export class MSafeTransaction extends Transaction {
     if (isModulePublishTxn(payload)) {
       return MSafeTxnType.ModulePublish;
     }
-    return MSafeTxnType.CustomInteraction;
+    return MSafeTxnType.EntryFunction;
   }
 
   private getTxnFuncArgs(): payloadInfo {
@@ -384,7 +384,7 @@ export class MSafeTransaction extends Transaction {
         return {sn: BigInt(sn)};
       }
 
-      case MSafeTxnType.CustomInteraction: {
+      case MSafeTxnType.EntryFunction: {
         const [addr, moduleName, fnName] = getModuleComponents(payload);
         const tArgs = decodeTypeArgs(payload);
         const args = payload.value.args;
@@ -501,7 +501,7 @@ function decodeTypeTag(tArg: TxnBuilderTypes.TypeTag): string {
   throw new Error("unknown type tag");
 }
 
-export async function decodeCustomArgs(
+export async function decodeEntryFunctionArgs(
   deployer: HexString,
   moduleName: string,
   fnName: string,
@@ -513,11 +513,11 @@ export async function decodeCustomArgs(
     throw new Error("argument size does not match param size");
   }
   return args.map((arg, i) => {
-    return decodeCustomArg(arg, filteredParams[i]);
+    return decodeEntryFunctionArg(arg, filteredParams[i]);
   });
 }
 
-function decodeCustomArg(data: Uint8Array, paramType: string) {
+function decodeEntryFunctionArg(data: Uint8Array, paramType: string) {
   const deserializer = new BCS.Deserializer(data);
 
   switch (paramType) {

@@ -7,8 +7,8 @@ import {
   APTTransferArgs,
   CoinRegisterArgs,
   CoinTransferArgs,
-  CustomInteractionArgs,
-  decodeCustomArgs,
+  EntryFunctionArgs,
+  decodeEntryFunctionArgs,
   ModulePublishInfo,
   MSafeTxnInfo,
   MSafeTxnType,
@@ -193,6 +193,7 @@ export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, ba
 
 export interface CmdOption {
   shortage: number | string;
+  alternatives?: string[]; // Alternative selection
   showText: string;
   handleFunc: () => void;
 }
@@ -217,6 +218,15 @@ class CmdOptionHelper {
         throw new Error("duplicate option");
       }
       this.m.set(opt.shortage, opt);
+
+      if (opt.alternatives) {
+        opt.alternatives.forEach(alt => {
+          if (this.m.has(alt)) {
+            throw new Error("duplicate alternatives");
+          }
+          this.m.set(alt, opt);
+        });
+      }
     });
   }
 
@@ -269,7 +279,7 @@ export async function printTxDetails(txData: MSafeTxnInfo) {
     case (MSafeTxnType.Revert):
       printRevertTxn(txData);
       break;
-    case (MSafeTxnType.CustomInteraction):
+    case (MSafeTxnType.EntryFunction):
       await printCustomTxn(txData);
       break;
     case (MSafeTxnType.ModulePublish):
@@ -316,7 +326,7 @@ function printRevertTxn(txInfo: MSafeTxnInfo) {
 
 async function printCustomTxn(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
-  const cia = txInfo.args as CustomInteractionArgs;
+  const cia = txInfo.args as EntryFunctionArgs;
   console.log(`Call function:\t\t${cia.deployer}::${cia.moduleName}::${cia.fnName}`);
   // print type arguments
   for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
@@ -347,10 +357,10 @@ function printModulePublishTxn(txInfo: MSafeTxnInfo) {
   ).join('\n\t\t\t')}`);
 }
 
-async function getBCSArgValue(cia: CustomInteractionArgs) {
+async function getBCSArgValue(cia: EntryFunctionArgs) {
   const deployer = cia.deployer;
   const moduleName = cia.moduleName;
   const fnName = cia.fnName;
 
-  return decodeCustomArgs(deployer, moduleName, fnName, cia.args);
+  return decodeEntryFunctionArgs(deployer, moduleName, fnName, cia.args);
 }
