@@ -13,6 +13,8 @@ import { Coin } from "./coin";
 import { BigNumber } from "bignumber.js";
 import { bigIntToBigNumber, fromDust } from "../utils/bignumber";
 import {getDeployedAddrFromNodeURL} from "./config";
+import { AnyNumber, Event, EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
+import { Transaction_UserTransaction, UserTransaction } from 'aptos/src/generated';
 
 export let MY_ACCOUNT: Account;
 export let APT_COIN_INFO: Coin;
@@ -154,6 +156,18 @@ async function loadAptosYaml(filePath: string) {
 
 export async function getAccountModule(addr: HexString, moduleName: string) {
   return await APTOS.getAccountModule(addr, moduleName);
+}
+
+export async function filterEvent<T>(handle: EventHandle<T>, option?: PaginationArgs):Promise<Event<T>[]> {
+  return await APTOS.getEventsByCreationNumber(handle.guid.id.addr, handle.guid.id.creation_num, option) as any;
+}
+
+export async function getTransactionByVersion(version: AnyNumber): Promise<Transaction_UserTransaction> {
+  return APTOS.getTransactionByVersion(version) as any;
+}
+
+export async function getTransactionByEvent<T>(event: Event<T>): Promise<Transaction_UserTransaction> {
+  return getTransactionByVersion(BigInt(event.version));
 }
 
 export function client() {

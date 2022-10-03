@@ -21,17 +21,18 @@ import { Registry } from "./registry";
 import { makeMSafeRegisterTx } from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
-import {DEPLOYER} from "../web3/global";
+import { DEPLOYER } from "../web3/global";
+import { EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
 
 
 // Data stored in creator
 
 type PendingMultiSigCreations = {
   nonces: Table<string, vector<string>>, // nonce=>[txids...]
-  creations: Table<string, MultiSigCreation> // hash=>MultiSigCreation
+  creations: Table<string, MomentumSafeCreation> // hash=>MomentumSafeCreation
 };
 
-type MultiSigCreation = {
+type MomentumSafeCreation = {
   owners: string[],
   public_keys: string[],
   nonce: number,
@@ -43,6 +44,11 @@ type CreateWalletTxn = {
   payload: string,
   signatures: SimpleMap<string>,
 }
+
+export type MultiSigCreationEvent = {
+  events: EventHandle<MomentumSafeCreation>
+};
+
 
 export class CreationHelper {
   /**
@@ -116,7 +122,7 @@ export class CreationHelper {
   }
 
   async initCreation(signer: Account) {
-    let creation: MultiSigCreation | undefined;
+    let creation: MomentumSafeCreation | undefined;
     try {
       creation = await this.getResourceData();
     } catch (e) {
@@ -190,7 +196,7 @@ export class CreationHelper {
 
   private signPendingCreation(
     signer: Account,
-    creation: MultiSigCreation
+    creation: MomentumSafeCreation
   ): TxnBuilderTypes.Ed25519Signature {
     const payload = Transaction.deserialize(HexBuffer(creation.txn.payload));
     const [, sig] = signer.getSigData(payload);
@@ -269,7 +275,7 @@ export class CreationHelper {
   }
 
   // getMSafeCreation get the current data for mSafe creation
-  private static async getMSafeCreation(msafeAddr: HexString): Promise<MultiSigCreation> {
+  private static async getMSafeCreation(msafeAddr: HexString): Promise<MomentumSafeCreation> {
     const creations = await CreationHelper.getResourceData();
     return CreationHelper.queryMultiSigCreation(creations, msafeAddr);
   }
@@ -282,7 +288,12 @@ export class CreationHelper {
     return res.data as PendingMultiSigCreations;
   }
 
-  static async queryMultiSigCreation(creations: PendingMultiSigCreations, msafeAddr: HexString): Promise<MultiSigCreation> {
+  static async getMultiSigCreationEvent(msafe: HexString): Promise<MultiSigCreationEvent> {
+    const eventStruct = await Aptos.getAccountResource(msafe, getResourceTag('CREATOR_EVENT'));
+    return eventStruct.data as MultiSigCreationEvent;
+  }
+
+  static async queryMultiSigCreation(creations: PendingMultiSigCreations, msafeAddr: HexString): Promise<MomentumSafeCreation> {
     const creation = await Aptos.client().getTableItem(creations.creations.handle, {
       key_type: 'address',
       value_type: getResourceTag('CREATOR_CREATION'),
@@ -301,5 +312,10 @@ export class CreationHelper {
       throw e;
     });
     return nonce;
+  }
+
+  // get MultiSigCreationEvent
+  static async filterMultiSigCreationEvent(eventStruct: MultiSigCreationEvent, option: PaginationArgs) {
+    return Aptos.filterEvent(eventStruct.events, option);
   }
 }
