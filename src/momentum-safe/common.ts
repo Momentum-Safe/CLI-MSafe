@@ -1,4 +1,5 @@
-import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
+import { BCS, HexString, TxnBuilderTypes} from "aptos";
+import { APTOS_TOKEN as APTOS_COIN } from "../web3/transaction";
 import {Transaction} from "../web3/transaction";
 import {HexBuffer} from "../utils/buffer";
 import {DEPLOYER} from "../web3/global";

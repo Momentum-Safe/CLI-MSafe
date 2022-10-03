@@ -9,9 +9,9 @@ import {
   Options,
   STRUCTS, TxConfig
 } from "./common";
-import * as SHA3 from "js-sha3";
 import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
 import {sha3_256} from "../utils/crypto";
+import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
 import {secToDate, typeTagStructFromName} from "../utils/parse";
 import {isHexEqual} from "../utils/check";
 import {DEPLOYER} from "../web3/global";
@@ -626,8 +626,8 @@ function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntr
 }
 
 function getModulePublishHash(metadataRaw: Uint8Array, codes: Uint8Array): HexString {
-  const hash = SHA3.sha3_256.create();
+  const hash = sha3Hash.create();
   hash.update(metadataRaw);
   hash.update(codes);
-  return new HexString(hash.hex());
+  return HexString.fromUint8Array(hash.digest());
 }

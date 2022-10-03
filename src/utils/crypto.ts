@@ -4,7 +4,7 @@ import {
   BCS
 } from "aptos";
 import {Buffer} from "buffer/"; // the trailing slash is important!
-import * as SHA3 from "js-sha3";
+import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
 import * as Aptos from "../web3/global";
 import {HexBuffer} from "./buffer";
 
@@ -54,15 +54,15 @@ function noncePubKey(nonce: number) {
 
 
 export function deriveAuthKey(publicKey: HexString): HexString {
-  const hash = SHA3.sha3_256.create();
+  const hash = sha3Hash.create();
   hash.update(publicKey.toUint8Array());
   hash.update("\x00");
-  return new HexString(hash.hex());
+  return HexString.fromUint8Array(hash.digest());
 }
 
 // Used to calculate the temporary hash of the transaction payload
 export function sha3_256(payload: Uint8Array): HexString {
-  const hash = SHA3.sha3_256.create();
+  const hash = sha3Hash.create();
   hash.update(payload);
-  return new HexString(hash.hex());
+  return HexString.fromUint8Array(hash.digest());
 }
