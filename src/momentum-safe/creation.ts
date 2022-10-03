@@ -8,7 +8,7 @@ import {
   assembleMultiSigTxn,
   serializeOwners,
   hasDuplicateAddresses,
-  vector, getResourceTag,
+  vector, getStructType,
 } from './common';
 import { assembleMultiSig } from "./sig-helper";
 import * as Aptos from "../web3/global";
@@ -275,7 +275,7 @@ export class CreationHelper {
   }
 
   static async getResourceData(): Promise<PendingMultiSigCreations> {
-    const res = await Aptos.getAccountResource(DEPLOYER, getResourceTag('CREATOR'));
+    const res = await Aptos.getAccountResource(DEPLOYER, getStructType('CREATOR').toMoveStructTag());
     if (!res) {
       throw new Error("Creator contract not initialized");
     }
@@ -285,7 +285,7 @@ export class CreationHelper {
   static async queryMultiSigCreation(creations: PendingMultiSigCreations, msafeAddr: HexString): Promise<MultiSigCreation> {
     const creation = await Aptos.client().getTableItem(creations.creations.handle, {
       key_type: 'address',
-      value_type: getResourceTag('CREATOR_CREATION'),
+      value_type: getStructType('CREATOR_CREATION').toMoveStructTag(),
       key: msafeAddr.noPrefix(),
     });
     return creation;

@@ -2,6 +2,7 @@ import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {Transaction} from "../web3/transaction";
 import {HexBuffer} from "../utils/buffer";
 import {DEPLOYER} from "../web3/global";
+import { MoveStructType } from "../moveTypes/moveStructType";
 
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -19,7 +20,7 @@ export const MODULES = {
   MANAGED_COIN: 'managed_coin',
   APTOS_COIN: "aptos_coin",
   CODE: "code",
-};
+} as const;
 
 export const FUNCTIONS = {
   MSAFE_REGISTER: 'register',
@@ -37,7 +38,7 @@ export const FUNCTIONS = {
   REGISTRY_REGISTER: "register",
 
   PUBLISH_PACKAGE: "publish_package_txn",
-};
+} as const;
 
 export const STRUCTS = {
   MOMENTUM: "Momentum",
@@ -47,23 +48,24 @@ export const STRUCTS = {
   REGISTRY: "OwnerMomentumSafes",
   APTOS_COIN: "AptosCoin",
   COIN_INFO: "CoinInfo"
-};
+} as const;
 
+new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM);
 // TODO: refactor all these values
-export function getResourceTag(tagName: string): string {
+export function getStructType(tagName: string): MoveStructType {
   switch (tagName) {
     case ('MOMENTUM'):
-      return `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM}`;
+      return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM);
     case ('MOMENTUM_TRANSACTION'):
-      return `${DEPLOYER}::${MODULES.MOMENTUM_SAFE}::${STRUCTS.MOMENTUM_TRANSACTION}`;
+      return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM_TRANSACTION);
     case ('CREATOR'):
-      return `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR}`;
+      return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR);
     case ('CREATOR_CREATION'):
-      return `${DEPLOYER}::${MODULES.CREATOR}::${STRUCTS.CREATOR_CREATION}`;
+      return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR_CREATION);
     case ('REGISTRY'):
-      return `${DEPLOYER}::${MODULES.REGISTRY}::${STRUCTS.REGISTRY}`;
+      return new MoveStructType(DEPLOYER, MODULES.REGISTRY, STRUCTS.REGISTRY);
     case ('APTOS_COIN'):
-      return `${APTOS_COIN}::${MODULES.COIN}::${STRUCTS.APTOS_COIN}`;
+      return MoveStructType.fromString(APTOS_COIN);
   }
   throw new Error('Unknown resource type');
 }
