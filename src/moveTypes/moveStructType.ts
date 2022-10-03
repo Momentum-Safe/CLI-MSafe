@@ -44,28 +44,28 @@ export class MoveStructType {
     }
 
     // get off address::
-    static readAddress(tag: string): [HexString, string] {
+    static parseAddress(tag: string): [HexString, string] {
         if(!tag.startsWith('0x')) throw `invalid address: ${tag}`;
         const separatorIndex = tag.indexOf('::');
         return [new HexString(tag.slice(0, separatorIndex)), tag.slice(separatorIndex + 2)];
     }
     // take off module::
-    static readModule(tag: string): [string, string] {
+    static parseModuleName(tag: string): [string, string] {
         const separatorIndex = tag.indexOf('::');
         return [tag.slice(0, separatorIndex), tag.slice(separatorIndex + 2)];
     }
-    // take off structNmaeBase
-    static readStructBase(tag: string): [string, string] {
+    // take off struct name
+    static parseStructName(tag: string): [string, string] {
         const match = tag.match(/[<>]/);
         if (!match) return [tag, ''];
         return [tag.slice(0, match.index), tag.slice(match.index)];
     }
-    // take off <MoveStructType[,MoveStructType]+>
-    static readStructTypeArgs(tag: string): [MoveStructType[], string] {
+    // take off type arguments <MoveStructType[,MoveStructType]+>
+    static parseStructTypeArgs(tag: string): [MoveStructType[], string] {
         if (!tag.startsWith('<')) return [[], tag];
         const structs = [] as MoveStructType[];
         do {
-            const [struct, remain] = MoveStructType.readStructType(tag.slice(1));
+            const [struct, remain] = MoveStructType.parseStructType(tag.slice(1));
             structs.push(struct);
             tag = remain;
             if (!['>', ','].includes(tag[0])) throw "expected ',' or '>'";
@@ -73,21 +73,21 @@ export class MoveStructType {
         return [structs, tag.slice(1)];
     }
 
-    static readStructType(tag: string): [MoveStructType, string] {
+    static parseStructType(tag: string): [MoveStructType, string] {
         let address: HexString;
         let module: string;
-        let structBase: string;
+        let structName: string;
         let structs: MoveStructType[];
-        [address, tag] = MoveStructType.readAddress(tag);
-        [module, tag] = MoveStructType.readModule(tag);
-        [structBase, tag] = MoveStructType.readStructBase(tag);
-        [structs, tag] = MoveStructType.readStructTypeArgs(tag);
-        const semiStruct = new MoveStructType(address, module, `${structBase}<${structs.map(()=>'T').join(',')}>`);
+        [address, tag] = MoveStructType.parseAddress(tag);
+        [module, tag] = MoveStructType.parseModuleName(tag);
+        [structName, tag] = MoveStructType.parseStructName(tag);
+        [structs, tag] = MoveStructType.parseStructTypeArgs(tag);
+        const semiStruct = new MoveStructType(address, module, `${structName}<${structs.map(()=>'T').join(',')}>`);
         return [semiStruct.args(structs), tag];
     }
 
     static fromString(tag: string): MoveStructType {
-        const [struct, remain] = MoveStructType.readStructType(tag);
+        const [struct, remain] = MoveStructType.parseStructType(tag);
         if (remain.length !== 0) {
             throw new Error("still have remain data");
         }
