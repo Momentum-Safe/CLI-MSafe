@@ -194,6 +194,7 @@ export async function makeMSafeAnyCoinTransferTx(
       BCS.bcsSerializeUint64(args.amount),
     ])
     .build();
+
   return new MSafeTransaction(txn.raw);
 }
 
@@ -241,6 +242,7 @@ export async function makeEntryFunctionTx(
     .type_args(args.typeArgs.map(ta => typeTagStructFromName(ta)))
     .args(args.args)
     .build();
+
   return new MSafeTransaction(tx.raw);
 }
 
@@ -546,7 +548,8 @@ function decodeEntryFunctionArg(data: Uint8Array, paramType: string) {
       return ["bool", deserializer.deserializeBool()];
     }
     case ("address"): {
-      return ["address", HexString.fromUint8Array(deserializer.deserializeBytes())];
+      return ["address", HexString.fromUint8Array(
+        deserializer.deserializeFixedBytes(TxnBuilderTypes.AccountAddress.LENGTH))];
     }
     case ("vector<u8>"): {
       return ["vector<u8>", HexString.fromUint8Array(deserializer.deserializeBytes())];
