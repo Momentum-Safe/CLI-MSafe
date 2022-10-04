@@ -1,7 +1,6 @@
 import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
 import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
-import {Buffer} from "buffer/";
 import {
   APTOS_FRAMEWORK_HS,
   FUNCTIONS,

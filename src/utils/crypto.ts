@@ -3,7 +3,6 @@ import {
   HexString,
   BCS
 } from "aptos";
-import {Buffer} from "buffer/"; // the trailing slash is important!
 import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
 import * as Aptos from "../web3/global";
 import {HexBuffer} from "./buffer";
