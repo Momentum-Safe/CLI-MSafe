@@ -1,14 +1,12 @@
-import { BCS, HexString, TxnBuilderTypes } from 'aptos';
+import { BCS, HexString, TxnBuilderTypes, Types } from 'aptos';
 import {
-  SimpleMap,
-  Table,
   MODULES,
   FUNCTIONS,
   MAX_NUM_OWNERS,
   assembleMultiSigTxn,
   serializeOwners,
   hasDuplicateAddresses,
-  vector, getResourceTag,
+  getResourceTag,
 } from './common';
 import { assembleMultiSig } from "./sig-helper";
 import * as Aptos from "../web3/global";
@@ -23,31 +21,33 @@ import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
 import { DEPLOYER } from "../web3/global";
 import { EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
+import { SimpleMap, Table, TEd25519PublicKey, TEd25519Signature, Vector } from '../moveTypes/moveTypes';
 
 
-// Data stored in creator
 
-type PendingMultiSigCreations = {
-  nonces: Table<string, vector<string>>, // nonce=>[txids...]
-  creations: Table<string, MomentumSafeCreation> // hash=>MomentumSafeCreation
-};
+export type CreateWalletTxn = {
+  payload: Types.HexEncodedBytes,
+  signatures: SimpleMap<TEd25519PublicKey, TEd25519Signature>,
+}
 
-type MomentumSafeCreation = {
-  owners: string[],
-  public_keys: string[],
+export type MomentumSafeCreation = {
+  owners: Vector<Types.Address>,
+  public_keys: Vector<TEd25519PublicKey>,
   nonce: number,
   threshold: number,
-  txn: CreateWalletTxn,
+  txn: CreateWalletTxn
 }
 
-type CreateWalletTxn = {
-  payload: string,
-  signatures: SimpleMap<string>,
-}
+export type PendingMultiSigCreations = {
+  nonces: Table<Types.Address, Vector<Types.U64>>,
+  creations: Table<Types.Address, MomentumSafeCreation>
+};
 
 export type MultiSigCreationEvent = {
   events: EventHandle<MomentumSafeCreation>
 };
+
+
 
 
 export class CreationHelper {

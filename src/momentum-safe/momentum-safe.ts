@@ -1,14 +1,11 @@
 import * as Aptos from "../web3/global";
-import { HexString, TxnBuilderTypes, BCS } from 'aptos';
+import { HexString, TxnBuilderTypes, BCS, Types } from 'aptos';
 import { AptosEntryTxnBuilder, Transaction } from '../web3/transaction';
 import { Account } from '../web3/account';
 import {
-  vector,
-  SimpleMap,
-  HexStr,
   MODULES,
   FUNCTIONS,
-  assembleMultiSigTxn, TableWithLength, getResourceTag,
+  assembleMultiSigTxn, getResourceTag,
 } from './common';
 import { assembleMultiSig } from './sig-helper';
 import { computeMultiSigAddress, sha3_256 } from "../utils/crypto";
@@ -18,34 +15,43 @@ import { isHexEqual } from "../utils/check";
 import { HexBuffer } from "../utils/buffer";
 import { DEPLOYER } from "../web3/global";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
+import { SimpleMap, TableWithLength, TEd25519PublicKey, TEd25519Signature, Vector } from "../moveTypes/moveTypes";
 
 
 // Data stored in MomentumSafe.move
-type Momentum = {
+
+export type Info = {
+  owners: Vector<Types.Address>,
+  public_keys: Vector<TEd25519PublicKey>, // Vector of public_keys
+  nonce: Types.U64,
+  threshold: number,
+  metadata: Types.HexEncodedBytes, // plain text / json / uri
+}
+
+export type Momentum = {
   info: Info,
   txn_book: TxnBook,
 }
 
-type Info = {
-  owners: vector<string>,
-  public_keys: vector<HexStr>, // vector of public_keys
-  nonce: number,
-  threshold: number,
-  metadata: HexStr, // plain text / json / uri
-}
-
-type TxnBook = {
-  min_sequence_number: string,
-  max_sequence_number: string,
-  tx_hashes: TableWithLength<string, vector<HexStr>>, // nonce => vector<tx hash>
+export type TxnBook = {
+  // minimum nonce in the txn_book
+  min_sequence_number: Types.U64,
+  // maximum nonce in the txn_book
+  max_sequence_number: Types.U64,
+  tx_hashes: TableWithLength<Types.U64, Vector<Types.HashValue>>, // nonce => Vector<tx hash>
   // sequence number => a list of transactions (with the same sequence number)
-  pendings: TableWithLength<string, TransactionType>, // Hash => Tx
+  pendings: TableWithLength<Types.U64, TransactionType>, // Hash => Tx
 }
 
 export type TransactionType = {
-  payload: HexStr,
-  metadata: HexStr, // json or uri
-  signatures: SimpleMap<HexStr>, // public_key => signature
+  payload: Types.HexEncodedBytes,
+  metadata: Types.HexEncodedBytes, // json or uri
+  signatures: SimpleMap<TEd25519PublicKey, TEd25519Signature>, // public_key => signature
+}
+
+export type MomentumSafeEvent = {
+  register_events: EventHandle<Info>,
+  transaction_events: EventHandle<TransactionType>
 }
 
 export type MomentumSafeInfo = {
@@ -59,13 +65,6 @@ export type MomentumSafeInfo = {
   balance: bigint,
   pendingTxs: MSafeTxnInfo[],
 }
-
-
-export type MomentumSafeEvent = {
-  register_events: EventHandle<Info>,
-  transaction_events: EventHandle<TransactionType>
-}
-
 
 export class MomentumSafe {
   owners: HexString[];
@@ -104,7 +103,7 @@ export class MomentumSafe {
     const threshold = msafeData.info.threshold;
     const nonce = msafeData.info.nonce;
     const ownerPubKeys = msafeData.info.public_keys.map(pk => HexString.ensure(pk));
-    return new MomentumSafe(owners, ownerPubKeys, threshold, nonce, address);
+    return new MomentumSafe(owners, ownerPubKeys, threshold, Number(nonce), address);
   }
 
   async initTransaction(signer: Account, tx: MSafeTransaction) {
@@ -266,7 +265,7 @@ export class MomentumSafe {
     return {
       owners: data.info.owners.map(owner => formatAddress(owner)),
       pubKeys: data.info.public_keys.map(pk => HexString.ensure(pk)),
-      creationNonce: data.info.nonce,
+      creationNonce: Number(data.info.nonce),
       threshold: data.info.threshold,
       curSN: sn,
       nextSN: nextSN,
@@ -315,7 +314,7 @@ export class MomentumSafe {
     return Aptos.filterEvent(eventStruct.transaction_events, option);
   }
 
-  static async queryPendingTxHashBySN(momentum: Momentum, sn: bigint): Promise<vector<string>> {
+  static async queryPendingTxHashBySN(momentum: Momentum, sn: bigint): Promise<Vector<string>> {
     return Aptos.client().getTableItem(momentum.txn_book.tx_hashes.inner.handle, {
       key_type: 'u64',
       value_type: 'vector<vector<u8>>',

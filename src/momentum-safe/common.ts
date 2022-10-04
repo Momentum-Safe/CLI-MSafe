@@ -78,28 +78,6 @@ export function getResourceTag(tagName: keyof typeof STRUCTS): string {
   throw new Error('Unknown resource type');
 }
 
-export type vector<T> = T[]
-
-export type HexStr = string
-
-export type Element<V> = {
-  key: string,
-  value: V
-}
-
-export type SimpleMap<V> = {
-  data: Element<V>[]
-}
-
-export type Table<K, V> = {
-  handle: string
-}
-
-export type TableWithLength<K, V> = {
-  inner: Table<K, V>,
-  length: string,
-}
-
 export function assembleMultiSigTxn(
   payload: string,
   pubKey: TxnBuilderTypes.MultiEd25519PublicKey,
