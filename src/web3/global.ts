@@ -14,6 +14,7 @@ import { BigNumber } from "bignumber.js";
 import { bigIntToBigNumber, fromDust } from "../utils/bignumber";
 import {getDeployedAddrFromNodeURL} from "./config";
 import { AnyNumber, Event, EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
+import {DEPLOYED} from "../../deployed";
 
 export let MY_ACCOUNT: Account;
 export let APT_COIN_INFO: Coin;
@@ -31,6 +32,7 @@ interface Config {
   faucetURL?: string;
   privateKey: string,
   address: string,
+  network?: string, // If not specified, infer from nodeURL
 }
 
 export async function setGlobal(c: Config) {
@@ -43,7 +45,14 @@ export async function setGlobal(c: Config) {
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
   APT_COIN_INFO = await Coin.new("0x01::aptos_coin::AptosCoin");
-  DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
+  if (c.network) {
+    if (c.network != "testnet" && c.network != "devnet") {
+      throw Error("unknown network: " + c.network);
+    }
+    DEPLOYER = HexString.ensure(DEPLOYED[c.network]);
+  } else {
+    DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
+  }
 }
 
 
@@ -162,7 +171,7 @@ export async function filterEvent<T>(handle: EventHandle<T>, option?: Pagination
 }
 
 export async function getTransactionByVersion(version: AnyNumber): Promise<Types.Transaction_UserTransaction> {
-  return APTOS.getTransactionByVersion(version) as any;
+  return await APTOS.getTransactionByVersion(version) as any;
 }
 
 export async function getTransactionByEvent<T>(event: Event<T>): Promise<Types.Transaction_UserTransaction> {
