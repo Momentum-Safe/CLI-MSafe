@@ -1,24 +1,24 @@
-import { ApiError, BCS, HexString } from "aptos";
+import { ApiError, BCS, HexString, Types } from "aptos";
 import * as Aptos from "../web3/global";
 import {
   FUNCTIONS,
   MODULES,
-  vector,
-  HexStr, getResourceTag,
+  getResourceTag,
 } from "./common";
 import { Account } from "../web3/account";
 import { AptosEntryTxnBuilder } from "../web3/transaction";
 import { formatAddress } from "../utils/parse";
 import { DEPLOYER } from "../web3/global";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
+import { TEd25519PublicKey, Vector } from "../moveTypes/moveTypes";
 
 // Data in registry
-type OwnerMomentumSafes = {
-  public_key: string,
-  pendings: vector<HexStr>,
-  msafes: vector<HexStr>,
-}
 
+export type OwnerMomentumSafes = {
+  public_key: TEd25519PublicKey,
+  pendings: Vector<Types.Address>,
+  msafes: Vector<Types.Address>
+};
 
 export type RegisterEvent = {
   events: EventHandle<OwnerMomentumSafes>

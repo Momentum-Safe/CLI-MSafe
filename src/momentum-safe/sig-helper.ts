@@ -1,11 +1,8 @@
-import {
-  SimpleMap,
-  HexStr,
-} from "./common";
-import {HexString, TxnBuilderTypes} from "aptos";
-import {Account} from "../web3/account";
-import {isHexEqual} from "../utils/check";
-import {HexBuffer} from "../utils/buffer";
+import { HexString, TxnBuilderTypes } from "aptos";
+import { Account } from "../web3/account";
+import { isHexEqual } from "../utils/check";
+import { HexBuffer } from "../utils/buffer";
+import { SimpleMap, TEd25519PublicKey, TEd25519Signature } from "../moveTypes/moveTypes";
 
 type SigAdded = {
   pubKey: HexString,
@@ -13,7 +10,7 @@ type SigAdded = {
 
 export function assembleMultiSig(
   pubKeys: HexString[],
-  sigs: SimpleMap<HexStr>,
+  sigs: SimpleMap<TEd25519PublicKey, TEd25519Signature>,
   acc: Account,
   sig: TxnBuilderTypes.Ed25519Signature
 ) {
@@ -30,13 +27,13 @@ export class MultiSigHelper {
   private pks: HexString[]; // pks might be updated in future implementation
   private sigs: Map<string, TxnBuilderTypes.Ed25519Signature>;
 
-  constructor(pks: HexString[], sigs?: SimpleMap<HexStr>) {
+  constructor(pks: HexString[], sigs?: SimpleMap<TEd25519PublicKey, TEd25519Signature>) {
     this.pks = pks;
     this.sigs = simpleMapToSigMap(sigs);
   }
 
   findIndex(target: HexString): number {
-    const i = this.pks.findIndex( pk => {
+    const i = this.pks.findIndex(pk => {
       return isHexEqual(pk, target);
     });
     if (i === -1) {
@@ -53,12 +50,12 @@ export class MultiSigHelper {
     return this.sigs.size;
   }
 
-  updateSigs(newSigs: SimpleMap<HexStr>): SigAdded[] {
+  updateSigs(newSigs: SimpleMap<TEd25519PublicKey, TEd25519Signature>): SigAdded[] {
     const addedSigs: SigAdded[] = [];
-    newSigs.data.forEach( entry => {
+    newSigs.data.forEach(entry => {
       const pk = HexString.ensure(entry.key);
       if (!this.isSigSubmitted(pk)) {
-        addedSigs.push( {pubKey: pk} );
+        addedSigs.push({ pubKey: pk });
       }
     });
     this.sigs = simpleMapToSigMap(newSigs);
@@ -90,10 +87,10 @@ export class MultiSigHelper {
   }
 }
 
-function simpleMapToSigMap(smSigs: SimpleMap<HexStr> | undefined): Map<string, TxnBuilderTypes.Ed25519Signature> {
+function simpleMapToSigMap(smSigs: SimpleMap<TEd25519PublicKey, TEd25519Signature> | undefined): Map<string, TxnBuilderTypes.Ed25519Signature> {
   const m = new Map<string, TxnBuilderTypes.Ed25519Signature>();
   if (smSigs) {
-    smSigs.data.forEach( entry => {
+    smSigs.data.forEach(entry => {
       const pk = HexString.ensure(entry.key);
       const sig = new TxnBuilderTypes.Ed25519Signature(HexBuffer(entry.value));
       m.set(pk.hex(), sig);
