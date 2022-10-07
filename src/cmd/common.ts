@@ -16,6 +16,7 @@ import {
 } from "../momentum-safe/msafe-txn";
 import {fromDust} from "../utils/bignumber";
 import {APT_COIN_INFO} from "../web3/global";
+import {splitFunctionComponents} from "../utils/parse";
 
 const SEPARATOR_LENGTH = 20;
 
@@ -327,7 +328,7 @@ function printRevertTxn(txInfo: MSafeTxnInfo) {
 async function printCustomTxn(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const cia = txInfo.args as EntryFunctionArgs;
-  console.log(`Call function:\t\t${cia.deployer}::${cia.moduleName}::${cia.fnName}`);
+  console.log(`Call function:\t\t${cia.fnName}`);
   // print type arguments
   for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
     console.log(`Type Arguments (${i+1}):\t${cia.typeArgs[i]}`);
@@ -358,9 +359,7 @@ function printModulePublishTxn(txInfo: MSafeTxnInfo) {
 }
 
 async function getBCSArgValue(cia: EntryFunctionArgs) {
-  const deployer = cia.deployer;
-  const moduleName = cia.moduleName;
-  const fnName = cia.fnName;
+  const [deployer, moduleName, fnName] = splitFunctionComponents(cia.fnName);
 
   return decodeEntryFunctionArgs(deployer, moduleName, fnName, cia.args);
 }

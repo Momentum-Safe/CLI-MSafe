@@ -38,6 +38,7 @@ const cli = program
   .description("Momentum Safe CLI")
   .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
+  .option("-n --network <string>", "network (devnet, testnet)", "devnet")
   .parse(process.argv);
 
 
@@ -49,6 +50,7 @@ async function main() {
     await loadConfigAndApply({
       configFilePath: cli.opts().config,
       profile: cli.opts().profile,
+      network: cli.opts().network,
     });
   } catch (e) {
     if ((e as ApiError).message.includes('Account not found by Address')) {
