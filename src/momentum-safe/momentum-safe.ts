@@ -5,7 +5,7 @@ import { Account } from '../web3/account';
 import {
   MODULES,
   FUNCTIONS,
-  assembleMultiSigTxn, getResourceTag,
+  assembleMultiSigTxn, getStructType,
 } from './common';
 import { assembleMultiSig } from './sig-helper';
 import { computeMultiSigAddress, sha3_256 } from "../utils/crypto";
@@ -233,7 +233,7 @@ export class MomentumSafe {
   }
 
   private static async queryMSafeResource(address: HexString): Promise<Momentum> {
-    const res = await Aptos.getAccountResource(address, getResourceTag('MOMENTUM'));
+    const res = await Aptos.getAccountResource(address, getStructType('MOMENTUM').toMoveStructTag());
     return res.data as Momentum;
   }
 
@@ -302,7 +302,7 @@ export class MomentumSafe {
   }
 
   static async getMomentumSafeEvent(owner: HexString): Promise<MomentumSafeEvent> {
-    const eventStruct = await Aptos.getAccountResource(owner, getResourceTag('MOMENTUM_EVENT'));
+    const eventStruct = await Aptos.getAccountResource(owner, getStructType('MOMENTUM_EVENT').toMoveStructTag());
     return eventStruct.data as any;
   }
 
@@ -325,7 +325,7 @@ export class MomentumSafe {
   static async queryPendingTxByHash(momentum: Momentum, txID: string | HexString): Promise<TransactionType> {
     return Aptos.client().getTableItem(momentum.txn_book.pendings.inner.handle, {
       key_type: 'vector<u8>',
-      value_type: getResourceTag('MOMENTUM_TRANSACTION'),
+      value_type: getStructType('MOMENTUM_TRANSACTION').toMoveStructTag(),
       key: txID.toString()
     });
   }

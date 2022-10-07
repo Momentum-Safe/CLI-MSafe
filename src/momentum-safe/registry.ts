@@ -3,7 +3,7 @@ import * as Aptos from "../web3/global";
 import {
   FUNCTIONS,
   MODULES,
-  getResourceTag,
+  getStructType,
 } from "./common";
 import { Account } from "../web3/account";
 import { AptosEntryTxnBuilder } from "../web3/transaction";
@@ -33,7 +33,7 @@ export class Registry {
     pendings: HexString[],
     msafes: HexString[]
   }> {
-    const res = await Aptos.getAccountResource(address, getResourceTag('REGISTRY'));
+    const res = await Aptos.getAccountResource(address, getStructType('REGISTRY').toMoveStructTag());
     if (!res) {
       throw new Error(`Address not registered in momentum safe: ${address}`);
     }
@@ -54,7 +54,7 @@ export class Registry {
     address = formatAddress(address);
     let res: any;
     try {
-      res = await Aptos.getAccountResource(address, getResourceTag('REGISTRY'));
+      res = await Aptos.getAccountResource(address, getStructType('REGISTRY').toMoveStructTag());
     } catch (e) {
       if (e instanceof ApiError && e.message.includes("Resource not found")) {
         return false;
@@ -88,7 +88,7 @@ export class Registry {
   }
 
   static async getRegisterEvent(owner: HexString): Promise<RegisterEvent> {
-    const eventStruct = await Aptos.getAccountResource(owner, getResourceTag('REGISTRY_EVENT'));
+    const eventStruct = await Aptos.getAccountResource(owner, getStructType('REGISTRY_EVENT').toMoveStructTag());
     return eventStruct.data as any;
   }
 
