@@ -50,6 +50,7 @@ async function main() {
     await loadConfigAndApply({
       configFilePath: cli.opts().config,
       profile: cli.opts().profile,
+      network: cli.opts().network,
     });
   } catch (e) {
     if ((e as ApiError).message.includes('Account not found by Address')) {

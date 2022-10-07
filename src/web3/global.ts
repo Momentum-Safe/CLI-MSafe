@@ -128,6 +128,7 @@ export async function getBalanceAPT(addr: string | HexString): Promise<BigNumber
 type loadConfig = {
   configFilePath: string,
   profile: string,
+  network: string,
 }
 
 export async function loadConfigAndApply(c: loadConfig) {
@@ -148,6 +149,7 @@ export async function loadConfigAndApply(c: loadConfig) {
     faucetURL: profile.faucet_url,
     privateKey: profile.private_key,
     address: profile.account,
+    network: profile.network,
   });
 }
 
