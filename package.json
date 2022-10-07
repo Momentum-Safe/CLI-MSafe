@@ -35,6 +35,7 @@
     "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.test.ts'",
     "faucet": "aptos account fund-with-faucet --amount 1000000000000",
     "deploy": "ts-node scripts/deploy.ts",
+    "entry-function": "ts-node scripts/entry-function.ts",
     "run-test-coin": "ts-node tests/test-coin/test-coin.ts",
     "run-test-coin-compile": "aptos tests/move compile --package-dir move",
     "run-test-coin-publish": "aptos tests/move publish --package-dir move"

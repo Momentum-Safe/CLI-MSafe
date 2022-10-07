@@ -11,7 +11,7 @@ import {
 import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
 import {sha3_256} from "../utils/crypto";
 import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
-import {secToDate, typeTagStructFromName} from "../utils/parse";
+import {secToDate, splitFunctionComponents, typeTagStructFromName} from "../utils/parse";
 import {isHexEqual} from "../utils/check";
 import {DEPLOYER} from "../web3/global";
 
@@ -51,8 +51,6 @@ export type RevertArgs = {
 }
 
 export type EntryFunctionArgs = {
-  deployer: HexString,
-  moduleName: string,
   fnName: string,
   typeArgs: string[],
   args: BCS.Bytes[], // encoded bytes
@@ -227,11 +225,12 @@ export async function makeEntryFunctionTx(
   opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
+  const [deployer, moduleName, fnName] = splitFunctionComponents(args.fnName);
   const txBuilder = new AptosEntryTxnBuilder();
   const tx = txBuilder
-    .addr(args.deployer)
-    .module(args.moduleName)
-    .method(args.fnName)
+    .addr(deployer)
+    .module(moduleName)
+    .method(fnName)
     .from(sender)
     .chainId(config.chainID)
     .sequenceNumber(config.sequenceNumber)
@@ -390,9 +389,7 @@ export class MSafeTransaction extends Transaction {
         const tArgs = decodeTypeArgs(payload);
         const args = payload.value.args;
         return {
-          deployer: addr,
-          moduleName: moduleName,
-          fnName: fnName,
+          fnName: `${addr}::${moduleName}::${fnName}`,
           typeArgs: tArgs,
           args: args,
         };

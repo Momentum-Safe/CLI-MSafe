@@ -252,9 +252,7 @@ async function promptAndBuildForEntryFnTx(
   const args = await promptForArgs(selectedFn.params);
 
   const ciArgs = {
-    deployer: contractAddr,
-    moduleName: moduleName,
-    fnName: selectedFn.name,
+    fnName: `${contractAddr}::${moduleName}::${selectedFn.name}`,
     typeArgs: typeArgs,
     args: args,
   };
