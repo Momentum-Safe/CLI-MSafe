@@ -10,13 +10,14 @@ import {
   FUNCTIONS,
   assembleMultiSigTxn, TableWithLength, getResourceTag,
 } from './common';
-import {assembleMultiSig} from './sig-helper';
-import {computeMultiSigAddress, sha3_256} from "../utils/crypto";
-import {MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
-import {formatAddress} from "../utils/parse";
-import {isHexEqual} from "../utils/check";
-import {HexBuffer} from "../utils/buffer";
-import {DEPLOYER} from "../web3/global";
+import { assembleMultiSig } from './sig-helper';
+import { computeMultiSigAddress, sha3_256 } from "../utils/crypto";
+import { MSafeTransaction, MSafeTxnInfo } from "./msafe-txn";
+import { formatAddress } from "../utils/parse";
+import { isHexEqual } from "../utils/check";
+import { HexBuffer } from "../utils/buffer";
+import { DEPLOYER } from "../web3/global";
+import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
 
 
 // Data stored in MomentumSafe.move
@@ -58,6 +59,13 @@ export type MomentumSafeInfo = {
   balance: bigint,
   pendingTxs: MSafeTxnInfo[],
 }
+
+
+export type MomentumSafeEvent = {
+  register_events: EventHandle<Info>,
+  transaction_events: EventHandle<TransactionType>
+}
+
 
 export class MomentumSafe {
   owners: HexString[];
@@ -292,6 +300,19 @@ export class MomentumSafe {
 
   private getNextSequenceNumberFromResourceData(momentum: Momentum) {
     return BigInt(momentum.txn_book.max_sequence_number) + 1n;
+  }
+
+  static async getMomentumSafeEvent(owner: HexString): Promise<MomentumSafeEvent> {
+    const eventStruct = await Aptos.getAccountResource(owner, getResourceTag('MOMENTUM_EVENT'));
+    return eventStruct.data as any;
+  }
+
+  static async filterRegisterEvent(eventStruct: MomentumSafeEvent, option: PaginationArgs) {
+    return Aptos.filterEvent(eventStruct.register_events, option);
+  }
+
+  static async filterTransactionEvent(eventStruct: MomentumSafeEvent, option: PaginationArgs) {
+    return Aptos.filterEvent(eventStruct.transaction_events, option);
   }
 
   static async queryPendingTxHashBySN(momentum: Momentum, sn: bigint): Promise<vector<string>> {

@@ -1,4 +1,3 @@
-import {Buffer} from "buffer/";
 import {HexString} from "aptos";
 
 export function HexBuffer(hex: HexString | string): Buffer {

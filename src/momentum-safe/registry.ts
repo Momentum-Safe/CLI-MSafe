@@ -1,4 +1,4 @@
-import {ApiError, BCS, HexString} from "aptos";
+import { ApiError, BCS, HexString } from "aptos";
 import * as Aptos from "../web3/global";
 import {
   FUNCTIONS,
@@ -6,16 +6,22 @@ import {
   vector,
   HexStr, getResourceTag,
 } from "./common";
-import {Account} from "../web3/account";
-import {AptosEntryTxnBuilder} from "../web3/transaction";
-import {formatAddress} from "../utils/parse";
-import {DEPLOYER} from "../web3/global";
+import { Account } from "../web3/account";
+import { AptosEntryTxnBuilder } from "../web3/transaction";
+import { formatAddress } from "../utils/parse";
+import { DEPLOYER } from "../web3/global";
+import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
 
 // Data in registry
 type OwnerMomentumSafes = {
   public_key: string,
   pendings: vector<HexStr>,
   msafes: vector<HexStr>,
+}
+
+
+export type RegisterEvent = {
+  events: EventHandle<OwnerMomentumSafes>
 }
 
 export class Registry {
@@ -34,8 +40,8 @@ export class Registry {
     const ownedMSafes = res.data as OwnerMomentumSafes;
     return {
       publicKey: HexString.ensure(ownedMSafes.public_key),
-      pendings: ownedMSafes.pendings.map( (addr) => formatAddress(addr)),
-      msafes:  ownedMSafes.msafes.map( (addr) => formatAddress(addr) ),
+      pendings: ownedMSafes.pendings.map((addr) => formatAddress(addr)),
+      msafes: ownedMSafes.msafes.map((addr) => formatAddress(addr)),
     };
   }
 
@@ -80,4 +86,14 @@ export class Registry {
       ])
       .build();
   }
+
+  static async getRegisterEvent(owner: HexString): Promise<RegisterEvent> {
+    const eventStruct = await Aptos.getAccountResource(owner, getResourceTag('REGISTRY_EVENT'));
+    return eventStruct.data as any;
+  }
+
+  static async filterRegisterEvent(eventStruct: RegisterEvent, option: PaginationArgs) {
+    return Aptos.filterEvent(eventStruct.events, option);
+  }
+
 }
