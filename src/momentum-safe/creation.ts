@@ -1,14 +1,12 @@
-import { BCS, HexString, TxnBuilderTypes } from 'aptos';
+import { BCS, HexString, TxnBuilderTypes, Types } from 'aptos';
 import {
-  SimpleMap,
-  Table,
   MODULES,
   FUNCTIONS,
   MAX_NUM_OWNERS,
   assembleMultiSigTxn,
   serializeOwners,
   hasDuplicateAddresses,
-  vector, getStructType,
+  getStructType,
 } from './common';
 import { assembleMultiSig } from "./sig-helper";
 import * as Aptos from "../web3/global";
@@ -21,28 +19,36 @@ import { Registry } from "./registry";
 import { makeMSafeRegisterTx } from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
-import {DEPLOYER} from "../web3/global";
+import { DEPLOYER } from "../web3/global";
+import { EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
+import { SimpleMap, Table, TEd25519PublicKey, TEd25519Signature, Vector } from '../moveTypes/moveTypes';
 
 
-// Data stored in creator
 
-type PendingMultiSigCreations = {
-  nonces: Table<string, vector<string>>, // nonce=>[txids...]
-  creations: Table<string, MultiSigCreation> // hash=>MultiSigCreation
-};
+export type CreateWalletTxn = {
+  payload: Types.HexEncodedBytes,
+  signatures: SimpleMap<TEd25519PublicKey, TEd25519Signature>,
+}
 
-type MultiSigCreation = {
-  owners: string[],
-  public_keys: string[],
+export type MomentumSafeCreation = {
+  owners: Vector<Types.Address>,
+  public_keys: Vector<TEd25519PublicKey>,
   nonce: number,
   threshold: number,
-  txn: CreateWalletTxn,
+  txn: CreateWalletTxn
 }
 
-type CreateWalletTxn = {
-  payload: string,
-  signatures: SimpleMap<string>,
-}
+export type PendingMultiSigCreations = {
+  nonces: Table<Types.Address, Vector<Types.U64>>,
+  creations: Table<Types.Address, MomentumSafeCreation>
+};
+
+export type MultiSigCreationEvent = {
+  events: EventHandle<MomentumSafeCreation>
+};
+
+
+
 
 export class CreationHelper {
   /**
@@ -116,7 +122,7 @@ export class CreationHelper {
   }
 
   async initCreation(signer: Account) {
-    let creation: MultiSigCreation | undefined;
+    let creation: MomentumSafeCreation | undefined;
     try {
       creation = await this.getResourceData();
     } catch (e) {
@@ -190,7 +196,7 @@ export class CreationHelper {
 
   private signPendingCreation(
     signer: Account,
-    creation: MultiSigCreation
+    creation: MomentumSafeCreation
   ): TxnBuilderTypes.Ed25519Signature {
     const payload = Transaction.deserialize(HexBuffer(creation.txn.payload));
     const [, sig] = signer.getSigData(payload);
@@ -269,7 +275,7 @@ export class CreationHelper {
   }
 
   // getMSafeCreation get the current data for mSafe creation
-  private static async getMSafeCreation(msafeAddr: HexString): Promise<MultiSigCreation> {
+  private static async getMSafeCreation(msafeAddr: HexString): Promise<MomentumSafeCreation> {
     const creations = await CreationHelper.getResourceData();
     return CreationHelper.queryMultiSigCreation(creations, msafeAddr);
   }
@@ -282,7 +288,12 @@ export class CreationHelper {
     return res.data as PendingMultiSigCreations;
   }
 
-  static async queryMultiSigCreation(creations: PendingMultiSigCreations, msafeAddr: HexString): Promise<MultiSigCreation> {
+  static async getMultiSigCreationEvent(msafe: HexString): Promise<MultiSigCreationEvent> {
+    const eventStruct = await Aptos.getAccountResource(msafe, getStructType('CREATOR_EVENT').toMoveStructTag());
+    return eventStruct.data as MultiSigCreationEvent;
+  }
+
+  static async queryMultiSigCreation(creations: PendingMultiSigCreations, msafeAddr: HexString): Promise<MomentumSafeCreation> {
     const creation = await Aptos.client().getTableItem(creations.creations.handle, {
       key_type: 'address',
       value_type: getStructType('CREATOR_CREATION').toMoveStructTag(),
@@ -301,5 +312,10 @@ export class CreationHelper {
       throw e;
     });
     return nonce;
+  }
+
+  // get MultiSigCreationEvent
+  static async filterMultiSigCreationEvent(eventStruct: MultiSigCreationEvent, option: PaginationArgs) {
+    return Aptos.filterEvent(eventStruct.events, option);
   }
 }

@@ -13,6 +13,8 @@ import { Coin } from "./coin";
 import { BigNumber } from "bignumber.js";
 import { bigIntToBigNumber, fromDust } from "../utils/bignumber";
 import {getDeployedAddrFromNodeURL} from "./config";
+import { AnyNumber, Event, EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
+import {DEPLOYED} from "../../deployed";
 
 export let MY_ACCOUNT: Account;
 export let APT_COIN_INFO: Coin;
@@ -30,6 +32,7 @@ interface Config {
   faucetURL?: string;
   privateKey: string,
   address: string,
+  network?: string, // If not specified, infer from nodeURL
 }
 
 export async function setGlobal(c: Config) {
@@ -42,7 +45,14 @@ export async function setGlobal(c: Config) {
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
   APT_COIN_INFO = await Coin.new("0x01::aptos_coin::AptosCoin");
-  DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
+  if (c.network) {
+    if (c.network != "testnet" && c.network != "devnet") {
+      throw Error("unknown network: " + c.network);
+    }
+    DEPLOYER = HexString.ensure(DEPLOYED[c.network]);
+  } else {
+    DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
+  }
 }
 
 
@@ -118,6 +128,7 @@ export async function getBalanceAPT(addr: string | HexString): Promise<BigNumber
 type loadConfig = {
   configFilePath: string,
   profile: string,
+  network: string,
 }
 
 export async function loadConfigAndApply(c: loadConfig) {
@@ -138,6 +149,7 @@ export async function loadConfigAndApply(c: loadConfig) {
     faucetURL: profile.faucet_url,
     privateKey: profile.private_key,
     address: profile.account,
+    network: profile.network,
   });
 }
 
@@ -154,6 +166,18 @@ async function loadAptosYaml(filePath: string) {
 
 export async function getAccountModule(addr: HexString, moduleName: string) {
   return await APTOS.getAccountModule(addr, moduleName);
+}
+
+export async function filterEvent<T>(handle: EventHandle<T>, option?: PaginationArgs):Promise<Event<T>[]> {
+  return await APTOS.getEventsByCreationNumber(handle.guid.id.addr, handle.guid.id.creation_num, option) as any;
+}
+
+export async function getTransactionByVersion(version: AnyNumber): Promise<Types.Transaction_UserTransaction> {
+  return await APTOS.getTransactionByVersion(version) as any;
+}
+
+export async function getTransactionByEvent<T>(event: Event<T>): Promise<Types.Transaction_UserTransaction> {
+  return getTransactionByVersion(BigInt(event.version));
 }
 
 export function client() {

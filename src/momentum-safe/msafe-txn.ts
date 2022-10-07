@@ -1,7 +1,6 @@
 import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
 import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
-import {Buffer} from "buffer/";
 import {
   APTOS_FRAMEWORK_HS,
   FUNCTIONS,
@@ -9,10 +8,10 @@ import {
   Options,
   STRUCTS, TxConfig
 } from "./common";
-import * as SHA3 from "js-sha3";
 import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
 import {sha3_256} from "../utils/crypto";
-import {secToDate, typeTagStructFromName} from "../utils/parse";
+import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
+import {secToDate, splitFunctionComponents, typeTagStructFromName} from "../utils/parse";
 import {isHexEqual} from "../utils/check";
 import {DEPLOYER} from "../web3/global";
 
@@ -51,9 +50,7 @@ export type RevertArgs = {
   sn: bigint, // The sn will override option.sequenceNumber
 }
 
-export type CustomInteractionArgs = {
-  deployer: HexString,
-  moduleName: string,
+export type EntryFunctionArgs = {
   fnName: string,
   typeArgs: string[],
   args: BCS.Bytes[], // encoded bytes
@@ -81,13 +78,13 @@ export enum MSafeTxnType {
   AnyCoinTransfer = "Transfer COIN",
   AnyCoinRegister = "Register COIN",
   Revert = "Revert transaction",
-  CustomInteraction = "Custom module interaction",
+  EntryFunction = "Entry function",
   ModulePublish = "Module publish",
 }
 
 // TODO: add module publish payload info
 export type payloadInfo = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs
-  | RevertArgs | CustomInteractionArgs | ModulePublishInfo
+  | RevertArgs | EntryFunctionArgs | ModulePublishInfo
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType,
@@ -194,6 +191,7 @@ export async function makeMSafeAnyCoinTransferTx(
       BCS.bcsSerializeUint64(args.amount),
     ])
     .build();
+
   return new MSafeTransaction(txn.raw);
 }
 
@@ -221,17 +219,18 @@ export async function makeMSafeRevertTx(
   return new MSafeTransaction(txn.raw);
 }
 
-export async function makeCustomInteractionTx(
+export async function makeEntryFunctionTx(
   sender: HexString,
-  args: CustomInteractionArgs,
+  args: EntryFunctionArgs,
   opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
+  const [deployer, moduleName, fnName] = splitFunctionComponents(args.fnName);
   const txBuilder = new AptosEntryTxnBuilder();
   const tx = txBuilder
-    .addr(args.deployer)
-    .module(args.moduleName)
-    .method(args.fnName)
+    .addr(deployer)
+    .module(moduleName)
+    .method(fnName)
     .from(sender)
     .chainId(config.chainID)
     .sequenceNumber(config.sequenceNumber)
@@ -241,6 +240,7 @@ export async function makeCustomInteractionTx(
     .type_args(args.typeArgs.map(ta => typeTagStructFromName(ta)))
     .args(args.args)
     .build();
+
   return new MSafeTransaction(tx.raw);
 }
 
@@ -347,7 +347,7 @@ export class MSafeTransaction extends Transaction {
     if (isModulePublishTxn(payload)) {
       return MSafeTxnType.ModulePublish;
     }
-    return MSafeTxnType.CustomInteraction;
+    return MSafeTxnType.EntryFunction;
   }
 
   private getTxnFuncArgs(): payloadInfo {
@@ -384,14 +384,12 @@ export class MSafeTransaction extends Transaction {
         return {sn: BigInt(sn)};
       }
 
-      case MSafeTxnType.CustomInteraction: {
+      case MSafeTxnType.EntryFunction: {
         const [addr, moduleName, fnName] = getModuleComponents(payload);
         const tArgs = decodeTypeArgs(payload);
         const args = payload.value.args;
         return {
-          deployer: addr,
-          moduleName: moduleName,
-          fnName: fnName,
+          fnName: `${addr}::${moduleName}::${fnName}`,
           typeArgs: tArgs,
           args: args,
         };
@@ -501,7 +499,7 @@ function decodeTypeTag(tArg: TxnBuilderTypes.TypeTag): string {
   throw new Error("unknown type tag");
 }
 
-export async function decodeCustomArgs(
+export async function decodeEntryFunctionArgs(
   deployer: HexString,
   moduleName: string,
   fnName: string,
@@ -513,11 +511,11 @@ export async function decodeCustomArgs(
     throw new Error("argument size does not match param size");
   }
   return args.map((arg, i) => {
-    return decodeCustomArg(arg, filteredParams[i]);
+    return decodeEntryFunctionArg(arg, filteredParams[i]);
   });
 }
 
-function decodeCustomArg(data: Uint8Array, paramType: string) {
+function decodeEntryFunctionArg(data: Uint8Array, paramType: string) {
   const deserializer = new BCS.Deserializer(data);
 
   switch (paramType) {
@@ -546,7 +544,8 @@ function decodeCustomArg(data: Uint8Array, paramType: string) {
       return ["bool", deserializer.deserializeBool()];
     }
     case ("address"): {
-      return ["address", HexString.fromUint8Array(deserializer.deserializeBytes())];
+      return ["address", HexString.fromUint8Array(
+        deserializer.deserializeFixedBytes(TxnBuilderTypes.AccountAddress.LENGTH))];
     }
     case ("vector<u8>"): {
       return ["vector<u8>", HexString.fromUint8Array(deserializer.deserializeBytes())];
@@ -626,8 +625,8 @@ function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntr
 }
 
 function getModulePublishHash(metadataRaw: Uint8Array, codes: Uint8Array): HexString {
-  const hash = SHA3.sha3_256.create();
+  const hash = sha3Hash.create();
   hash.update(metadataRaw);
   hash.update(codes);
-  return new HexString(hash.hex());
+  return HexString.fromUint8Array(hash.digest());
 }

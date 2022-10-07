@@ -1,7 +1,8 @@
-import {APTOS_COIN, BCS, HexString, TxnBuilderTypes} from "aptos";
-import {Transaction} from "../web3/transaction";
-import {HexBuffer} from "../utils/buffer";
-import {DEPLOYER} from "../web3/global";
+import { BCS, HexString, TxnBuilderTypes } from "aptos";
+import { APTOS_TOKEN as APTOS_COIN } from "../web3/transaction";
+import { Transaction } from "../web3/transaction";
+import { HexBuffer } from "../utils/buffer";
+import { DEPLOYER } from "../web3/global";
 import { MoveStructType } from "../moveTypes/moveStructType";
 
 
@@ -43,53 +44,40 @@ export const FUNCTIONS = {
 export const STRUCTS = {
   MOMENTUM: "Momentum",
   MOMENTUM_TRANSACTION: "Transaction",
+  MOMENTUM_EVENT: "MomentumSafeEvent",
   CREATOR: "PendingMultiSigCreations",
   CREATOR_CREATION: "MomentumSafeCreation",
+  CREATOR_EVENT: "MultiSigCreationEvent",
   REGISTRY: "OwnerMomentumSafes",
+  REGISTRY_EVENT: "RegisterEvent",
   APTOS_COIN: "AptosCoin",
   COIN_INFO: "CoinInfo"
 } as const;
 
 new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM);
 // TODO: refactor all these values
-export function getStructType(tagName: string): MoveStructType {
+export function getStructType(tagName: keyof typeof STRUCTS): MoveStructType {
   switch (tagName) {
     case ('MOMENTUM'):
       return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM);
     case ('MOMENTUM_TRANSACTION'):
       return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM_TRANSACTION);
+    case ('MOMENTUM_EVENT'):
+      return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM_EVENT);
     case ('CREATOR'):
       return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR);
     case ('CREATOR_CREATION'):
       return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR_CREATION);
+    case ('CREATOR_EVENT'):
+        return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR_EVENT);
     case ('REGISTRY'):
       return new MoveStructType(DEPLOYER, MODULES.REGISTRY, STRUCTS.REGISTRY);
+    case ('REGISTRY_EVENT'):
+      return new MoveStructType(DEPLOYER, MODULES.REGISTRY, STRUCTS.REGISTRY_EVENT);
     case ('APTOS_COIN'):
       return MoveStructType.fromString(APTOS_COIN);
   }
   throw new Error('Unknown resource type');
-}
-
-export type vector<T> = T[]
-
-export type HexStr = string
-
-export type Element<V> = {
-  key: string,
-  value: V
-}
-
-export type SimpleMap<V> = {
-  data: Element<V>[]
-}
-
-export type Table<K, V> = {
-  handle: string
-}
-
-export type TableWithLength<K, V> = {
-  inner: Table<K, V>,
-  length: string,
 }
 
 export function assembleMultiSigTxn(

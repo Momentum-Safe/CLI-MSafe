@@ -2,7 +2,7 @@ import {DEPLOYED} from '../../deployed';
 import {HexString} from "aptos";
 
 export enum Network {
-  Unknown = 'unknown',
+  Custom = 'custom',
   Mainnet = 'mainnet',
   Testnet = 'testnet',
   Devnet = 'devnet',
@@ -35,7 +35,7 @@ export function getNetworkFromNodeURL(nodeURL: string): Network {
   if (isLocalnet(nodeURL)) {
     return Network.Localnet;
   }
-  return Network.Unknown;
+  return Network.Custom;
 }
 
 function isDevnet(nodeURL: string) {
