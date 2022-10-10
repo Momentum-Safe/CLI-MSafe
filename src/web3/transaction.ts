@@ -10,7 +10,7 @@ const TRANSFER_METHOD = "transfer";
 export const APTOS_TOKEN = "0x1::aptos_coin::AptosCoin";
 
 // TODO: Use prophecy and gas analysis
-const DEFAULT_MAX_GAS = 5000n;
+const DEFAULT_MAX_GAS = 50000n;
 const DEFAULT_GAS_PRICE = 100n;
 const DEFAULT_EXPIRATION = 3600;
 
