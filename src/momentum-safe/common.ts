@@ -3,7 +3,7 @@ import { APTOS_TOKEN as APTOS_COIN } from "../web3/transaction";
 import { Transaction } from "../web3/transaction";
 import { HexBuffer } from "../utils/buffer";
 import { DEPLOYER } from "../web3/global";
-import { MoveStructType } from "../moveTypes/moveStructType";
+import { MoveStructTypeTag } from "../moveTypes/moveTypeTag";
 
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -17,6 +17,7 @@ export const MODULES = {
   MOMENTUM_SAFE: 'momentum_safe',
   CREATOR: 'creator',
   REGISTRY: 'registry',
+  TABLE_MAP: 'table_map',
   COIN: 'coin',
   MANAGED_COIN: 'managed_coin',
   APTOS_COIN: "aptos_coin",
@@ -50,32 +51,34 @@ export const STRUCTS = {
   CREATOR_EVENT: "MultiSigCreationEvent",
   REGISTRY: "OwnerMomentumSafes",
   REGISTRY_EVENT: "RegisterEvent",
+  REGISTRY_ELEMENT: "Element<K,V>",
   APTOS_COIN: "AptosCoin",
   COIN_INFO: "CoinInfo"
 } as const;
 
-new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM);
 // TODO: refactor all these values
-export function getStructType(tagName: keyof typeof STRUCTS): MoveStructType {
+export function getStructType(tagName: keyof typeof STRUCTS): MoveStructTypeTag {
   switch (tagName) {
     case ('MOMENTUM'):
-      return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM);
     case ('MOMENTUM_TRANSACTION'):
-      return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM_TRANSACTION);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM_TRANSACTION);
     case ('MOMENTUM_EVENT'):
-      return new MoveStructType(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM_EVENT);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.MOMENTUM_SAFE, STRUCTS.MOMENTUM_EVENT);
     case ('CREATOR'):
-      return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR);
     case ('CREATOR_CREATION'):
-      return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR_CREATION);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR_CREATION);
     case ('CREATOR_EVENT'):
-        return new MoveStructType(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR_EVENT);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.CREATOR, STRUCTS.CREATOR_EVENT);
     case ('REGISTRY'):
-      return new MoveStructType(DEPLOYER, MODULES.REGISTRY, STRUCTS.REGISTRY);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.REGISTRY, STRUCTS.REGISTRY);
     case ('REGISTRY_EVENT'):
-      return new MoveStructType(DEPLOYER, MODULES.REGISTRY, STRUCTS.REGISTRY_EVENT);
+      return new MoveStructTypeTag(DEPLOYER, MODULES.REGISTRY, STRUCTS.REGISTRY_EVENT);
+    case ('REGISTRY_ELEMENT'):
+      return new MoveStructTypeTag(DEPLOYER, MODULES.TABLE_MAP, STRUCTS.REGISTRY_ELEMENT);
     case ('APTOS_COIN'):
-      return MoveStructType.fromString(APTOS_COIN);
+      return MoveStructTypeTag.fromString(APTOS_COIN);
   }
   throw new Error('Unknown resource type');
 }
