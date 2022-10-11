@@ -10,18 +10,32 @@ import { AptosEntryTxnBuilder } from "../web3/transaction";
 import { formatAddress } from "../utils/parse";
 import { DEPLOYER } from "../web3/global";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
-import { TEd25519PublicKey, Vector } from "../moveTypes/moveTypes";
+import { TEd25519PublicKey, Vector, Element, Table, TableWithLength } from "../moveTypes/moveTypes";
 
 // Data in registry
 
-export type OwnerMomentumSafes = {
+export type TableMap<K,V> = {
+  index: Table<K, Types.U64>,
+  data: TableWithLength<Types.U64, V>,
+}
+
+type OwnerMomentumSafes = {
   public_key: TEd25519PublicKey,
-  pendings: Vector<Types.Address>,
-  msafes: Vector<Types.Address>
+  pendings: TableMap<Types.Address, boolean>,
+  msafes: TableMap<Types.Address, boolean>
 };
+export default OwnerMomentumSafes;
+
+export type OwnerMomentumSafesChangeEvent = {
+  public_key: Types.HexEncodedBytes,
+  msafe: Types.Address,
+  op_type: number,
+  pendings_length: Types.U64,
+  msafes_length: Types.U64,
+}
 
 export type RegisterEvent = {
-  events: EventHandle<OwnerMomentumSafes>
+  events: EventHandle<OwnerMomentumSafesChangeEvent>
 }
 
 export class Registry {
@@ -38,10 +52,11 @@ export class Registry {
       throw new Error(`Address not registered in momentum safe: ${address}`);
     }
     const ownedMSafes = res.data as OwnerMomentumSafes;
+    const msafes = await Registry.queryAllMsafes(ownedMSafes);
     return {
       publicKey: HexString.ensure(ownedMSafes.public_key),
-      pendings: ownedMSafes.pendings.map((addr) => formatAddress(addr)),
-      msafes: ownedMSafes.msafes.map((addr) => formatAddress(addr)),
+      pendings: msafes.pendings.map((addr) => formatAddress(addr)),
+      msafes: msafes.msafes.map((addr) => formatAddress(addr)),
     };
   }
 
@@ -85,6 +100,44 @@ export class Registry {
         BCS.bcsSerializeBytes(signer.publicKeyBytes()),
       ])
       .build();
+  }
+
+
+  static async queryAllMsafes(ownerMomentumSafes: OwnerMomentumSafes) {
+    return {
+      pendings: await this.queryAllPendingMsafes(ownerMomentumSafes),
+      msafes: await this.queryAllOwnedMsafes(ownerMomentumSafes),
+    };
+  }
+
+  static async queryAllPendingMsafes(ownerMomentumSafes: OwnerMomentumSafes): Promise<Vector<Types.Address>> {
+    const indexes = Object.keys(Array(Number(ownerMomentumSafes.pendings.data.length)).fill(0));
+    return Promise.all(indexes.map(index => this.queryPendingMsafe(ownerMomentumSafes, Number(index))));
+  }
+
+  static async queryAllOwnedMsafes(ownerMomentumSafes: OwnerMomentumSafes): Promise<Vector<Types.Address>> {
+    const indexes = Object.keys(Array(Number(ownerMomentumSafes.msafes.data.length)).fill(0));
+    return Promise.all(indexes.map(index => this.queryOwnedMsafe(ownerMomentumSafes, Number(index))));
+  }
+
+  static async queryPendingMsafe(ownerMomentumSafes: OwnerMomentumSafes, index: number): Promise<Types.Address> {
+    const element = getStructType('REGISTRY_ELEMENT').args(['address', 'bool']);
+    const msafe = await Aptos.client().getTableItem(ownerMomentumSafes.pendings.data.inner.handle, {
+      key_type: 'u64',
+      value_type: element.toString(),
+      key: String(index),
+    }) as Element<Types.Address, boolean>;
+    return msafe.key;
+  }
+
+  static async queryOwnedMsafe(ownerMomentumSafes: OwnerMomentumSafes, index: number): Promise<Types.Address> {
+    const element = getStructType('REGISTRY_ELEMENT').args(['address', 'bool']);
+    const msafe = await Aptos.client().getTableItem(ownerMomentumSafes.msafes.data.inner.handle, {
+      key_type: 'u64',
+      value_type: element.toString(),
+      key: String(index),
+    }) as Element<Types.Address, boolean>;
+    return msafe.key;
   }
 
   static async getRegisterEvent(owner: HexString): Promise<RegisterEvent> {
