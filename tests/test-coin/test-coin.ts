@@ -8,7 +8,7 @@ import {typeTagStructFromName} from "../../src/utils/parse";
 
 const DEF_SEND_AMOUNT = "100000000";
 
-const DEPLOYER = HexString.ensure("be836d132840c6380a97342a46e09c75ca30d1cbf561bc4161e20f71e644692c");
+const DEPLOYER = HexString.ensure("26b767b97edc9df9695ea203275a20446aa0b362b361330e552bb62e1c8b5cda");
 
 const program = new Command();
 const cli = program
@@ -18,6 +18,7 @@ const cli = program
   .option("-p --profile <string>", "profile to use in aptos config", "default")
   .option("-t --to <string>", "target account to send test coin")
   .option("-a --amount <string>", "amount of token to be sent", DEF_SEND_AMOUNT)
+  .option("-n --network <string>", "network", "devnet")
   .option("-r --register", "Whether to register coin")
   .parse(process.argv);
 
@@ -28,6 +29,7 @@ async function main() {
     await loadConfigAndApply({
       configFilePath: cli.opts().config,
       profile: cli.opts().profile,
+      network: cli.opts().network,
     });
   } catch (e) {
     if ((e as ApiError).message.includes('Account not found by Address')) {
