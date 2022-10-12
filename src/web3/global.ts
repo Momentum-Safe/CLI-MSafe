@@ -4,12 +4,12 @@ import {
   HexString,
   BCS,
   ApiError,
-  Types
+  Types, CoinClient
 } from 'aptos';
 import { Account } from "./account";
 import { load } from "js-yaml";
 import { readFile } from "fs/promises";
-import { Coin } from "./coin";
+import { CoinType } from "./coinType";
 import { BigNumber } from "bignumber.js";
 import { bigIntToBigNumber, fromDust } from "../utils/bignumber";
 import {getDeployedAddrFromNodeURL} from "./config";
@@ -17,7 +17,7 @@ import { AnyNumber, Event, EventHandle, PaginationArgs } from '../moveTypes/move
 import {DEPLOYED} from "../../deployed";
 
 export let MY_ACCOUNT: Account;
-export let APT_COIN_INFO: Coin;
+export let APT_COIN_INFO: CoinType;
 export let DEPLOYER: HexString;
 
 let APTOS: AptosClient;
@@ -44,7 +44,7 @@ export async function setGlobal(c: Config) {
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
-  APT_COIN_INFO = await Coin.new("0x01::aptos_coin::AptosCoin");
+  APT_COIN_INFO = await CoinType.fromMoveCoin("0x01::aptos_coin::AptosCoin");
   if (c.network) {
     if (c.network != "testnet" && c.network != "devnet") {
       throw Error("unknown network: " + c.network);
@@ -183,3 +183,5 @@ export async function getTransactionByEvent<T>(event: Event<T>): Promise<Types.T
 export function client() {
   return APTOS;
 }
+
+
