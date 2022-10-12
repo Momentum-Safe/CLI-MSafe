@@ -12,11 +12,10 @@ export function isStringAddress(s: string): boolean {
   if (!isStringHex(s)) {
     return false;
   }
-  try {
-    const byteLength = HexString.ensure(s).toUint8Array().length;
-    return byteLength <= 32; // SHA3_256 length
-  } catch (e) {
-    return false;
+  if (s.includes('0x')) {
+    return s.length <= 66;
+  } else {
+    return s.length <= 64;
   }
 }
 
