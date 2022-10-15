@@ -87,6 +87,7 @@ export class MultiSigHelper {
   }
 }
 
+
 function simpleMapToSigMap(smSigs: SimpleMap<TEd25519PublicKey, TEd25519Signature> | undefined): Map<string, TxnBuilderTypes.Ed25519Signature> {
   const m = new Map<string, TxnBuilderTypes.Ed25519Signature>();
   if (smSigs) {

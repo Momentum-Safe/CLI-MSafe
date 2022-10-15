@@ -19,11 +19,9 @@ import { Registry } from "./registry";
 import { makeMSafeRegisterTx } from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
-import { DEPLOYER } from "../web3/global";
+import {DEPLOYER, MY_ACCOUNT} from "../web3/global";
 import { EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
 import { SimpleMap, Table, TEd25519PublicKey, TEd25519Signature, Vector } from '../moveTypes/moveTypes';
-
-
 
 export type CreateWalletTxn = {
   payload: Types.HexEncodedBytes,
@@ -139,13 +137,18 @@ export class CreationHelper {
     // Sign on the multi-sig transaction
     // TODO: expose the metadata
     const txArg = { metadata: 'Momentum Safe' };
-    const options = { sequenceNumber: 0n };
-    const tx = await makeMSafeRegisterTx(this.address, txArg, options);
+    const options = {
+      sequenceNumber: 0n,
+    };
+    const tx = await makeMSafeRegisterTx(this.address, this.rawPublicKey, txArg, options);
     const [payload, sig] = signer.getSigData(tx);
 
     // Sign and submit the transaction from the signer
-    const tx2 = await this.makeInitCreationTxn(signer.address(), payload, sig);
-    const signedTx2 = signer.sign(tx2);
+    const tx2Builder = await this.makeInitCreationTxn(signer.address(), payload, sig);
+    const maxGas = await tx2Builder.build().estimateGas(MY_ACCOUNT.account);
+    const tx2Final = tx2Builder.maxGas(maxGas).build();
+
+    const signedTx2 = signer.sign(tx2Final);
 
     return await Aptos.sendSignedTransactionAsync(signedTx2);
   }
@@ -176,7 +179,12 @@ export class CreationHelper {
   async submitSignature(signer: Account) {
     const creation = await this.getResourceData();
     const sig = this.signPendingCreation(signer, creation);
-    const tx = await this.makeSubmitSignatureTxn(signer, sig);
+
+    const txBuilder = await this.makeSubmitSignatureTxn(signer, sig);
+    const simulateTx = txBuilder.build();
+    const maxGas = await simulateTx.estimateGas(MY_ACCOUNT.account);
+    const tx = txBuilder.maxGas(maxGas).build();
+
     const signedTx = signer.sign(tx);
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
@@ -208,6 +216,7 @@ export class CreationHelper {
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txModuleBuilder = new AptosEntryTxnBuilder();
     const index = this.findPkIndex(signer.publicKey());
+    const gasUnit = await Aptos.estimateGasPrice();
 
     return txModuleBuilder
       .addr(DEPLOYER)
@@ -216,11 +225,12 @@ export class CreationHelper {
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
+      .gasPrice(gasUnit)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
         BCS.bcsSerializeUint64(index),
         BCS.bcsToBytes(sig),
-      ]).build();
+      ]);
   }
 
   private findPkIndex(publicKey: HexString) {
@@ -252,8 +262,7 @@ export class CreationHelper {
         BCS.bcsSerializeUint64(this.initBalance),
         BCS.bcsSerializeBytes(payload as Uint8Array),
         BCS.bcsToBytes(signature),
-      ])
-      .build();
+      ]);
   }
 
   private static async getPublicKeysFromRegistry(addrs: HexString[]) {

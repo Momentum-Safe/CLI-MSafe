@@ -1,9 +1,12 @@
 import {
+  AptosAccount,
   BCS,
   HexString,
   TransactionBuilder,
   TxnBuilderTypes,
 } from "aptos";
+import * as Aptos from "./global";
+import {assembleMultiSigTxn} from "../momentum-safe/common";
 
 const COIN_MODULE = "0x1::coin";
 const TRANSFER_METHOD = "transfer";
@@ -14,8 +17,13 @@ const DEFAULT_MAX_GAS = 50000n;
 const DEFAULT_GAS_PRICE = 1000n;
 const DEFAULT_EXPIRATION = 3600;
 
+// Set the default minimum max gas
+const MIN_MAX_GAS = 1000n;
 
-abstract class AptosTxnBuilder {
+const MAX_GAS_MULTI = 110n;
+const MAX_GAS_DENOM = 100n;
+
+export abstract class AptosTxnBuilder {
   private _fromAddress: HexString | undefined;
   private _sequenceNumber: bigint | undefined;
   private _chainId: number | undefined;
@@ -204,6 +212,11 @@ export class AptosEntryTxnBuilder extends AptosTxnBuilder {
   }
 }
 
+export type GasOption = {
+  gasUnit: bigint,
+  maxGas: bigint,
+}
+
 
 export class Transaction {
   raw: TxnBuilderTypes.RawTransaction;
@@ -220,4 +233,67 @@ export class Transaction {
   getSigningMessage() {
     return TransactionBuilder.getSigningMessage(this.raw);
   }
+
+  async estimateMultiSigGas(rawPK: TxnBuilderTypes.MultiEd25519PublicKey) {
+    const res = await simulateMultiSigTx(rawPK, this.raw);
+    if (!res) {
+      throw Error("empty result from simulation");
+    }
+    if (!(res[0].success)) {
+      console.log("simulate result", res);
+      throw Error("simulation with error:" + res[0].vm_status);
+    }
+    let gas = BigInt(res[0].gas_used) * MAX_GAS_MULTI / MAX_GAS_DENOM;
+    if (gas < MIN_MAX_GAS) {
+      gas = MIN_MAX_GAS;
+    }
+    console.log("simulate result", res);
+    console.log("gas estimate", gas);
+    return gas;
+  }
+
+  async estimateGas(sender: AptosAccount) {
+    const res = await Aptos.client().simulateTransaction(sender, this.raw);
+    if (!res) {
+      throw Error("empty result from simulation");
+    }
+    if (!(res[0].success)) {
+      throw Error("simulation with error:" + res[0].vm_status);
+    }
+    let gas = BigInt(res[0].gas_used) * MAX_GAS_MULTI / MAX_GAS_DENOM;
+    if (gas < MIN_MAX_GAS) {
+      gas = MIN_MAX_GAS;
+    }
+    console.log("gas estimate", gas);
+    return gas;
+  }
+}
+
+async function simulateMultiSigTx(
+  rawPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  txn: TxnBuilderTypes.RawTransaction,
+) {
+  const signingMessage = TransactionBuilder.getSigningMessage(txn);
+  const sig = makeInvalidMultiSigForSimulation(rawPK);
+  const bcsTxn = assembleMultiSigTxn(signingMessage, rawPK, sig);
+  return Aptos.client().submitBCSSimulation(bcsTxn, {
+    estimateGasUnitPrice: true,
+    estimateMaxGasAmount: true
+  });
+}
+
+function makeInvalidMultiSigForSimulation(rawMultiPubKey: TxnBuilderTypes.MultiEd25519PublicKey) {
+  const threshold = rawMultiPubKey.threshold;
+  const bitmap: number[] = [];
+  const invalidSigs: TxnBuilderTypes.Ed25519Signature[] = [];
+  for (let i = 0; i != threshold; i = i + 1) {
+    bitmap.push(i);
+    const invalidSigBytes = new Uint8Array(TxnBuilderTypes.Ed25519Signature.LENGTH);
+    invalidSigs.push(new TxnBuilderTypes.Ed25519Signature(invalidSigBytes));
+  }
+  const parsedBitMap = TxnBuilderTypes.MultiEd25519Signature.createBitmap(bitmap);
+
+  return new TxnBuilderTypes.MultiEd25519Signature(
+    invalidSigs, parsedBitMap,
+  );
 }

@@ -9,7 +9,6 @@ import { MoveStructTypeTag } from "../moveTypes/moveTypeTag";
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
 export const APTOS_FRAMEWORK_HS = HexString.ensure(APTOS_FRAMEWORK);
 
-
 export const MAX_NUM_OWNERS = 32;
 export const ADDRESS_HEX_LENGTH = 64;
 
@@ -84,12 +83,13 @@ export function getStructType(tagName: keyof typeof STRUCTS): MoveStructTypeTag 
 }
 
 export function assembleMultiSigTxn(
-  payload: string,
+  payload: string | Uint8Array,
   pubKey: TxnBuilderTypes.MultiEd25519PublicKey,
   sig: TxnBuilderTypes.MultiEd25519Signature,
 ): Uint8Array {
   const authenticator = new TxnBuilderTypes.TransactionAuthenticatorMultiEd25519(pubKey, sig);
-  const signingTx = Transaction.deserialize(HexBuffer(payload));
+  const hb = typeof payload === "string"? HexBuffer(payload): Buffer.from(payload);
+  const signingTx = Transaction.deserialize(hb);
   const signedTx = new TxnBuilderTypes.SignedTransaction(signingTx.raw, authenticator);
   return BCS.bcsToBytes(signedTx);
 }
@@ -129,4 +129,3 @@ export type TxConfig = {
   sequenceNumber: bigint,
   chainID: number,
 }
-

@@ -1,4 +1,4 @@
-import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, Transaction} from "../web3/transaction";
+import {AptosCoinTransferTxnBuilder, AptosEntryTxnBuilder, AptosTxnBuilder, Transaction} from "../web3/transaction";
 import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
 import * as Aptos from '../web3/global';
 import {
@@ -22,6 +22,8 @@ const WEEK_SECONDS = DAY_SECONDS * 7;
 // const MONTH_SECONDS = DAY_SECONDS * 30;
 // const YEAR_SECONDS = DAY_SECONDS *365;
 
+// Normally use < 6000 gas
+const DEF_REGISTER_MAX_GAS = 12000n;
 const DEFAULT_UNIT_PRICE = 1000n;
 const DEFAULT_REGISTER_MAX_GAS = 50000n;
 const DEFAULT_EXPIRATION = WEEK_SECONDS;
@@ -102,12 +104,16 @@ export type MSafeTxnInfo = {
 // call momentum_safe::register
 export async function makeMSafeRegisterTx(
   sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
   args: MSafeRegisterArgs,
   opts: Options,
 ): Promise<MSafeTransaction> {
+  if (!opts.maxGas) {
+    opts.maxGas = DEF_REGISTER_MAX_GAS;
+  }
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosEntryTxnBuilder();
-  const txn = txBuilder
+  const tx = txBuilder
     .addr(DEPLOYER)
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REGISTER)
@@ -115,21 +121,22 @@ export async function makeMSafeRegisterTx(
     .chainId(config.chainID)
     .sequenceNumber(config.sequenceNumber)
     .maxGas(config.maxGas)
-    .gasPrice(config.gasPrice)
     .expiration(config.expirationSec)
     .args([BCS.bcsSerializeStr(args.metadata)])
     .build();
-  return new MSafeTransaction(txn.raw);
+  // Note: We do not need to replace the max gas here.
+  return new MSafeTransaction(tx.raw);
 }
 
 export async function makeMSafeAPTTransferTx(
   sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
   args: APTTransferArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosCoinTransferTxnBuilder();
-  const txn = txBuilder
+  txBuilder
     .from(sender)
     .chainId(config.chainID)
     .sequenceNumber(config.sequenceNumber)
@@ -137,20 +144,21 @@ export async function makeMSafeAPTTransferTx(
     .gasPrice(config.gasPrice)
     .expiration(config.expirationSec)
     .to(args.to)
-    .amount(args.amount)
-    .build();
-  return new MSafeTransaction(txn.raw);
+    .amount(args.amount);
+
+  return await buildMultiTxWithMaxGas(txBuilder, multiPK);
 }
 
 export async function makeMSafeAnyCoinRegisterTx(
   sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
   args: CoinRegisterArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
   const txBuilder = new AptosEntryTxnBuilder();
   const structTag = typeTagStructFromName(args.coinType);
-  const txn = txBuilder
+  txBuilder
     .addr(APTOS_FRAMEWORK_HS)
     .module(MODULES.MANAGED_COIN)
     .method(FUNCTIONS.COIN_REGISTER)
@@ -161,13 +169,14 @@ export async function makeMSafeAnyCoinRegisterTx(
     .maxGas(config.maxGas)
     .expiration(config.expirationSec)
     .type_args([structTag])
-    .args([])
-    .build();
-  return new MSafeTransaction(txn.raw);
+    .args([]);
+
+  return await buildMultiTxWithMaxGas(txBuilder, multiPK);
 }
 
 export async function makeMSafeAnyCoinTransferTx(
   sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
   args: CoinTransferArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
@@ -175,7 +184,7 @@ export async function makeMSafeAnyCoinTransferTx(
   const txBuilder = new AptosEntryTxnBuilder();
   const structTag = typeTagStructFromName(args.coinType);
 
-  const txn = txBuilder
+  txBuilder
     .addr(APTOS_FRAMEWORK_HS)
     .module(MODULES.COIN)
     .method(FUNCTIONS.COIN_TRANSFER)
@@ -189,14 +198,14 @@ export async function makeMSafeAnyCoinTransferTx(
     .args([
       BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(args.to)),
       BCS.bcsSerializeUint64(args.amount),
-    ])
-    .build();
+    ]);
 
-  return new MSafeTransaction(txn.raw);
+  return await buildMultiTxWithMaxGas(txBuilder, multiPK);
 }
 
 export async function makeMSafeRevertTx(
   sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
   args: RevertArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
@@ -204,7 +213,7 @@ export async function makeMSafeRevertTx(
   // sequence number will override option sn
   config.sequenceNumber = args.sn;
   const txBuilder = new AptosEntryTxnBuilder();
-  const txn = txBuilder
+  txBuilder
     .addr(DEPLOYER)
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REVERT)
@@ -214,20 +223,20 @@ export async function makeMSafeRevertTx(
     .gasPrice(config.gasPrice)
     .maxGas(config.maxGas)
     .expiration(config.expirationSec)
-    .args([])
-    .build();
-  return new MSafeTransaction(txn.raw);
+    .args([]);
+  return await buildMultiTxWithMaxGas(txBuilder, multiPK);
 }
 
 export async function makeEntryFunctionTx(
   sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
   args: EntryFunctionArgs,
   opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender, opts);
   const [deployer, moduleName, fnName] = splitFunctionComponents(args.fnName);
   const txBuilder = new AptosEntryTxnBuilder();
-  const tx = txBuilder
+  txBuilder
     .addr(deployer)
     .module(moduleName)
     .method(fnName)
@@ -238,14 +247,14 @@ export async function makeEntryFunctionTx(
     .maxGas(config.maxGas)
     .expiration(config.expirationSec)
     .type_args(args.typeArgs.map(ta => typeTagStructFromName(ta)))
-    .args(args.args)
-    .build();
+    .args(args.args);
 
-  return new MSafeTransaction(tx.raw);
+  return await buildMultiTxWithMaxGas(txBuilder, multiPK);
 }
 
 export async function compileAndMakeModulePublishTx(
   sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
   args: ModuleCompilePublishArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
@@ -256,15 +265,25 @@ export async function compileAndMakeModulePublishTx(
   };
   await MovePublisher.compile(args.moveDir, args.artifacts, namedAddress);
   const mp = await MovePublisher.fromMoveDir(args.moveDir);
-  const tx = mp.getDeployTransaction(sender, config);
-  return new MSafeTransaction(tx.raw);
+  const txBuilder = mp.getDeployTransaction(sender, config);
+  return await buildMultiTxWithMaxGas(txBuilder, multiPK);
 }
 
-export async function makeModulePublishTx(sender: HexString, args: ModulePublishArgs, opts?: Options) {
+export async function makeModulePublishTx(
+  sender: HexString,
+  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  args: ModulePublishArgs,
+  opts?: Options
+) {
   const config = await applyDefaultOptions(sender, opts);
   const mp = await MovePublisher.fromMoveDir(args.moveDir);
-  const tx = mp.getDeployTransaction(sender, config);
-  return new MSafeTransaction(tx.raw);
+  const txBuilder = mp.getDeployTransaction(sender, config);
+  return await buildMultiTxWithMaxGas(txBuilder, multiPK);
+}
+
+async function buildMultiTxWithMaxGas(txBuilder: AptosTxnBuilder, multiPK: TxnBuilderTypes.MultiEd25519PublicKey) {
+  const maxGas = await txBuilder.build().estimateMultiSigGas(multiPK);
+  return new MSafeTransaction(txBuilder.maxGas(maxGas).build().raw);
 }
 
 async function applyDefaultOptions(sender: HexString, opts?: Options): Promise<TxConfig> {
@@ -272,7 +291,7 @@ async function applyDefaultOptions(sender: HexString, opts?: Options): Promise<T
     opts = {};
   }
   const maxGas = opts.maxGas? opts.maxGas: DEFAULT_REGISTER_MAX_GAS;
-  const gasPrice = opts.gasPrice? opts.gasPrice: DEFAULT_UNIT_PRICE;
+  const gasPrice = opts.gasPrice? opts.gasPrice: await Aptos.estimateGasPrice();
   const expirationSec = opts.expirationSec? opts.expirationSec: DEFAULT_EXPIRATION;
 
   let sequenceNumber: bigint;
