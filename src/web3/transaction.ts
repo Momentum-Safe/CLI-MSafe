@@ -258,6 +258,9 @@ export class Transaction {
       throw Error("empty result from simulation");
     }
     if (!(res[0].success)) {
+      if (res[0].vm_status.includes("SEQUENCE_NUMBER_TOO_NEW")) {
+        return DEFAULT_MAX_GAS;
+      }
       throw Error("simulation with error:" + res[0].vm_status);
     }
     let gas = BigInt(res[0].gas_used) * MAX_GAS_MULTI / MAX_GAS_DENOM;
