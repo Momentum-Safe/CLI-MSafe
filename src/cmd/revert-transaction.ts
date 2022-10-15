@@ -64,7 +64,7 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
     return;
   }
 
-  const revertTx = await makeMSafeRevertTx(msafe.address, {sn: tx.sn});
+  const revertTx = await makeMSafeRevertTx(msafe.address, msafe.rawPublicKey, {sn: tx.sn});
   const {plHash: revertHash, pendingTx: txRes} = await msafe.initTransaction(MY_ACCOUNT, revertTx);
   console.log(`\tTransaction ${txRes.hash} submitted. Waiting for confirmation`);
   await Aptos.waitForTransaction(txRes.hash);

@@ -46,10 +46,13 @@ export async function setGlobal(c: Config) {
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
   APT_COIN_INFO = await CoinType.fromMoveCoin("0x01::aptos_coin::AptosCoin");
   if (c.network) {
-    if (c.network != "testnet" && c.network != "devnet") {
+    if (c.network == "auto") {
+      DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
+    } else if (c.network != "testnet" && c.network != "devnet") {
       throw Error("unknown network: " + c.network);
+    } else {
+      DEPLOYER = HexString.ensure(DEPLOYED[c.network]);
     }
-    DEPLOYER = HexString.ensure(DEPLOYED[c.network]);
   } else {
     DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
   }
@@ -184,4 +187,21 @@ export function client() {
   return APTOS;
 }
 
+type Fraction = {
+  numerator: bigint,
+  denominator: bigint,
+}
+
+const defaultGasPriceFrac: Fraction = {
+  numerator: 120n,
+  denominator: 100n,
+};
+
+export async function estimateGasPrice(frac?: Fraction): Promise<bigint> {
+  if (!frac) {
+    frac = defaultGasPriceFrac;
+  }
+  const gasPrice = await APTOS.estimateGasPrice();
+  return BigInt(gasPrice.gas_estimate) * frac.numerator / frac.denominator;
+}
 
