@@ -240,24 +240,6 @@ export class Transaction {
       throw Error("empty result from simulation");
     }
     if (!(res[0].success)) {
-      console.log("simulate result", res);
-      throw Error("simulation with error:" + res[0].vm_status);
-    }
-    let gas = BigInt(res[0].gas_used) * MAX_GAS_MULTI / MAX_GAS_DENOM;
-    if (gas < MIN_MAX_GAS) {
-      gas = MIN_MAX_GAS;
-    }
-    console.log("simulate result", res);
-    console.log("gas estimate", gas);
-    return gas;
-  }
-
-  async estimateGas(sender: AptosAccount) {
-    const res = await Aptos.client().simulateTransaction(sender, this.raw);
-    if (!res) {
-      throw Error("empty result from simulation");
-    }
-    if (!(res[0].success)) {
       if (res[0].vm_status.includes("SEQUENCE_NUMBER_TOO_NEW")) {
         return DEFAULT_MAX_GAS;
       }
@@ -267,7 +249,21 @@ export class Transaction {
     if (gas < MIN_MAX_GAS) {
       gas = MIN_MAX_GAS;
     }
-    console.log("gas estimate", gas);
+    return gas;
+  }
+
+  async estimateGas(sender: AptosAccount) {
+    const res = await Aptos.client().simulateTransaction(sender, this.raw);
+    if (!res) {
+      throw Error("empty result from simulation");
+    }
+    if (!(res[0].success)) {
+      throw Error("simulation with error:" + res[0].vm_status);
+    }
+    let gas = BigInt(res[0].gas_used) * MAX_GAS_MULTI / MAX_GAS_DENOM;
+    if (gas < MIN_MAX_GAS) {
+      gas = MIN_MAX_GAS;
+    }
     return gas;
   }
 }
