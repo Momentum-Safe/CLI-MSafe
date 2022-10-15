@@ -33,7 +33,7 @@ export type CreateWalletTxn = {
 export type MomentumSafeCreation = {
   owners: Vector<Types.Address>,
   public_keys: Vector<TEd25519PublicKey>,
-  nonce: number,
+  nonce: string,
   threshold: number,
   txn: CreateWalletTxn
 }
@@ -75,7 +75,7 @@ export class CreationHelper {
     readonly owners: HexString[],
     readonly ownerPubKeys: HexString[],
     readonly threshold: number,
-    readonly creationNonce: number,
+    readonly creationNonce: bigint,
     readonly initBalance?: bigint,
   ) {
     // Input parameter checks
@@ -103,7 +103,7 @@ export class CreationHelper {
     addr = formatAddress(addr);
     const creation = await CreationHelper.getMSafeCreation(addr);
     const threshold = creation.threshold;
-    const nonce = creation.nonce;
+    const nonce = BigInt(creation.nonce);
     const owners = creation.owners.map(addr => HexString.ensure(addr));
     const ownerPubKeys = creation.public_keys.map(pk => HexString.ensure(pk));
     return new CreationHelper(owners, ownerPubKeys, threshold, nonce);
@@ -207,7 +207,7 @@ export class CreationHelper {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txModuleBuilder = new AptosEntryTxnBuilder();
-    const index = this.findPkIndex(signer.publicKey());
+    const pkIndex = this.findPkIndex(signer.publicKey());
 
     return txModuleBuilder
       .addr(DEPLOYER)
@@ -216,9 +216,10 @@ export class CreationHelper {
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
+      .maxGas(10000n)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
-        BCS.bcsSerializeUint64(index),
+        BCS.bcsSerializeU8(pkIndex),
         BCS.bcsToBytes(sig),
       ]).build();
   }
@@ -263,10 +264,10 @@ export class CreationHelper {
   }
 
 
-  private static async getNonce(initiator: HexString): Promise<number> {
+  private static async getNonce(initiator: HexString): Promise<bigint> {
     const pendingCreations = await CreationHelper.getResourceData();
     const nonce = await CreationHelper.queryNonces(pendingCreations, initiator);
-    return Number(nonce);
+    return BigInt(nonce);
   }
 
   // debug only

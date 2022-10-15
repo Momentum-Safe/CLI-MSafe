@@ -7,15 +7,17 @@ import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
 import * as Aptos from "../web3/global";
 import {HexBuffer} from "./buffer";
 
-
+const IMPORT_NONCE = BigInt('0xffffffffffffffff');
 // MomentumSafe public key is a blend of owners and a nonce (as address)
-export function computeMultiSigAddress(owners: string[] | Uint8Array[] | HexString[], threshold: number, nonce: number):
+export function computeMultiSigAddress(owners: string[] | Uint8Array[] | HexString[], threshold: number, nonce: bigint):
   [TxnBuilderTypes.MultiEd25519PublicKey, HexString, HexString] {
 
   const publicKeys: TxnBuilderTypes.Ed25519PublicKey[] = owners.map( (owner) => {
     return parsePubKey(owner);
   });
-  publicKeys.push(noncePubKey(nonce));
+  if(nonce !== IMPORT_NONCE) {
+    publicKeys.push(noncePubKey(Number(nonce)));
+  }
   const multiPubKey = new TxnBuilderTypes.MultiEd25519PublicKey(
     publicKeys, threshold,
   );

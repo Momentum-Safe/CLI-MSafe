@@ -16,7 +16,7 @@ const TESTNET_NODE_URL = 'https://fullnode.testnet.aptoslabs.com/v1';
 const TESTNET_FAUCET_URL = 'https://faucet.testnet.aptoslabs.com';
 
 const LOCAL_NODE_URL = 'http://127.0.0.1:8080';
-const LOCAL_FAUCET_URL = 'http://127.0.0.1:8000';
+const LOCAL_FAUCET_URL = 'http://127.0.0.1:8081';
 
 
 export function getDeployedAddrFromNodeURL(nodeURL: string): HexString {
