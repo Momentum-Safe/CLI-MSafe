@@ -1,7 +1,7 @@
 export const DEPLOYED = {
-  "testnet": "0x74f14286e43d27ed0acc0c4548a5be99a7c2af3cf17a1344c87b7f026b2fcc23",
-  "devnet": "0x74f14286e43d27ed0acc0c4548a5be99a7c2af3cf17a1344c87b7f026b2fcc23",
-  "mainnet": "0x74f14286e43d27ed0acc0c4548a5be99a7c2af3cf17a1344c87b7f026b2fcc23",
+  "testnet": "0x329d9bbe8f70aecbf84199870613fbdc3f95fccdfcca3b201f0090eec78b3046",
+  "devnet": "0x329d9bbe8f70aecbf84199870613fbdc3f95fccdfcca3b201f0090eec78b3046",
+  "mainnet": "0x329d9bbe8f70aecbf84199870613fbdc3f95fccdfcca3b201f0090eec78b3046",
   "custom": "_",
   "localnet": "_",
 };
