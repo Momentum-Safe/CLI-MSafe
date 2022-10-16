@@ -48,7 +48,7 @@ export async function setGlobal(c: Config) {
   if (c.network) {
     if (c.network == "auto") {
       DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
-    } else if (c.network != "testnet" && c.network != "devnet") {
+    } else if (c.network != "testnet" && c.network != "devnet" && c.network != "mainnet") {
       throw Error("unknown network: " + c.network);
     } else {
       DEPLOYER = HexString.ensure(DEPLOYED[c.network]);
@@ -152,7 +152,7 @@ export async function loadConfigAndApply(c: loadConfig) {
     faucetURL: profile.faucet_url,
     privateKey: profile.private_key,
     address: profile.account,
-    network: profile.network,
+    network: c.network,
   });
 }
 
