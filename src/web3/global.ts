@@ -33,7 +33,6 @@ interface Config {
   privateKey: string,
   address: string,
   network?: string, // If not specified, infer from nodeURL
-  msafe?: string, // optionally, specify the msafe address, only used to develop.
 }
 
 export async function setGlobal(c: Config) {
@@ -52,7 +51,7 @@ export async function setGlobal(c: Config) {
     }
     DEPLOYER = HexString.ensure(DEPLOYED[c.network]);
   } else {
-    DEPLOYER = c.msafe ? HexString.ensure(c.msafe) : getDeployedAddrFromNodeURL(c.nodeURL);
+    DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
   }
 }
 
@@ -151,7 +150,6 @@ export async function loadConfigAndApply(c: loadConfig) {
     privateKey: profile.private_key,
     address: profile.account,
     network: profile.network,
-    msafe: profile.msafe,
   });
 }
 

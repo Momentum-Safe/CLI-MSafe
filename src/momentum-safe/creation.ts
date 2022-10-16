@@ -216,7 +216,6 @@ export class CreationHelper {
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
-      .maxGas(10000n)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
         BCS.bcsSerializeU8(pkIndex),
