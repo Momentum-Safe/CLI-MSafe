@@ -15,7 +15,7 @@ const cli = program
   .description("Momentum Safe entry function caller. Call an entry function.")
   .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
-  .option("-n --network <string>", "network (devnet, testnet), use deployed address", "devnet")
+  .option("-n --network <string>", "network (devnet, testnet), use deployed address", "auto")
   .requiredOption("--msafe <string>", "momentum safe address")
   .parse(process.argv);
 
@@ -32,6 +32,7 @@ async function main() {
   // Apply your function call and arguments here
   const msafeTxn = await makeEntryFunctionTx(
     msafe.address,
+    msafe.rawPublicKey,
     {
       fnName: "0x1908fe0d337d7bd718c8465030c5f306377ac396f3d7acce92f526ae41637cc0::message::set_message",
       typeArgs: [],

@@ -33,6 +33,7 @@ async function main() {
   const sn = await msafe.getNextSN();
   const msafeTxn = await makeModulePublishTx(
     msafe.address,
+    msafe.rawPublicKey,
     {moveDir: args.moveDir},
     {sequenceNumber: sn}
   );

@@ -71,8 +71,7 @@ export class MovePublisher {
       .args([
         BCS.bcsSerializeBytes(this.moveInfo.metadata.raw),
         this.serializeCodeBytes(),
-      ])
-      .build();
+      ]);
   }
 
   private serializeCodeBytes() {

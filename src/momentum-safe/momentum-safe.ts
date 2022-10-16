@@ -1,5 +1,5 @@
 import * as Aptos from "../web3/global";
-import { HexString, TxnBuilderTypes, BCS, Types } from 'aptos';
+import {HexString, TxnBuilderTypes, BCS, Types, TransactionBuilder} from 'aptos';
 import { AptosEntryTxnBuilder, Transaction } from '../web3/transaction';
 import { Account } from '../web3/account';
 import {
@@ -13,7 +13,7 @@ import { MSafeTransaction, MSafeTxnInfo } from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
 import { HexBuffer } from "../utils/buffer";
-import { DEPLOYER } from "../web3/global";
+import {DEPLOYER, MY_ACCOUNT} from "../web3/global";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
 import { SimpleMap, TableWithLength, TEd25519PublicKey, TEd25519Signature, Vector } from "../moveTypes/moveTypes";
 
@@ -107,10 +107,11 @@ export class MomentumSafe {
   }
 
   async initTransaction(signer: Account, tx: MSafeTransaction) {
+    await tx.estimateMultiSigGas(this.rawPublicKey);
     const [rawTx, sig] = signer.getSigData(tx);
     const tmpHash = sha3_256(rawTx);
 
-    const initTx = await this.makeCoinTransferInitTx(signer, rawTx, sig);
+    const initTx = await this.makeInitTxTx(signer, rawTx, sig);
     const signedInitTx = signer.sign(initTx);
 
     const txRes = await Aptos.sendSignedTransactionAsync(signedInitTx);
@@ -136,6 +137,7 @@ export class MomentumSafe {
     const sig = this.signTx(signer, txType);
 
     const tx = await this.makeSubmitSignatureTxn(signer, txHash, txType, sig);
+    await tx.estimateGas(MY_ACCOUNT.account);
     const signedTx = signer.sign(tx);
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
@@ -178,7 +180,7 @@ export class MomentumSafe {
     return [txType, msafeTxInfo];
   }
 
-  private async makeCoinTransferInitTx(
+  private async makeInitTxTx(
     signer: Account,
     payload: TxnBuilderTypes.SigningMessage,
     signature: TxnBuilderTypes.Ed25519Signature
@@ -330,7 +332,3 @@ export class MomentumSafe {
     });
   }
 }
-
-
-
-

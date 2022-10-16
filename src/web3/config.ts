@@ -35,7 +35,7 @@ export function getNetworkFromNodeURL(nodeURL: string): Network {
   if (isLocalnet(nodeURL)) {
     return Network.Localnet;
   }
-  return Network.Custom;
+  throw Error(`unknown network. Cannot infer network from nodeURL ${nodeURL}. Please specify network with --network`);
 }
 
 function isDevnet(nodeURL: string) {
