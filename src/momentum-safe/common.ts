@@ -1,9 +1,8 @@
-import { BCS, HexString, TxnBuilderTypes } from "aptos";
-import { APTOS_TOKEN as APTOS_COIN } from "../web3/transaction";
-import { Transaction } from "../web3/transaction";
-import { HexBuffer } from "../utils/buffer";
-import { DEPLOYER } from "../web3/global";
-import { MoveStructTypeTag } from "../moveTypes/moveTypeTag";
+import {BCS, HexString, TxnBuilderTypes} from "aptos";
+import {APTOS_TOKEN as APTOS_COIN, Transaction} from "../web3/transaction";
+import {HexBuffer} from "../utils/buffer";
+import {DEPLOYER} from "../web3/global";
+import {MoveStructTypeTag} from "../moveTypes/moveTypeTag";
 
 
 export const APTOS_FRAMEWORK = '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -113,19 +112,4 @@ export function serializeOwners(addrs: HexString[]): BCS.Bytes {
   return serializer.getBytes();
 }
 
-export type Options = {
-  maxGas?: bigint,
-  gasPrice?: bigint,
-  expirationSec?: number, // target = time.now() + expiration
-  sequenceNumber?: bigint,
-  chainID?: number,
-}
 
-// Parsed tx config from Options
-export type TxConfig = {
-  maxGas: bigint,
-  gasPrice: bigint,
-  expirationSec: number, // target = time.now() + expiration
-  sequenceNumber: bigint,
-  chainID: number,
-}

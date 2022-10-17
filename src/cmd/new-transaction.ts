@@ -72,7 +72,10 @@ async function newTransaction(c: {address: HexString}) {
   }
 
   // Submit transaction
-  const {plHash: txHash, pendingTx: res} = await msafe.initTransaction(MY_ACCOUNT, tx);
+  const {plHash: txHash, pendingTx: res} = await msafe.initTransaction(MY_ACCOUNT, tx, {
+    estimateGasPrice: true,
+    estimateMaxGas: true,
+  });
   const myHash = (res as any).hash;
   console.log();
   console.log(`\tTransaction ${myHash} submitted to blockchain`);
@@ -154,7 +157,12 @@ async function promptAndBuildAPTCoinTransfer(sender: HexString, pk: TxnBuilderTy
   );
   const amount = toDust(amountBN, APT_COIN_INFO.decimals);
   const txArgs: APTTransferArgs = {to: toAddress, amount: amount};
-  return await makeMSafeAPTTransferTx(sender, pk, txArgs, {sequenceNumber: sn});
+  const opt = {
+    sequenceNumber: sn,
+    estimateGasPrice: true,
+    estimateMaxGas: true
+  };
+  return await makeMSafeAPTTransferTx(sender, pk, txArgs, opt);
 }
 
 async function promptAndBuildAnyCoinTransfer(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, sn: bigint): Promise<MSafeTransaction> {
@@ -181,7 +189,12 @@ async function promptAndBuildAnyCoinTransfer(sender: HexString, pk: TxnBuilderTy
     to: toAddress,
     amount: amount,
   };
-  return await makeMSafeAnyCoinTransferTx(sender, pk, txArgs, {sequenceNumber: sn});
+  const opt = {
+    sequenceNumber: sn,
+    estimateGasPrice: true,
+    estimateMaxGas: true
+  };
+  return await makeMSafeAnyCoinTransferTx(sender, pk, txArgs, opt);
 }
 
 async function promptAndBuildForAnyCoinRegister(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, sn: bigint): Promise<MSafeTransaction> {
@@ -191,7 +204,12 @@ async function promptAndBuildForAnyCoinRegister(sender: HexString, pk: TxnBuilde
     isStringTypeStruct,
   );
   const txArgs: CoinRegisterArgs = {coinType: coinType};
-  return await makeMSafeAnyCoinRegisterTx(sender, pk, txArgs, {sequenceNumber: sn});
+  const opt = {
+    sequenceNumber: sn,
+    estimateGasPrice: true,
+    estimateMaxGas: true
+  };
+  return await makeMSafeAnyCoinRegisterTx(sender, pk, txArgs, opt);
 }
 
 async function promptAndBuildForEntryFnTx(
@@ -263,7 +281,12 @@ async function promptAndBuildForEntryFnTx(
     args: args,
   };
 
-  return await makeEntryFunctionTx(sender, pk, ciArgs, {sequenceNumber: sn});
+  const opt = {
+    sequenceNumber: sn,
+    estimateGasPrice: true,
+    estimateMaxGas: true
+  };
+  return await makeEntryFunctionTx(sender, pk, ciArgs, opt);
 }
 
 async function promptForTypeArgs() {
@@ -406,7 +429,12 @@ async function promptCompileAndBuildModulePublishTx(
     artifacts: includedArtifacts,
     deployerAddressName: addrToReplace,
   };
-  return await compileAndMakeModulePublishTx(sender, pk, args, {sequenceNumber: sn});
+  const opts = {
+    sequenceNumber: sn,
+    estimateGasPrice: true,
+    estimateMaxGas: true,
+  };
+  return await compileAndMakeModulePublishTx(sender, pk, args, opts);
 }
 
 async function printTxConfirmation(txData: MSafeTxnInfo) {

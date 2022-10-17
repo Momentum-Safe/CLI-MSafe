@@ -48,7 +48,10 @@ async function main() {
   }
 
   // Submit transaction
-  const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn);
+  const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn, {
+    estimateGasPrice: true,
+    estimateMaxGas: true,
+  });
   const myHash = (res.pendingTx as any).hash;
   console.log(`\tTransaction ${myHash} submitted to blockchain`);
   await Aptos.waitForTransaction(myHash);

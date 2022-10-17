@@ -10,13 +10,13 @@ import {
 } from './common';
 import { assembleMultiSig } from "./sig-helper";
 import * as Aptos from "../web3/global";
-import { AptosEntryTxnBuilder, Transaction } from "../web3/transaction";
+import {AptosEntryTxnBuilder, Options, Transaction, TxConfig} from "../web3/transaction";
 import { Account } from "../web3/account";
 import { computeMultiSigAddress } from "../utils/crypto";
 import { HexBuffer } from "../utils/buffer";
 import { MultiSigHelper } from "./sig-helper";
 import { Registry } from "./registry";
-import { makeMSafeRegisterTx } from "./msafe-txn";
+import {applyDefaultOptions, makeMSafeRegisterTx} from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
 import {DEPLOYER, MY_ACCOUNT} from "../web3/global";
@@ -119,7 +119,7 @@ export class CreationHelper {
     return new CreationHelper(owners, pubKeys, threshold, creationNonce, initBalance);
   }
 
-  async initCreation(signer: Account) {
+  async initCreation(signer: Account, multiOption: Options, singleOption: Options) {
     let creation: MomentumSafeCreation | undefined;
     try {
       creation = await this.getResourceData();
@@ -137,18 +137,12 @@ export class CreationHelper {
     // Sign on the multi-sig transaction
     // TODO: expose the metadata
     const txArg = { metadata: 'Momentum Safe' };
-    const options = {
-      sequenceNumber: 0n,
-    };
-    const tx = await makeMSafeRegisterTx(this.address, this.rawPublicKey, txArg, options);
+    const tx = await makeMSafeRegisterTx(this.address, this.rawPublicKey, txArg, multiOption);
     const [payload, sig] = signer.getSigData(tx);
 
     // Sign and submit the transaction from the signer
-    const tx2Builder = await this.makeInitCreationTxn(signer.address(), payload, sig);
-    const maxGas = await tx2Builder.build().estimateGas(MY_ACCOUNT.account);
-    const tx2Final = tx2Builder.maxGas(maxGas).build();
-
-    const signedTx2 = signer.sign(tx2Final);
+    const tx2 = await this.makeInitCreationTxn(signer, payload, sig, singleOption);
+    const signedTx2 = signer.sign(tx2);
 
     return await Aptos.sendSignedTransactionAsync(signedTx2);
   }
@@ -176,14 +170,11 @@ export class CreationHelper {
     return collectedSigs >= this.threshold;
   }
 
-  async submitSignature(signer: Account) {
+  async submitSignature(signer: Account, opts: Options) {
     const creation = await this.getResourceData();
     const sig = this.signPendingCreation(signer, creation);
 
-    const txBuilder = await this.makeSubmitSignatureTxn(signer, sig);
-    const simulateTx = txBuilder.build();
-    const maxGas = await simulateTx.estimateGas(MY_ACCOUNT.account);
-    const tx = txBuilder.maxGas(maxGas).build();
+    const tx = await this.makeSubmitSignatureTxn(signer, sig, opts);
 
     const signedTx = signer.sign(tx);
     return await Aptos.sendSignedTransactionAsync(signedTx);
@@ -211,26 +202,23 @@ export class CreationHelper {
     return sig;
   }
 
-  private async makeSubmitSignatureTxn(signer: Account, sig: TxnBuilderTypes.Ed25519Signature) {
-    const chainID = await Aptos.getChainId();
-    const sn = await Aptos.getSequenceNumber(signer.address());
+  private async makeSubmitSignatureTxn(signer: Account, sig: TxnBuilderTypes.Ed25519Signature, opts: Options) {
     const txModuleBuilder = new AptosEntryTxnBuilder();
     const pkIndex = this.findPkIndex(signer.publicKey());
-    const gasUnit = await Aptos.estimateGasPrice();
+    const config = await applyDefaultOptions(signer.address(), opts);
 
     return txModuleBuilder
       .addr(DEPLOYER)
       .module(MODULES.CREATOR)
       .method(FUNCTIONS.CREATOR_SUBMIT_SIG)
       .from(signer.address())
-      .chainId(chainID)
-      .sequenceNumber(sn)
-      .gasPrice(gasUnit)
+      .withTxConfig(config)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
         BCS.bcsSerializeU8(pkIndex),
         BCS.bcsToBytes(sig),
-      ]);
+      ])
+      .build(signer.account);
   }
 
   private findPkIndex(publicKey: HexString) {
@@ -241,28 +229,31 @@ export class CreationHelper {
     return index;
   }
 
-  private async makeInitCreationTxn(signer: HexString, payload: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature) {
+  private async makeInitCreationTxn(
+    signer: Account,
+    payload: TxnBuilderTypes.SigningMessage,
+    signature: TxnBuilderTypes.Ed25519Signature,
+    opts?: Options,
+  ) {
     if (!this.initBalance) {
       throw new Error("init balance not specified for init creation");
     }
-
-    const chainID = await Aptos.getChainId();
-    const sn = await Aptos.getSequenceNumber(signer);
+    const config = await applyDefaultOptions(signer.address(), opts);
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
       .addr(DEPLOYER)
       .module(MODULES.CREATOR)
       .method(FUNCTIONS.CREATOR_INIT_WALLET)
-      .from(signer)
-      .chainId(chainID)
-      .sequenceNumber(sn)
+      .from(signer.address())
+      .withTxConfig(config)
       .args([
         serializeOwners(this.owners),
         BCS.bcsSerializeU8(this.threshold),
         BCS.bcsSerializeUint64(this.initBalance),
         BCS.bcsSerializeBytes(payload as Uint8Array),
         BCS.bcsToBytes(signature),
-      ]);
+      ])
+      .build(signer.account);
   }
 
   private static async getPublicKeysFromRegistry(addrs: HexString[]) {

@@ -82,7 +82,13 @@ async function initCreateMSafe() {
   }
 
   console.log();
-  const tx = await creation.initCreation(MY_ACCOUNT);
+  const tx = await creation.initCreation(MY_ACCOUNT, {
+    estimateGasPrice: true,
+    estimateMaxGas: true,
+  }, {
+    estimateGasPrice: true,
+    estimateMaxGas: true,
+  });
   console.log(`\tWallet creation transaction sent:\t${tx.hash}`);
   await Aptos.waitForTransaction(tx.hash);
   console.log(`\tTransaction confirmed, MomentumSafe creation initialized.`);

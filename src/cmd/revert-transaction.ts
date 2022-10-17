@@ -12,7 +12,7 @@ import {
 import {MomentumSafe} from "../momentum-safe/momentum-safe";
 import * as Aptos from "../web3/global";
 import {HexString} from "aptos";
-import {makeMSafeRevertTx} from "../momentum-safe/msafe-txn";
+import {makeMSafeAnyCoinRegisterTx, makeMSafeRevertTx} from "../momentum-safe/msafe-txn";
 import {MY_ACCOUNT} from "../web3/global";
 import {checkTxnEnoughSigsAndAssemble} from "./tx-details";
 import {isHexEqual} from "../utils/check";
@@ -63,9 +63,15 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
     ]);
     return;
   }
-
-  const revertTx = await makeMSafeRevertTx(msafe.address, msafe.rawPublicKey, {sn: tx.sn});
-  const {plHash: revertHash, pendingTx: txRes} = await msafe.initTransaction(MY_ACCOUNT, revertTx);
+  const opt = {
+    estimateGasPrice: true,
+    estimateMaxGas: true
+  };
+  const revertTx = await makeMSafeRevertTx(msafe.address, msafe.rawPublicKey, {sn: tx.sn}, opt);
+  const {plHash: revertHash, pendingTx: txRes} = await msafe.initTransaction(MY_ACCOUNT, revertTx, {
+    estimateGasPrice: true,
+    estimateMaxGas: true,
+  });
   console.log(`\tTransaction ${txRes.hash} submitted. Waiting for confirmation`);
   await Aptos.waitForTransaction(txRes.hash);
   console.log(`\tTransaction confirmed on chain.`);

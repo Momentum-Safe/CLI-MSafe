@@ -1,10 +1,4 @@
-import {
-  AptosAccount,
-  BCS,
-  HexString,
-  TransactionBuilder,
-  TxnBuilderTypes,
-} from "aptos";
+import {AptosAccount, BCS, HexString, TransactionBuilder, TxnBuilderTypes,} from "aptos";
 import * as Aptos from "./global";
 import {assembleMultiSigTxn} from "../momentum-safe/common";
 
@@ -19,6 +13,7 @@ const DEFAULT_EXPIRATION = 3600;
 
 // Set the default minimum max gas
 const MIN_MAX_GAS = 1000n;
+const MAX_MAX_GAS = 2000000n;
 
 const MAX_GAS_MULTI = 110n;
 const MAX_GAS_DENOM = 100n;
@@ -30,6 +25,8 @@ export abstract class AptosTxnBuilder {
   private _maxGas: bigint | undefined;
   private _gasPrice: bigint | undefined;
   private _expiration: number | undefined;
+  private _estimateGasPrice: boolean | undefined;
+  private _estimateMaxGas: boolean | undefined;
 
   abstract payload(): TxnBuilderTypes.TransactionPayload;
 
@@ -66,9 +63,32 @@ export abstract class AptosTxnBuilder {
     return this;
   }
 
-  build(): Transaction {
+  estimateGasPrice(val: boolean): this {
+    this._estimateGasPrice = val;
+    return this;
+  }
+
+  estimateMaxGas(val: boolean): this {
+    this._estimateMaxGas = val;
+    return this;
+  }
+
+  withTxConfig(config: TxConfig): this {
+    return this.maxGas(config.maxGas)
+      .gasPrice(config.gasPrice)
+      .expiration(config.expirationSec)
+      .sequenceNumber(config.sequenceNumber)
+      .chainId(config.chainID)
+      .estimateMaxGas(config.estimateMaxGas)
+      .estimateGasPrice(config.estimateGasPrice);
+  }
+
+  async build(sender: AptosAccount | TxnBuilderTypes.MultiEd25519PublicKey): Promise<Transaction> {
     this._validateAndFix();
     this.validateAndFix();
+    if (this._estimateMaxGas || this._estimateGasPrice) {
+      await this.estimateMaxGasAndPrice(sender);
+    }
     const raw = this.makeRawTransaction();
     return new Transaction(raw);
   }
@@ -92,6 +112,27 @@ export abstract class AptosTxnBuilder {
     if (this._expiration === undefined) {
       this._expiration = DEFAULT_EXPIRATION;
     }
+  }
+
+  private async estimateMaxGasAndPrice(sender?: AptosAccount | TxnBuilderTypes.MultiEd25519PublicKey) {
+    if (this._estimateGasPrice) {
+      this._gasPrice = await Aptos.estimateGasPrice();
+    }
+    if (this._estimateMaxGas) {
+      this._maxGas = MAX_MAX_GAS;
+      if (sender instanceof AptosAccount) {
+        this._maxGas = await this.buildTemp().estimateMaxGas(sender);
+      } else if (sender instanceof TxnBuilderTypes.MultiEd25519PublicKey) {
+        this._maxGas = await this.buildTemp().estimateMultiSigMaxGas(sender);
+      }
+    }
+  }
+
+  private buildTemp(): Transaction {
+    this._validateAndFix();
+    this.validateAndFix();
+    const raw = this.makeRawTransaction();
+    return new Transaction(raw);
   }
 
   private makeRawTransaction(): TxnBuilderTypes.RawTransaction {
@@ -234,7 +275,7 @@ export class Transaction {
     return TransactionBuilder.getSigningMessage(this.raw);
   }
 
-  async estimateMultiSigGas(rawPK: TxnBuilderTypes.MultiEd25519PublicKey) {
+  async estimateMultiSigMaxGas(rawPK: TxnBuilderTypes.MultiEd25519PublicKey) {
     const res = await simulateMultiSigTx(rawPK, this.raw);
     if (!res) {
       throw Error("empty result from simulation");
@@ -245,14 +286,21 @@ export class Transaction {
       }
       throw Error("simulation with error:" + res[0].vm_status);
     }
+    if (BigInt(res[0].gas_used) > MAX_MAX_GAS) {
+      throw Error("gas exceed max allowed");
+    }
     let gas = BigInt(res[0].gas_used) * MAX_GAS_MULTI / MAX_GAS_DENOM;
+
     if (gas < MIN_MAX_GAS) {
       gas = MIN_MAX_GAS;
+    }
+    if (gas > MAX_MAX_GAS) {
+      gas = MAX_MAX_GAS;
     }
     return gas;
   }
 
-  async estimateGas(sender: AptosAccount) {
+  async estimateMaxGas(sender: AptosAccount) {
     const res = await Aptos.client().simulateTransaction(sender, this.raw);
     if (!res) {
       throw Error("empty result from simulation");
@@ -295,4 +343,25 @@ function makeInvalidMultiSigForSimulation(rawMultiPubKey: TxnBuilderTypes.MultiE
   return new TxnBuilderTypes.MultiEd25519Signature(
     invalidSigs, parsedBitMap,
   );
+}
+
+export type Options = {
+  maxGas?: bigint,
+  gasPrice?: bigint,
+  expirationSec?: number, // target = time.now() + expiration
+  sequenceNumber?: bigint,
+  chainID?: number,
+  estimateGasPrice?: boolean,
+  estimateMaxGas?: boolean,
+}
+
+// Parsed tx config from Options
+export type TxConfig = {
+  maxGas: bigint,
+  gasPrice: bigint,
+  expirationSec: number, // target = time.now() + expiration
+  sequenceNumber: bigint,
+  chainID: number,
+  estimateGasPrice: boolean,
+  estimateMaxGas: boolean,
 }
