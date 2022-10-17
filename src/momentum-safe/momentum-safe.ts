@@ -70,7 +70,7 @@ export class MomentumSafe {
   owners: HexString[];
   ownersPublicKeys: HexString[];
   threshold: number;
-  creationNonce: number;
+  creationNonce: bigint;
   rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey;
   address: HexString;
 
@@ -80,7 +80,7 @@ export class MomentumSafe {
     owners: HexString[],
     ownerPKs: HexString[],
     threshold: number,
-    nonce: number,
+    nonce: bigint,
     address?: HexString
   ) {
     this.owners = owners;
@@ -101,9 +101,9 @@ export class MomentumSafe {
     const msafeData = await MomentumSafe.queryMSafeResource(address);
     const owners = msafeData.info.owners.map(ownerStr => HexString.ensure(ownerStr));
     const threshold = msafeData.info.threshold;
-    const nonce = msafeData.info.nonce;
+    const nonce = BigInt(msafeData.info.nonce);
     const ownerPubKeys = msafeData.info.public_keys.map(pk => HexString.ensure(pk));
-    return new MomentumSafe(owners, ownerPubKeys, threshold, Number(nonce), address);
+    return new MomentumSafe(owners, ownerPubKeys, threshold, nonce, address);
   }
 
   async initTransaction(signer: Account, tx: MSafeTransaction) {
@@ -200,7 +200,7 @@ export class MomentumSafe {
       .sequenceNumber(sn)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
-        BCS.bcsSerializeUint64(pkIndex),
+        BCS.bcsSerializeU8(pkIndex),
         BCS.bcsSerializeBytes(payload),
         BCS.bcsToBytes(signature),
       ])
@@ -227,7 +227,7 @@ export class MomentumSafe {
       .sequenceNumber(sn)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
-        BCS.bcsSerializeUint64(pkIndex),
+        BCS.bcsSerializeU8(pkIndex),
         BCS.bcsSerializeBytes(HexBuffer(txHash)),
         BCS.bcsToBytes(sig),
       ])
