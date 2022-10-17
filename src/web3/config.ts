@@ -20,9 +20,11 @@ const LOCAL_FAUCET_URL = 'http://127.0.0.1:8081';
 
 
 export function getDeployedAddrFromNodeURL(nodeURL: string): HexString {
-  type ObjectKey = keyof typeof DEPLOYED;
-  const network = getNetworkFromNodeURL(nodeURL) as ObjectKey;
-  return HexString.ensure(DEPLOYED[network] as string);
+  const network = getNetworkFromNodeURL(nodeURL);
+  if (!DEPLOYED.has(network)) {
+    throw Error("cannot infer network from nodeURL: " + nodeURL);
+  }
+  return HexString.ensure(DEPLOYED.get(network) as string);
 }
 
 export function getNetworkFromNodeURL(nodeURL: string): Network {

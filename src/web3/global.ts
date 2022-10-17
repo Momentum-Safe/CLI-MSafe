@@ -45,13 +45,14 @@ export async function setGlobal(c: Config) {
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
   APT_COIN_INFO = await CoinType.fromMoveCoin("0x01::aptos_coin::AptosCoin");
+
   if (c.network) {
     if (c.network == "auto") {
       DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
-    } else if (c.network != "testnet" && c.network != "devnet") {
-      throw Error("unknown network: " + c.network);
+    } else if (DEPLOYED.has(c.network)) {
+      DEPLOYER = HexString.ensure(DEPLOYED.get(c.network) as string);
     } else {
-      DEPLOYER = HexString.ensure(DEPLOYED[c.network]);
+      throw Error("Unknown network:"+c.network);
     }
   } else {
     DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
@@ -152,7 +153,7 @@ export async function loadConfigAndApply(c: loadConfig) {
     faucetURL: profile.faucet_url,
     privateKey: profile.private_key,
     address: profile.account,
-    network: profile.network,
+    network: c.network,
   });
 }
 
