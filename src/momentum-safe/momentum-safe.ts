@@ -111,7 +111,9 @@ export class MomentumSafe {
     const [rawTx, sig] = signer.getSigData(tx);
     const tmpHash = sha3_256(rawTx);
 
-    const initTx = await this.makeInitTxTx(signer, rawTx, sig);
+    const txBuilder = await this.makeInitTxTx(signer, rawTx, sig);
+    const maxGas = await txBuilder.build().estimateGas(signer.account);
+    const initTx = txBuilder.maxGas(maxGas).build();
     const signedInitTx = signer.sign(initTx);
 
     const txRes = await Aptos.sendSignedTransactionAsync(signedInitTx);
@@ -136,8 +138,9 @@ export class MomentumSafe {
     const txType = await this.findTx(txHash);
     const sig = this.signTx(signer, txType);
 
-    const tx = await this.makeSubmitSignatureTxn(signer, txHash, txType, sig);
-    await tx.estimateGas(MY_ACCOUNT.account);
+    const txBuilder = await this.makeSubmitSignatureTxn(signer, txHash, txType, sig);
+    const maxGas = await txBuilder.build().estimateGas(signer.account);
+    const tx = txBuilder.maxGas(maxGas).build();
     const signedTx = signer.sign(tx);
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
@@ -190,6 +193,7 @@ export class MomentumSafe {
     // TODO: do not query for resource again;
     const txBuilder = new AptosEntryTxnBuilder();
     const pkIndex = this.getIndex(signer.publicKey());
+    const gasPrice = await Aptos.estimateGasPrice();
 
     return txBuilder
       .addr(DEPLOYER)
@@ -198,13 +202,13 @@ export class MomentumSafe {
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
+      .gasPrice(gasPrice)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
         BCS.bcsSerializeU8(pkIndex),
         BCS.bcsSerializeBytes(payload),
         BCS.bcsToBytes(signature),
-      ])
-      .build();
+      ]);
   }
 
   async makeSubmitSignatureTxn(
@@ -217,6 +221,7 @@ export class MomentumSafe {
     const chainID = await Aptos.getChainId();
     const sn = await Aptos.getSequenceNumber(signer.address());
     const txBuilder = new AptosEntryTxnBuilder();
+    const gasPrice = await Aptos.estimateGasPrice();
 
     return txBuilder
       .addr(DEPLOYER)
@@ -225,13 +230,13 @@ export class MomentumSafe {
       .from(signer.address())
       .chainId(chainID)
       .sequenceNumber(sn)
+      .gasPrice(gasPrice)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
         BCS.bcsSerializeU8(pkIndex),
         BCS.bcsSerializeBytes(HexBuffer(txHash)),
         BCS.bcsToBytes(sig),
-      ])
-      .build();
+      ]);
   }
 
   private static async queryMSafeResource(address: HexString): Promise<Momentum> {
