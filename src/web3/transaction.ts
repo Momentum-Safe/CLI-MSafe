@@ -86,6 +86,7 @@ export abstract class AptosTxnBuilder {
   async build(sender: AptosAccount | IMultiSig): Promise<Transaction> {
     this._validateAndFix();
     this.validateAndFix();
+
     if (this._estimateMaxGas || this._estimateGasPrice) {
       await this.estimateMaxGasAndPrice(sender);
     }
@@ -131,8 +132,8 @@ export abstract class AptosTxnBuilder {
         this._maxGas = await this.buildTemp().estimateMaxGas(sender);
         console.log("single wallet max gas", this._maxGas);
       } else {
-        console.log("multi sig max gas", this._maxGas);
         this._maxGas = await this.buildTemp().estimateMultiSigMaxGas(sender);
+        console.log("multi sig max gas", this._maxGas);
       }
     }
   }
