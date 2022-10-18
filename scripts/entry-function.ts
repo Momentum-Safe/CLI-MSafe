@@ -17,6 +17,8 @@ const cli = program
   .option("-p --profile <string>", "profile to use in aptos config", "default")
   .option("-n --network <string>", "network (devnet, testnet), use deployed address", "auto")
   .requiredOption("--msafe <string>", "momentum safe address")
+  .option("--max-gas <bigint>", "max gas to override the default settings")
+  .option("--gas-price <bigint>", "gas price that override the default settings")
   .parse(process.argv);
 
 
@@ -31,14 +33,19 @@ async function main() {
 
   // Apply your function call and arguments here
   const msafeTxn = await makeEntryFunctionTx(
-    msafe.address,
-    msafe.rawPublicKey,
+    msafe,
     {
       fnName: "0x1908fe0d337d7bd718c8465030c5f306377ac396f3d7acce92f526ae41637cc0::message::set_message",
       typeArgs: [],
       args: [BCS.bcsSerializeStr("Hello momentum safe")],
     },
-    {sequenceNumber: sn},
+    {
+      sequenceNumber: sn,
+      gasPrice: args.gasPrice,
+      maxGas: args.maxGas,
+      estimateMaxGas: args.estimateMaxGas,
+      estimateGasPrice: args.estimateGasPrice,
+    },
   );
 
   // Confirm transaction details
@@ -51,7 +58,13 @@ async function main() {
   }
 
   // Submit transaction
-  const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn);
+  const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn, {
+    sequenceNumber: sn,
+    gasPrice: args.gasPrice,
+    maxGas: args.maxGas,
+    estimateMaxGas: args.estimateMaxGas,
+    estimateGasPrice: args.estimateGasPrice,
+  });
   const myHash = (res.pendingTx as any).hash;
   console.log(`\tTransaction ${myHash} submitted to blockchain`);
   await Aptos.waitForTransaction(myHash);
@@ -75,16 +88,28 @@ type configArg = {
   profile: string,
   network: string,
   msafe: HexString,
+  maxGas: bigint,
+  estimateMaxGas: boolean,
+  gasPrice: bigint,
+  estimateGasPrice: boolean,
 }
 
 function getArguments(): configArg {
+  const estimateGasPrice = cli.opts().gasPrice === undefined;
+  const estimateMaxGas = cli.opts().maxGas === undefined;
+
   return {
     config: cli.opts().config,
     profile: cli.opts().profile,
     network: cli.opts().network,
     msafe: HexString.ensure(cli.opts().msafe),
+    maxGas: cli.opts().maxGas,
+    gasPrice: cli.opts().gasPrice,
+    estimateGasPrice,
+    estimateMaxGas,
   };
 }
+
 
 function validateArguments(ca: configArg) {
   if (!isStringAddress(ca.msafe.hex())) {

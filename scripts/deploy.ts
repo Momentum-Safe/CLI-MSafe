@@ -20,6 +20,8 @@ const cli = program
   .option("-n --network <string>", "network (devnet, testnet), use deployed address", "devnet")
   .requiredOption("--msafe <string>", "momentum safe address")
   .requiredOption("--move-dir <string>", "move directory contains Move.toml")
+  .option("--max-gas <bigint>", "max gas to override the default settings")
+  .option("--gas-price <bigint>", "gas price that override the default settings")
   .parse(process.argv);
 
 
@@ -32,10 +34,15 @@ async function main() {
   // make module publish transaction
   const sn = await msafe.getNextSN();
   const msafeTxn = await makeModulePublishTx(
-    msafe.address,
-    msafe.rawPublicKey,
+    msafe,
     {moveDir: args.moveDir},
-    {sequenceNumber: sn}
+    {
+      sequenceNumber: sn,
+      gasPrice: args.gasPrice,
+      maxGas: args.maxGas,
+      estimateMaxGas: args.estimateMaxGas,
+      estimateGasPrice: args.estimateGasPrice,
+    }
   );
 
   // Confirm transaction details
@@ -48,7 +55,12 @@ async function main() {
   }
 
   // Submit transaction
-  const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn);
+  const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn, {
+    gasPrice: args.gasPrice,
+    maxGas: args.maxGas,
+    estimateMaxGas: args.estimateMaxGas,
+    estimateGasPrice: args.estimateGasPrice,
+  });
   const myHash = (res.pendingTx as any).hash;
   console.log(`\tTransaction ${myHash} submitted to blockchain`);
   await Aptos.waitForTransaction(myHash);
@@ -73,15 +85,26 @@ type configArg = {
   network: string,
   msafe: HexString,
   moveDir: string,
+  maxGas: bigint,
+  estimateMaxGas: boolean,
+  gasPrice: bigint,
+  estimateGasPrice: boolean,
 }
 
 function getArguments(): configArg {
+  const estimateGasPrice = cli.opts().gasPrice === undefined;
+  const estimateMaxGas = cli.opts().maxGas === undefined;
+
   return {
     config: cli.opts().config,
     profile: cli.opts().profile,
     network: cli.opts().network,
     msafe: HexString.ensure(cli.opts().msafe),
     moveDir: cli.opts().moveDir,
+    maxGas: cli.opts().maxGas,
+    gasPrice: cli.opts().gasPrice,
+    estimateGasPrice,
+    estimateMaxGas,
   };
 }
 

@@ -6,11 +6,12 @@ import {
   getStructType,
 } from "./common";
 import { Account } from "../web3/account";
-import { AptosEntryTxnBuilder } from "../web3/transaction";
+import {AptosEntryTxnBuilder, Options} from "../web3/transaction";
 import { formatAddress } from "../utils/parse";
 import { DEPLOYER } from "../web3/global";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
 import { TEd25519PublicKey, Vector, Element, Table, TableWithLength } from "../moveTypes/moveTypes";
+import {applyDefaultOptions} from "./msafe-txn";
 
 // Data in registry
 
@@ -80,26 +81,27 @@ export class Registry {
   }
 
   static async register(signer: Account) {
-    const tx = await this.getRegisterTx(signer);
+    const tx = await this.getRegisterTx(signer, {
+      estimateGasPrice: true,
+      estimateMaxGas: true,
+    });
     const signedTx = signer.sign(tx);
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
 
-  private static async getRegisterTx(signer: Account) {
-    const chainID = await Aptos.getChainId();
-    const sn = await Aptos.getSequenceNumber(signer.address());
+  private static async getRegisterTx(signer: Account, opts: Options) {
+    const config = await applyDefaultOptions(signer.address(), opts);
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
       .addr(DEPLOYER)
       .module(MODULES.REGISTRY)
       .method(FUNCTIONS.REGISTRY_REGISTER)
       .from(signer.address())
-      .chainId(chainID)
-      .sequenceNumber(sn)
+      .withTxConfig(config)
       .args([
         BCS.bcsSerializeBytes(signer.publicKeyBytes()),
       ])
-      .build();
+      .build(signer.account);
   }
 
 

@@ -1,6 +1,6 @@
 import * as Aptos from "../web3/global";
 import {HexString, TxnBuilderTypes, BCS, Types, TransactionBuilder} from 'aptos';
-import { AptosEntryTxnBuilder, Transaction } from '../web3/transaction';
+import {AptosEntryTxnBuilder, Options, Transaction} from '../web3/transaction';
 import { Account } from '../web3/account';
 import {
   MODULES,
@@ -9,7 +9,7 @@ import {
 } from './common';
 import { assembleMultiSig } from './sig-helper';
 import { computeMultiSigAddress, sha3_256 } from "../utils/crypto";
-import { MSafeTransaction, MSafeTxnInfo } from "./msafe-txn";
+import {applyDefaultOptions, MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
 import { HexBuffer } from "../utils/buffer";
@@ -106,14 +106,11 @@ export class MomentumSafe {
     return new MomentumSafe(owners, ownerPubKeys, threshold, nonce, address);
   }
 
-  async initTransaction(signer: Account, tx: MSafeTransaction) {
-    await tx.estimateMultiSigGas(this.rawPublicKey);
+  async initTransaction(signer: Account, tx: MSafeTransaction, opts: Options) {
     const [rawTx, sig] = signer.getSigData(tx);
     const tmpHash = sha3_256(rawTx);
 
-    const txBuilder = await this.makeInitTxTx(signer, rawTx, sig);
-    const maxGas = await txBuilder.build().estimateGas(signer.account);
-    const initTx = txBuilder.maxGas(maxGas).build();
+    const initTx = await this.makeInitTxTx(signer, rawTx, sig, opts);
     const signedInitTx = signer.sign(initTx);
 
     const txRes = await Aptos.sendSignedTransactionAsync(signedInitTx);
@@ -134,13 +131,11 @@ export class MomentumSafe {
     return collectedSigs >= this.threshold;
   }
 
-  async submitTxSignature(signer: Account, txHash: string) {
+  async submitTxSignature(signer: Account, txHash: string, opts: Options) {
     const txType = await this.findTx(txHash);
     const sig = this.signTx(signer, txType);
 
-    const txBuilder = await this.makeSubmitSignatureTxn(signer, txHash, txType, sig);
-    const maxGas = await txBuilder.build().estimateGas(signer.account);
-    const tx = txBuilder.maxGas(maxGas).build();
+    const tx = await this.makeSubmitSignatureTxn(signer, txHash, txType, sig, opts);
     const signedTx = signer.sign(tx);
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
@@ -186,57 +181,53 @@ export class MomentumSafe {
   private async makeInitTxTx(
     signer: Account,
     payload: TxnBuilderTypes.SigningMessage,
-    signature: TxnBuilderTypes.Ed25519Signature
+    signature: TxnBuilderTypes.Ed25519Signature,
+    opts: Options,
   ) {
-    const chainID = await Aptos.getChainId();
-    const sn = await Aptos.getSequenceNumber(signer.address());
     // TODO: do not query for resource again;
     const txBuilder = new AptosEntryTxnBuilder();
     const pkIndex = this.getIndex(signer.publicKey());
-    const gasPrice = await Aptos.estimateGasPrice();
+    const config = await applyDefaultOptions(signer.address(), opts);
 
     return txBuilder
       .addr(DEPLOYER)
       .module(MODULES.MOMENTUM_SAFE)
       .method(FUNCTIONS.MSAFE_INIT_TRANSACTION)
       .from(signer.address())
-      .chainId(chainID)
-      .sequenceNumber(sn)
-      .gasPrice(gasPrice)
+      .withTxConfig(config)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
         BCS.bcsSerializeU8(pkIndex),
         BCS.bcsSerializeBytes(payload),
         BCS.bcsToBytes(signature),
-      ]);
+      ])
+      .build(signer.account);
   }
 
   async makeSubmitSignatureTxn(
     signer: Account,
     txHash: string,
     tx: TransactionType,
-    sig: TxnBuilderTypes.Ed25519Signature
+    sig: TxnBuilderTypes.Ed25519Signature,
+    opts: Options,
   ) {
     const pkIndex = this.getIndex(signer.publicKey());
-    const chainID = await Aptos.getChainId();
-    const sn = await Aptos.getSequenceNumber(signer.address());
     const txBuilder = new AptosEntryTxnBuilder();
-    const gasPrice = await Aptos.estimateGasPrice();
+    const config = await applyDefaultOptions(signer.address(), opts);
 
     return txBuilder
       .addr(DEPLOYER)
       .module(MODULES.MOMENTUM_SAFE)
       .method(FUNCTIONS.MSAFE_SUBMIT_SIGNATURE)
       .from(signer.address())
-      .chainId(chainID)
-      .sequenceNumber(sn)
-      .gasPrice(gasPrice)
+      .withTxConfig(config)
       .args([
         BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
         BCS.bcsSerializeU8(pkIndex),
         BCS.bcsSerializeBytes(HexBuffer(txHash)),
         BCS.bcsToBytes(sig),
-      ]);
+      ])
+      .build(signer.account);
   }
 
   private static async queryMSafeResource(address: HexString): Promise<Momentum> {

@@ -198,11 +198,20 @@ const defaultGasPriceFrac: Fraction = {
   denominator: 100n,
 };
 
+const MIN_GAS_PRICE = 100n;
+const MAX_GAS_PRICE = 10000n;
+
 export async function estimateGasPrice(frac?: Fraction): Promise<bigint> {
   if (!frac) {
     frac = defaultGasPriceFrac;
   }
   const gasPrice = await APTOS.estimateGasPrice();
-  return BigInt(gasPrice.gas_estimate) * frac.numerator / frac.denominator;
+  const val = BigInt(gasPrice.gas_estimate) * frac.numerator / frac.denominator;
+  if (val < MIN_GAS_PRICE) {
+    return MIN_GAS_PRICE;
+  } else if (val > MAX_GAS_PRICE) {
+    return MAX_GAS_PRICE;
+  }
+  return val;
 }
 

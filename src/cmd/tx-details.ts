@@ -108,7 +108,10 @@ async function txDetails(c: {address: HexString, txHash: string}) {
   if (isReadyExecute) {
     tx = await msafe.assembleAndSubmitTx(MY_ACCOUNT, txHash);
   } else {
-    tx = await msafe.submitTxSignature(MY_ACCOUNT, txHash);
+    tx = await msafe.submitTxSignature(MY_ACCOUNT, txHash, {
+      estimateGasPrice: true,
+      estimateMaxGas: true,
+    });
   }
   console.log(`\tTransaction ${tx.hash} submitted. Waiting for confirmation`);
   await Aptos.waitForTransaction(tx.hash);

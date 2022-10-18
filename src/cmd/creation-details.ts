@@ -101,7 +101,10 @@ async function creationDetails(rawArg: any) {
   if (isReadyExecute) {
     tx = await creation.assembleAndSubmitTx(MY_ACCOUNT);
   } else {
-    tx = await creation.submitSignature(MY_ACCOUNT);
+    tx = await creation.submitSignature(MY_ACCOUNT, {
+      estimateGasPrice: true,
+      estimateMaxGas: true,
+    });
   }
   console.log(`\tTransaction ${tx.hash} submitted. Waiting for confirmation`);
   await Aptos.waitForTransaction(tx.hash);
