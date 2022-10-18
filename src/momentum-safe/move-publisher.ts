@@ -3,7 +3,7 @@ import * as child from "child_process";
 import path from "path";
 import fs from "fs";
 import * as toml from "toml";
-import {AptosEntryTxnBuilder, Options, TxConfig} from "../web3/transaction";
+import {AptosEntryTxnBuilder, IMultiSig, Options, TxConfig} from "../web3/transaction";
 import {
   APTOS_FRAMEWORK_HS,
   FUNCTIONS,
@@ -55,19 +55,19 @@ export class MovePublisher {
     await MovePublisher.moveCompile(moveDir, artifacts, namedAddress);
   }
 
-  async getDeployTransaction(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, config: TxConfig) {
+  async getDeployTransaction(sender: IMultiSig, config: TxConfig) {
     const txBuilder = new AptosEntryTxnBuilder();
     return txBuilder
       .addr(APTOS_FRAMEWORK_HS)
       .module(MODULES.CODE)
       .method(FUNCTIONS.PUBLISH_PACKAGE)
-      .from(sender)
+      .from(sender.address)
       .withTxConfig(config)
       .args([
         BCS.bcsSerializeBytes(this.moveInfo.metadata.raw),
         this.serializeCodeBytes(),
       ])
-      .build(pk);
+      .build(sender);
   }
 
   private serializeCodeBytes() {

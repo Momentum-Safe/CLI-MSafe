@@ -15,7 +15,7 @@ const DEFAULT_EXPIRATION = 3600;
 const MIN_MAX_GAS = 1000n;
 const MAX_MAX_GAS = 2000000n;
 
-const MAX_GAS_MULTI = 110n;
+const MAX_GAS_MULTI = 150n;
 const MAX_GAS_DENOM = 100n;
 
 export abstract class AptosTxnBuilder {
@@ -83,7 +83,7 @@ export abstract class AptosTxnBuilder {
       .estimateGasPrice(config.estimateGasPrice);
   }
 
-  async build(sender: AptosAccount | TxnBuilderTypes.MultiEd25519PublicKey): Promise<Transaction> {
+  async build(sender: AptosAccount | IMultiSig): Promise<Transaction> {
     this._validateAndFix();
     this.validateAndFix();
     if (this._estimateMaxGas || this._estimateGasPrice) {
@@ -114,15 +114,24 @@ export abstract class AptosTxnBuilder {
     }
   }
 
-  private async estimateMaxGasAndPrice(sender?: AptosAccount | TxnBuilderTypes.MultiEd25519PublicKey) {
+  private async estimateMaxGasAndPrice(sender: AptosAccount | IMultiSig) {
     if (this._estimateGasPrice) {
       this._gasPrice = await Aptos.estimateGasPrice();
     }
     if (this._estimateMaxGas) {
       this._maxGas = MAX_MAX_GAS;
+
+      const addr = sender instanceof AptosAccount? sender.address(): sender.address;
+      const bal = await Aptos.getBalance(addr);
+      const maxAllowedGas = bal / this._gasPrice!;
+      if (this._maxGas > maxAllowedGas) {
+        this._maxGas = maxAllowedGas;
+      }
       if (sender instanceof AptosAccount) {
         this._maxGas = await this.buildTemp().estimateMaxGas(sender);
-      } else if (sender instanceof TxnBuilderTypes.MultiEd25519PublicKey) {
+        console.log("single wallet max gas", this._maxGas);
+      } else {
+        console.log("multi sig max gas", this._maxGas);
         this._maxGas = await this.buildTemp().estimateMultiSigMaxGas(sender);
       }
     }
@@ -275,8 +284,8 @@ export class Transaction {
     return TransactionBuilder.getSigningMessage(this.raw);
   }
 
-  async estimateMultiSigMaxGas(rawPK: TxnBuilderTypes.MultiEd25519PublicKey) {
-    const res = await simulateMultiSigTx(rawPK, this.raw);
+  async estimateMultiSigMaxGas(sender: IMultiSig) {
+    const res = await simulateMultiSigTx(sender.rawPublicKey, this.raw);
     if (!res) {
       throw Error("empty result from simulation");
     }
@@ -364,4 +373,9 @@ export type TxConfig = {
   chainID: number,
   estimateGasPrice: boolean,
   estimateMaxGas: boolean,
+}
+
+export interface IMultiSig {
+  address: HexString,
+  rawPublicKey: TxnBuilderTypes.MultiEd25519PublicKey,
 }

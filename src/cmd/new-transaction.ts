@@ -59,7 +59,7 @@ async function newTransaction(c: {address: HexString}) {
   await printMSafeMessage(addr, info, balance);
 
   const sn = await msafe.getNextSN();
-  const tx = await promptForNewTransaction(msafe.address, msafe.rawPublicKey, sn);
+  const tx = await promptForNewTransaction(msafe, sn);
   printSeparator();
 
   await printTxConfirmation(tx.getTxnInfo());
@@ -99,7 +99,7 @@ async function newTransaction(c: {address: HexString}) {
     ]);
 }
 
-async function promptForNewTransaction(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, sn: bigint): Promise<MSafeTransaction> {
+async function promptForNewTransaction(msafe: MomentumSafe, sn: bigint): Promise<MSafeTransaction> {
   let txType = MSafeTxnType.Unknown;
   await executeCmdOptions(
     "Please choose your transaction type",
@@ -117,32 +117,31 @@ async function promptForNewTransaction(sender: HexString, pk: TxnBuilderTypes.Mu
   console.log(`Start ${txType}`);
   console.log();
 
-  return await promptAndBuildTx(sender, pk, txType, sn);
+  return await promptAndBuildTx(msafe, txType, sn);
 }
 
 async function promptAndBuildTx(
-  sender: HexString,
-  pk: TxnBuilderTypes.MultiEd25519PublicKey,
+  msafe: MomentumSafe,
   txType: MSafeTxnType,
   sn: bigint
 ): Promise<MSafeTransaction> {
   switch (txType) {
     case MSafeTxnType.APTCoinTransfer:
-      return await promptAndBuildAPTCoinTransfer(sender, pk, sn);
+      return await promptAndBuildAPTCoinTransfer(msafe, sn);
     case MSafeTxnType.AnyCoinTransfer:
-      return await promptAndBuildAnyCoinTransfer(sender, pk, sn);
+      return await promptAndBuildAnyCoinTransfer(msafe, sn);
     case MSafeTxnType.AnyCoinRegister:
-      return await promptAndBuildForAnyCoinRegister(sender, pk, sn);
+      return await promptAndBuildForAnyCoinRegister(msafe, sn);
     case MSafeTxnType.EntryFunction:
-      return await promptAndBuildForEntryFnTx(sender, pk, sn);
+      return await promptAndBuildForEntryFnTx(msafe, sn);
     case MSafeTxnType.ModulePublish:
-      return await promptPublishTx(sender, pk, sn);
+      return await promptPublishTx(msafe, sn);
     default:
       throw new Error("Invalid type");
   }
 }
 
-async function promptAndBuildAPTCoinTransfer(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, sn: bigint): Promise<MSafeTransaction> {
+async function promptAndBuildAPTCoinTransfer(msafe: MomentumSafe, sn: bigint): Promise<MSafeTransaction> {
   const toAddressStr = await promptUntilString(
     '\tTo address:\t',
     '\tAddress not valid:\t',
@@ -162,10 +161,10 @@ async function promptAndBuildAPTCoinTransfer(sender: HexString, pk: TxnBuilderTy
     estimateGasPrice: true,
     estimateMaxGas: true
   };
-  return await makeMSafeAPTTransferTx(sender, pk, txArgs, opt);
+  return await makeMSafeAPTTransferTx(msafe, txArgs, opt);
 }
 
-async function promptAndBuildAnyCoinTransfer(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, sn: bigint): Promise<MSafeTransaction> {
+async function promptAndBuildAnyCoinTransfer(msafe: MomentumSafe, sn: bigint): Promise<MSafeTransaction> {
   const coinType = await promptUntilString(
     '\tCoin type:\t',
     '\tCoin type not valid:\t',
@@ -194,10 +193,10 @@ async function promptAndBuildAnyCoinTransfer(sender: HexString, pk: TxnBuilderTy
     estimateGasPrice: true,
     estimateMaxGas: true
   };
-  return await makeMSafeAnyCoinTransferTx(sender, pk, txArgs, opt);
+  return await makeMSafeAnyCoinTransferTx(msafe, txArgs, opt);
 }
 
-async function promptAndBuildForAnyCoinRegister(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, sn: bigint): Promise<MSafeTransaction> {
+async function promptAndBuildForAnyCoinRegister(msafe: MomentumSafe, sn: bigint): Promise<MSafeTransaction> {
   const coinType = await promptUntilString(
     '\tCoin type:\t',
     '\tCoin type not valid:\t',
@@ -209,12 +208,11 @@ async function promptAndBuildForAnyCoinRegister(sender: HexString, pk: TxnBuilde
     estimateGasPrice: true,
     estimateMaxGas: true
   };
-  return await makeMSafeAnyCoinRegisterTx(sender, pk, txArgs, opt);
+  return await makeMSafeAnyCoinRegisterTx(msafe, txArgs, opt);
 }
 
 async function promptAndBuildForEntryFnTx(
-  sender: HexString,
-  pk: TxnBuilderTypes.MultiEd25519PublicKey,
+  msafe: MomentumSafe,
   sn: bigint
 ): Promise<MSafeTransaction> {
   const fullFnName = await promptUntilString(
@@ -247,7 +245,7 @@ async function promptAndBuildForEntryFnTx(
     });
     i = i + 1;
   });
-  opts.push({shortage: 'b', showText: "Back", handleFunc: () => setState(State.MSafeDetails, {address: sender})});
+  opts.push({shortage: 'b', showText: "Back", handleFunc: () => setState(State.MSafeDetails, {address: msafe.address})});
 
   await executeCmdOptions(
     'Please select the function you want to interact with:',
@@ -286,7 +284,7 @@ async function promptAndBuildForEntryFnTx(
     estimateGasPrice: true,
     estimateMaxGas: true
   };
-  return await makeEntryFunctionTx(sender, pk, ciArgs, opt);
+  return await makeEntryFunctionTx(msafe, ciArgs, opt);
 }
 
 async function promptForTypeArgs() {
@@ -370,34 +368,33 @@ async function promptForArg(i: number, param: any): Promise<BCS.Bytes | undefine
   }
 }
 
-async function promptPublishTx(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey,  sn: bigint) {
+async function promptPublishTx(msafe: MomentumSafe,  sn: bigint) {
   const res = await promptForYN("Do you want to compile the MOVE module?", false);
   console.log();
   if (res) {
-    return promptCompileAndBuildModulePublishTx(sender, pk, sn);
+    return promptCompileAndBuildModulePublishTx(msafe, sn);
   } else {
-    return promptBuildModulePublishTx(sender, pk, sn);
+    return promptBuildModulePublishTx(msafe, sn);
   }
 }
 
-async function promptBuildModulePublishTx(sender: HexString, pk: TxnBuilderTypes.MultiEd25519PublicKey, sn: bigint) {
+async function promptBuildModulePublishTx(msafe: MomentumSafe, sn: bigint) {
   console.log("Publish move modules.");
   console.log();
   console.log('Please confirm for prerequisite:');
   console.log("\t1. MOVE module has already been compiled with flag `--save-metadata`");
-  console.log(`\t2. The deployer's address has been set to momentum safe ${sender}`);
+  console.log(`\t2. The deployer's address has been set to momentum safe ${msafe.address}`);
   console.log();
   const moveDir = await promptUntilString(
     "Please input your target move directory (with Move.toml)",
     "Invalid directory - Move.toml not found",
     MovePublisher.isDirValid,
   );
-  return await makeModulePublishTx(sender, pk, {moveDir: moveDir}, {sequenceNumber: sn});
+  return await makeModulePublishTx(msafe, {moveDir: moveDir}, {sequenceNumber: sn});
 }
 
 async function promptCompileAndBuildModulePublishTx(
-  sender: HexString,
-  pk: TxnBuilderTypes.MultiEd25519PublicKey,
+  msafe: MomentumSafe,
   sn: bigint,
 ): Promise<MSafeTransaction> {
   console.log("Compile and publish move modules.");
@@ -434,7 +431,7 @@ async function promptCompileAndBuildModulePublishTx(
     estimateGasPrice: true,
     estimateMaxGas: true,
   };
-  return await compileAndMakeModulePublishTx(sender, pk, args, opts);
+  return await compileAndMakeModulePublishTx(msafe, args, opts);
 }
 
 async function printTxConfirmation(txData: MSafeTxnInfo) {

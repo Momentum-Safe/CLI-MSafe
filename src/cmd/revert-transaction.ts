@@ -67,7 +67,7 @@ async function revertTransaction(c: {address: HexString, txHash: HexString}) {
     estimateGasPrice: true,
     estimateMaxGas: true
   };
-  const revertTx = await makeMSafeRevertTx(msafe.address, msafe.rawPublicKey, {sn: tx.sn}, opt);
+  const revertTx = await makeMSafeRevertTx(msafe, {sn: tx.sn}, opt);
   const {plHash: revertHash, pendingTx: txRes} = await msafe.initTransaction(MY_ACCOUNT, revertTx, {
     estimateGasPrice: true,
     estimateMaxGas: true,

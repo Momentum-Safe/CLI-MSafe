@@ -1,7 +1,7 @@
 import {
   AptosCoinTransferTxnBuilder,
   AptosEntryTxnBuilder,
-  AptosTxnBuilder,
+  AptosTxnBuilder, IMultiSig,
   Options,
   Transaction, TxConfig
 } from "../web3/transaction";
@@ -108,8 +108,7 @@ export type MSafeTxnInfo = {
 
 // call momentum_safe::register
 export async function makeMSafeRegisterTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: MSafeRegisterArgs,
   opts: Options,
 ): Promise<MSafeTransaction> {
@@ -117,68 +116,65 @@ export async function makeMSafeRegisterTx(
   if (!opts.maxGas) {
     opts.maxGas = DEF_REGISTER_MAX_GAS;
   }
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   const txBuilder = new AptosEntryTxnBuilder();
   const tx = await txBuilder
     .addr(DEPLOYER)
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REGISTER)
-    .from(sender)
+    .from(sender.address)
     .withTxConfig(config)
     .args([BCS.bcsSerializeStr(args.metadata)])
-    .build(multiPK);
+    .build(sender);
   // Note: We do not need to replace the max gas here.
   return new MSafeTransaction(tx.raw);
 }
 
 export async function makeMSafeAPTTransferTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: APTTransferArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   const txBuilder = new AptosCoinTransferTxnBuilder();
   const tx = await txBuilder
-    .from(sender)
+    .from(sender.address)
     .chainId(config.chainID)
     .withTxConfig(config)
     .to(args.to)
     .amount(args.amount)
-    .build(multiPK);
+    .build(sender);
 
   return new MSafeTransaction(tx.raw);
 }
 
 export async function makeMSafeAnyCoinRegisterTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: CoinRegisterArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   const txBuilder = new AptosEntryTxnBuilder();
   const structTag = typeTagStructFromName(args.coinType);
   const tx = await txBuilder
     .addr(APTOS_FRAMEWORK_HS)
     .module(MODULES.MANAGED_COIN)
     .method(FUNCTIONS.COIN_REGISTER)
-    .from(sender)
+    .from(sender.address)
     .withTxConfig(config)
     .type_args([structTag])
     .args([])
-    .build(multiPK);
+    .build(sender);
 
   return new MSafeTransaction(tx.raw);
 }
 
 export async function makeMSafeAnyCoinTransferTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: CoinTransferArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   const txBuilder = new AptosEntryTxnBuilder();
   const structTag = typeTagStructFromName(args.coinType);
 
@@ -186,25 +182,24 @@ export async function makeMSafeAnyCoinTransferTx(
     .addr(APTOS_FRAMEWORK_HS)
     .module(MODULES.COIN)
     .method(FUNCTIONS.COIN_TRANSFER)
-    .from(sender)
+    .from(sender.address)
     .withTxConfig(config)
     .type_args([structTag])
     .args([
       BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(args.to)),
       BCS.bcsSerializeUint64(args.amount),
     ])
-    .build(multiPK);
+    .build(sender);
 
   return new MSafeTransaction(tx.raw);
 }
 
 export async function makeMSafeRevertTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: RevertArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   // sequence number will override option sn
   config.sequenceNumber = args.sn;
   const txBuilder = new AptosEntryTxnBuilder();
@@ -212,61 +207,58 @@ export async function makeMSafeRevertTx(
     .addr(DEPLOYER)
     .module(MODULES.MOMENTUM_SAFE)
     .method(FUNCTIONS.MSAFE_REVERT)
-    .from(sender)
+    .from(sender.address)
     .withTxConfig(config)
     .args([])
-    .build(multiPK);
+    .build(sender);
   return new MSafeTransaction(tx.raw);
 }
 
 export async function makeEntryFunctionTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: EntryFunctionArgs,
   opts?: Options
 ): Promise<MSafeTransaction> {
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   const [deployer, moduleName, fnName] = splitFunctionComponents(args.fnName);
   const txBuilder = new AptosEntryTxnBuilder();
   const tx = await txBuilder
     .addr(deployer)
     .module(moduleName)
     .method(fnName)
-    .from(sender)
+    .from(sender.address)
     .withTxConfig(config)
     .type_args(args.typeArgs.map(ta => typeTagStructFromName(ta)))
     .args(args.args)
-    .build(multiPK);
+    .build(sender);
 
   return new MSafeTransaction(tx.raw);
 }
 
 export async function compileAndMakeModulePublishTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: ModuleCompilePublishArgs,
   opts?: Options,
 ): Promise<MSafeTransaction> {
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   const namedAddress = {
     addrName: args.deployerAddressName,
-    addrValue: sender,
+    addrValue: sender.address,
   };
   await MovePublisher.compile(args.moveDir, args.artifacts, namedAddress);
   const mp = await MovePublisher.fromMoveDir(args.moveDir);
-  const tx = await mp.getDeployTransaction(sender, multiPK, config);
+  const tx = await mp.getDeployTransaction(sender, config);
   return new MSafeTransaction(tx.raw);
 }
 
 export async function makeModulePublishTx(
-  sender: HexString,
-  multiPK: TxnBuilderTypes.MultiEd25519PublicKey,
+  sender: IMultiSig,
   args: ModulePublishArgs,
   opts?: Options
 ) {
-  const config = await applyDefaultOptions(sender, opts);
+  const config = await applyDefaultOptions(sender.address, opts);
   const mp = await MovePublisher.fromMoveDir(args.moveDir);
-  const tx = await mp.getDeployTransaction(sender, multiPK, config);
+  const tx = await mp.getDeployTransaction(sender, config);
   return new MSafeTransaction(tx.raw);
 }
 

@@ -137,7 +137,7 @@ export class CreationHelper {
     // Sign on the multi-sig transaction
     // TODO: expose the metadata
     const txArg = { metadata: 'Momentum Safe' };
-    const tx = await makeMSafeRegisterTx(this.address, this.rawPublicKey, txArg, multiOption);
+    const tx = await makeMSafeRegisterTx(this, txArg, multiOption);
     const [payload, sig] = signer.getSigData(tx);
 
     // Sign and submit the transaction from the signer
