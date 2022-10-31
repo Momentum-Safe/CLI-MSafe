@@ -1,10 +1,11 @@
 import {Command} from "commander";
-import {DEF_ACCOUNT_CONF, isAccountExist, loadConfigAndApply, MY_ACCOUNT} from "../../src/web3/global";
+import {DEF_ACCOUNT_CONF, isAccountExist, MY_ACCOUNT} from "../../src/web3/global";
 import * as Aptos from "../../src/web3/global";
 import {ApiError, BCS, HexString, TxnBuilderTypes} from "aptos";
 import {AptosEntryTxnBuilder} from "../../src/web3/transaction";
 import {APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES} from "../../src/momentum-safe/common";
 import {typeTagStructFromName} from "../../src/utils/parse";
+import {loadConfigAndApply} from "../../src/utils/load";
 
 const DEF_SEND_AMOUNT = "100000000";
 

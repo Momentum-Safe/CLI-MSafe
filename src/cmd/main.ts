@@ -22,7 +22,7 @@ import {
   State,
 } from "./common";
 import {Registry} from "../momentum-safe/registry";
-import {DEF_ACCOUNT_CONF, loadConfigAndApply, MY_ACCOUNT} from "../web3/global";
+import {DEF_ACCOUNT_CONF, MY_ACCOUNT} from "../web3/global";
 import {registerList} from "./list";
 import {registerCreationDetails} from "./creation-details";
 import {ApiError} from "aptos";
@@ -30,6 +30,7 @@ import {registerMSafeDetails} from "./msafe-details";
 import {registerInitCoinTransfer} from "./new-transaction";
 import {registerTxDetails} from "./tx-details";
 import {registerRevertTransaction} from "./revert-transaction";
+import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE, DEFAULT_NETWORK, loadConfigAndApply} from "../utils/load";
 
 const program = new Command();
 
@@ -38,7 +39,10 @@ const cli = program
   .description("Momentum Safe CLI")
   .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
-  .option("-n --network <string>", "network (auto, devnet, testnet)", "auto")
+  .option("-n --network <string>", "network (auto, devnet, testnet, mainnet)", DEFAULT_NETWORK)
+  .option("-e --endpoint <string>", "full node endpoint (default to use the endpoint in config.yaml)", DEFAULT_ENDPOINT)
+  .option("-f --faucet <string>", "faucet address (default to use the endpoint in config.yaml)", DEFAULT_FAUCET)
+  .option("-m --msafe <string>", "address of msafe deployer", DEFAULT_MSAFE)
   .parse(process.argv);
 
 
@@ -51,6 +55,9 @@ async function main() {
       configFilePath: cli.opts().config,
       profile: cli.opts().profile,
       network: cli.opts().network,
+      endpoint: cli.opts().endpoint,
+      faucet: cli.opts().faucet,
+      msafe: cli.opts().msafe,
     });
   } catch (e) {
     if ((e as ApiError).message.includes('Account not found by Address')) {

@@ -87,9 +87,7 @@ export abstract class AptosTxnBuilder {
     this._validateAndFix();
     this.validateAndFix();
 
-    if (this._estimateMaxGas || this._estimateGasPrice) {
-      await this.estimateMaxGasAndPrice(sender);
-    }
+    await this.estimateMaxGasAndPrice(sender);
     const raw = this.makeRawTransaction();
     return new Transaction(raw);
   }
