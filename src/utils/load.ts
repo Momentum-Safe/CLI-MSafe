@@ -40,7 +40,7 @@ type loadConfig = {
   network: string,
   endpoint: string,
   faucet: string,
-  msafe: string,
+  msafeDeployer: string,
 }
 
 export async function loadConfigAndApply(c: loadConfig) {
@@ -186,10 +186,10 @@ function isMainnet(nodeURL: string) {
 }
 
 function getMSafeAddress(c: loadConfig, network: string) {
-  if (!c.msafe || c.msafe === DEFAULT_MSAFE) {
+  if (!c.msafeDeployer || c.msafeDeployer === DEFAULT_MSAFE) {
     return getDefaultMSafeAddr(network as Network);
   }
-  return HexString.ensure(c.msafe);
+  return HexString.ensure(c.msafeDeployer);
 }
 
 function getDefaultMSafeAddr(network: Network): HexString {

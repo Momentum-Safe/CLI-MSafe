@@ -22,7 +22,8 @@ const cli = program
   .option("--gas-price <bigint>", "gas price that override the default settings")
   .option("-e --endpoint <string>", "full node endpoint (default to use the endpoint in config.yaml)", DEFAULT_ENDPOINT)
   .option("-f --faucet <string>", "faucet address (default to use the endpoint in config.yaml)", DEFAULT_FAUCET)
-  .option("-m --msafe <string>", "address of msafe deployer", DEFAULT_MSAFE)
+  .option("-d --msafe-deployer <string>", "address of msafe deployer", DEFAULT_MSAFE)
+  .requiredOption("-m --msafe <string>", "address of msafe account")
   .parse(process.argv);
 
 
@@ -76,7 +77,6 @@ async function main() {
 
 async function parseAndLoadConfig(): Promise<configArg> {
   const args = getArguments();
-  validateArguments(args);
 
   await loadConfigAndApply({
     configFilePath: args.config,
@@ -84,7 +84,7 @@ async function parseAndLoadConfig(): Promise<configArg> {
     network: args.network,
     endpoint: args.endpoint,
     faucet: args.faucet,
-    msafe: args.msafe,
+    msafeDeployer: args.msafeDeployer,
   });
   return args;
 }
@@ -99,6 +99,7 @@ type configArg = {
   estimateGasPrice: boolean,
   endpoint: string,
   faucet: string,
+  msafeDeployer: string,
   msafe: string,
 }
 
@@ -116,15 +117,9 @@ function getArguments(): configArg {
     estimateMaxGas,
     endpoint: cli.opts().endpoint,
     faucet: cli.opts().faucet,
-    msafe: cli.opts().msafe,
+    msafeDeployer: cli.opts().msafeDeployer.toLowerCase(),
+    msafe: cli.opts().msafe.toLowerCase(),
   };
-}
-
-
-function validateArguments(ca: configArg) {
-  if (!isStringAddress(ca.msafe)) {
-    throw Error("invalid msafe address: " + ca.msafe);
-  }
 }
 
 (async () => main())();

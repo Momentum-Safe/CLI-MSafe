@@ -128,10 +128,8 @@ export abstract class AptosTxnBuilder {
       }
       if (sender instanceof AptosAccount) {
         this._maxGas = await this.buildTemp().estimateMaxGas(sender);
-        console.log("single wallet max gas", this._maxGas);
       } else {
         this._maxGas = await this.buildTemp().estimateMultiSigMaxGas(sender);
-        console.log("multi sig max gas", this._maxGas);
       }
     }
   }
