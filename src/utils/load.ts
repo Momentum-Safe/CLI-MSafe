@@ -21,17 +21,17 @@ export const DEPLOYED_MSAFE = new Map<string, string>([
   ["mainnet", "0xaa90e0d9d16b63ba4a289fb0dc8d1b454058b21c9b5c76864f825d5c1f32582e"],
 ]);
 
-const DEVNET_NODE_URL = 'https://rpc.devnet.aptos.fernlabs.xyz/v1';
-const DEVNET_FAUCET_URL = 'https://faucet.devnet.aptoslabs.com';
+export const DEVNET_NODE_URL = 'https://rpc.devnet.aptos.fernlabs.xyz/v1';
+export const DEVNET_FAUCET_URL = 'https://faucet.devnet.aptoslabs.com';
 
-const TESTNET_NODE_URL = 'https://rpc.testnet.aptos.fernlabs.xyz/v1';
-const TESTNET_FAUCET_URL = 'https://faucet.testnet.aptoslabs.com';
+export const TESTNET_NODE_URL = 'https://rpc.testnet.aptos.fernlabs.xyz/v1';
+export const TESTNET_FAUCET_URL = 'https://faucet.testnet.aptoslabs.com';
 
-const MAINNET_NODE_URL = "https://rpc.mainnet.aptos.fernlabs.xyz/v1";
-const MAINNET_FAUCET_URL = "_";
+export const MAINNET_NODE_URL = "https://rpc.mainnet.aptos.fernlabs.xyz/v1";
+export const MAINNET_FAUCET_URL = "_";
 
-const LOCAL_NODE_URL = 'http://127.0.0.1:8080';
-const LOCAL_FAUCET_URL = 'http://127.0.0.1:8081';
+export const LOCAL_NODE_URL = 'http://127.0.0.1:8080';
+export const LOCAL_FAUCET_URL = 'http://127.0.0.1:8081';
 
 
 type loadConfig = {
