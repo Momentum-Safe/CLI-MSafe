@@ -13,7 +13,7 @@ import {applyDefaultOptions, MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
 import { formatAddress } from "../utils/parse";
 import { isHexEqual } from "../utils/check";
 import { HexBuffer } from "../utils/buffer";
-import {DEPLOYER, MY_ACCOUNT} from "../web3/global";
+import {DEPLOYER} from "../web3/global";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
 import { SimpleMap, TableWithLength, TEd25519PublicKey, TEd25519Signature, Vector } from "../moveTypes/moveTypes";
 

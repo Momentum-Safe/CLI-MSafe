@@ -1,20 +1,11 @@
-import {
-  AptosClient,
-  FaucetClient,
-  HexString,
-  BCS,
-  ApiError,
-  Types, CoinClient
-} from 'aptos';
-import { Account } from "./account";
-import { load } from "js-yaml";
-import { readFile } from "fs/promises";
-import { CoinType } from "./coinType";
-import { BigNumber } from "bignumber.js";
-import { bigIntToBigNumber, fromDust } from "../utils/bignumber";
-import {getDeployedAddrFromNodeURL} from "./config";
-import { AnyNumber, Event, EventHandle, PaginationArgs } from '../moveTypes/moveEvent';
-import {DEPLOYED} from "../../deployed";
+import {ApiError, AptosClient, BCS, FaucetClient, HexString, Types} from 'aptos';
+import {Account} from "./account";
+import {load} from "js-yaml";
+import {readFile} from "fs/promises";
+import {CoinType} from "./coinType";
+import {BigNumber} from "bignumber.js";
+import {fromDust} from "../utils/bignumber";
+import {AnyNumber, Event, EventHandle, PaginationArgs} from '../moveTypes/moveEvent';
 
 export let MY_ACCOUNT: Account;
 export let APT_COIN_INFO: CoinType;
@@ -32,31 +23,18 @@ interface Config {
   faucetURL?: string;
   privateKey: string,
   address: string,
-  network?: string, // If not specified, infer from nodeURL
+  network: string,
+  msafe: HexString,
 }
 
 export async function setGlobal(c: Config) {
   APTOS = new AptosClient(c.nodeURL);
   if (c.faucetURL) {
-    if (c.faucetURL.endsWith('/')) {
-      c.faucetURL = c.faucetURL.substring(0, c.faucetURL.length - 1);
-    }
     FAUCET = new FaucetClient(c.nodeURL, c.faucetURL);
   }
   MY_ACCOUNT = new Account(HexString.ensure(c.privateKey).toUint8Array(), c.address);
   APT_COIN_INFO = await CoinType.fromMoveCoin("0x01::aptos_coin::AptosCoin");
-
-  if (c.network) {
-    if (c.network == "auto") {
-      DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
-    } else if (DEPLOYED.has(c.network)) {
-      DEPLOYER = HexString.ensure(DEPLOYED.get(c.network) as string);
-    } else {
-      throw Error("Unknown network:"+c.network);
-    }
-  } else {
-    DEPLOYER = getDeployedAddrFromNodeURL(c.nodeURL);
-  }
+  DEPLOYER = c.msafe;
 }
 
 
@@ -129,42 +107,7 @@ export async function getBalanceAPT(addr: string | HexString): Promise<BigNumber
   return fromDust(bal, APT_COIN_INFO.decimals);
 }
 
-type loadConfig = {
-  configFilePath: string,
-  profile: string,
-  network: string,
-}
-
-export async function loadConfigAndApply(c: loadConfig) {
-  let yaml: any;
-  try {
-    yaml = await loadAptosYaml(c.configFilePath);
-  } catch (e) {
-    printSetupWalletMsg();
-    process.exit(1);
-  }
-  const profile = yaml.profiles[c.profile];
-  if (!profile) {
-    console.log(`cannot find profile ${c.profile}`);
-    process.exit(1);
-  }
-  await setGlobal({
-    nodeURL: profile.rest_url,
-    faucetURL: profile.faucet_url,
-    privateKey: profile.private_key,
-    address: profile.account,
-    network: c.network,
-  });
-}
-
-function printSetupWalletMsg() {
-  console.log('');
-  console.log("Have you set up your Aptos address? Run the following command to setup your wallet\n");
-  console.log("\taptos init\n");
-  process.exit(1001);
-}
-
-async function loadAptosYaml(filePath: string) {
+export async function loadAptosYaml(filePath: string) {
   return load(await readFile(filePath, 'utf-8'));
 }
 

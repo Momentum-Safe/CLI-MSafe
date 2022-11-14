@@ -3,6 +3,8 @@
 
 // Test only config
 import {setGlobal} from "../src/web3/global";
+import {DEPLOYED_MSAFE} from "../src/utils/load";
+import {HexString} from "aptos";
 
 export const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 export const FAUCET_URL = "https://faucet.devnet.aptoslabs.com/";
@@ -15,5 +17,7 @@ export async function init() {
     faucetURL: FAUCET_URL,
     privateKey: PRIVATE_KEY,
     address: ADDRESS,
+    network: "devnet",
+    msafe: HexString.ensure(DEPLOYED_MSAFE.get("devnet")!),
   });
 }

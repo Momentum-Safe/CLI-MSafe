@@ -1,4 +1,4 @@
-import {DEF_ACCOUNT_CONF, loadConfigAndApply, MY_ACCOUNT} from "../src/web3/global";
+import {DEF_ACCOUNT_CONF, MY_ACCOUNT} from "../src/web3/global";
 import {Command} from "commander";
 import {BCS, HexString} from "aptos";
 import {loadMomentumSafe} from "./common";
@@ -6,6 +6,7 @@ import {makeEntryFunctionTx} from "../src/momentum-safe/msafe-txn";
 import {printSeparator, printTxDetails, promptForYN} from "../src/cmd/common";
 import * as Aptos from "../src/web3/global";
 import {isStringAddress} from "../src/utils/check";
+import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE, loadConfigAndApply} from "../src/utils/load";
 
 
 const program = new Command();
@@ -19,6 +20,10 @@ const cli = program
   .requiredOption("--msafe <string>", "momentum safe address")
   .option("--max-gas <bigint>", "max gas to override the default settings")
   .option("--gas-price <bigint>", "gas price that override the default settings")
+  .option("-e --endpoint <string>", "full node endpoint (default to use the endpoint in config.yaml)", DEFAULT_ENDPOINT)
+  .option("-f --faucet <string>", "faucet address (default to use the endpoint in config.yaml)", DEFAULT_FAUCET)
+  .option("-d --msafe-deployer <string>", "address of msafe deployer", DEFAULT_MSAFE)
+  .requiredOption("-m --msafe <string>", "address of msafe account")
   .parse(process.argv);
 
 
@@ -35,7 +40,7 @@ async function main() {
   const msafeTxn = await makeEntryFunctionTx(
     msafe,
     {
-      fnName: "0x1908fe0d337d7bd718c8465030c5f306377ac396f3d7acce92f526ae41637cc0::message::set_message",
+      fnName: "0x57ddcbaeda7ba430dbd95641120ffccec86a7f896ec99e5eec85e985b11f522e::message::set_message",
       typeArgs: [],
       args: [BCS.bcsSerializeStr("Hello momentum safe")],
     },
@@ -59,7 +64,6 @@ async function main() {
 
   // Submit transaction
   const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn, {
-    sequenceNumber: sn,
     gasPrice: args.gasPrice,
     maxGas: args.maxGas,
     estimateMaxGas: args.estimateMaxGas,
@@ -73,12 +77,14 @@ async function main() {
 
 async function parseAndLoadConfig(): Promise<configArg> {
   const args = getArguments();
-  validateArguments(args);
 
   await loadConfigAndApply({
     configFilePath: args.config,
     profile: args.profile,
     network: args.network,
+    endpoint: args.endpoint,
+    faucet: args.faucet,
+    msafeDeployer: args.msafeDeployer,
   });
   return args;
 }
@@ -87,11 +93,14 @@ type configArg = {
   config: string,
   profile: string,
   network: string,
-  msafe: HexString,
   maxGas: bigint,
   estimateMaxGas: boolean,
   gasPrice: bigint,
   estimateGasPrice: boolean,
+  endpoint: string,
+  faucet: string,
+  msafeDeployer: string,
+  msafe: string,
 }
 
 function getArguments(): configArg {
@@ -102,19 +111,15 @@ function getArguments(): configArg {
     config: cli.opts().config,
     profile: cli.opts().profile,
     network: cli.opts().network,
-    msafe: HexString.ensure(cli.opts().msafe),
     maxGas: cli.opts().maxGas,
     gasPrice: cli.opts().gasPrice,
     estimateGasPrice,
     estimateMaxGas,
+    endpoint: cli.opts().endpoint,
+    faucet: cli.opts().faucet,
+    msafeDeployer: cli.opts().msafeDeployer.toLowerCase(),
+    msafe: cli.opts().msafe.toLowerCase(),
   };
-}
-
-
-function validateArguments(ca: configArg) {
-  if (!isStringAddress(ca.msafe.hex())) {
-    throw Error("invalid msafe address: " + ca.msafe);
-  }
 }
 
 (async () => main())();

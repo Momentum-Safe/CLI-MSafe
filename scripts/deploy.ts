@@ -1,4 +1,4 @@
-import {DEF_ACCOUNT_CONF, loadConfigAndApply, MY_ACCOUNT} from "../src/web3/global";
+import {DEF_ACCOUNT_CONF, MY_ACCOUNT} from "../src/web3/global";
 import {Command} from "commander";
 import {HexString} from "aptos";
 import {isHexEqual, isStringAddress} from "../src/utils/check";
@@ -8,6 +8,7 @@ import * as Aptos from "../src/web3/global";
 import {makeModulePublishTx} from "../src/momentum-safe/msafe-txn";
 import {printSeparator, printTxDetails, promptForYN} from "../src/cmd/common";
 import {loadMomentumSafe} from "./common";
+import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE, DEFAULT_NETWORK, loadConfigAndApply} from "../src/utils/load";
 
 const program = new Command();
 
@@ -22,6 +23,10 @@ const cli = program
   .requiredOption("--move-dir <string>", "move directory contains Move.toml")
   .option("--max-gas <bigint>", "max gas to override the default settings")
   .option("--gas-price <bigint>", "gas price that override the default settings")
+  .option("-e --endpoint <string>", "full node endpoint (default to use the endpoint in config.yaml)", DEFAULT_ENDPOINT)
+  .option("-f --faucet <string>", "faucet address (default to use the endpoint in config.yaml)", DEFAULT_FAUCET)
+  .option("-d --msafe-deployer <string>", "address of momentum safe deployer", DEFAULT_MSAFE)
+  .requiredOption("-m --msafe <string>", "address of msafe account")
   .parse(process.argv);
 
 
@@ -29,7 +34,7 @@ async function main() {
   const args = await parseAndLoadConfig();
 
   // load msafe
-  const msafe = await loadMomentumSafe(HexString.ensure(args.msafe));
+  const msafe = await loadMomentumSafe(HexString.ensure(args.msafeAddr));
 
   // make module publish transaction
   const sn = await msafe.getNextSN();
@@ -75,6 +80,9 @@ async function parseAndLoadConfig(): Promise<configArg> {
     configFilePath: args.config,
     profile: args.profile,
     network: args.network,
+    endpoint: args.endpoint,
+    faucet: args.faucet,
+    msafeDeployer: args.msafeDeployer,
   });
   return args;
 }
@@ -83,12 +91,15 @@ type configArg = {
   config: string,
   profile: string,
   network: string,
-  msafe: HexString,
   moveDir: string,
   maxGas: bigint,
   estimateMaxGas: boolean,
   gasPrice: bigint,
   estimateGasPrice: boolean,
+  endpoint: string,
+  faucet: string,
+  msafeDeployer: string,
+  msafeAddr: string,
 }
 
 function getArguments(): configArg {
@@ -98,22 +109,22 @@ function getArguments(): configArg {
   return {
     config: cli.opts().config,
     profile: cli.opts().profile,
-    network: cli.opts().network,
-    msafe: HexString.ensure(cli.opts().msafe),
+    network: cli.opts().network.toLowerCase(),
     moveDir: cli.opts().moveDir,
     maxGas: cli.opts().maxGas,
     gasPrice: cli.opts().gasPrice,
     estimateGasPrice,
     estimateMaxGas,
+    endpoint: cli.opts().endpoint.toLowerCase(),
+    faucet: cli.opts().faucet.toLowerCase(),
+    msafeDeployer: cli.opts().msafeDeployer.toLowerCase(),
+    msafeAddr: cli.opts().msafe.toLowerCase(),
   };
 }
 
 function validateArguments(ca: configArg) {
-  if (!isStringAddress(ca.msafe.hex())) {
-    throw Error("invalid msafe address: " + ca.msafe);
-  }
   if (!MovePublisher.isDirValid(ca.moveDir)) {
-    throw Error("invalid move dir: " + ca.msafe);
+    throw Error("invalid move dir: " + ca.msafeDeployer);
   }
 }
 
