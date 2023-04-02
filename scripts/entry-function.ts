@@ -7,6 +7,7 @@ import {printSeparator, printTxDetails, promptForYN} from "../src/cmd/common";
 import * as Aptos from "../src/web3/global";
 import {isStringAddress} from "../src/utils/check";
 import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE, loadConfigAndApply} from "../src/utils/load";
+import {AdminOperationData, OperationData} from "./admin/types";
 
 
 const program = new Command();
@@ -16,6 +17,7 @@ const cli = program
   .description("Momentum Safe entry function caller. Call an entry function.")
   .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
+  .option("-o --operation <string>", "admin operation to call")
   .option("-n --network <string>", "network (devnet, testnet), use deployed address", "auto")
   .requiredOption("--msafe <string>", "momentum safe address")
   .option("--max-gas <bigint>", "max gas to override the default settings")
@@ -39,11 +41,7 @@ async function main() {
   // Apply your function call and arguments here
   const msafeTxn = await makeEntryFunctionTx(
     msafe,
-    {
-      fnName: "0x57ddcbaeda7ba430dbd95641120ffccec86a7f896ec99e5eec85e985b11f522e::message::set_message",
-      typeArgs: [],
-      args: [BCS.bcsSerializeStr("Hello momentum safe")],
-    },
+    fetchOperationData(args.operation),
     {
       sequenceNumber: sn,
       gasPrice: args.gasPrice,
@@ -92,6 +90,7 @@ async function parseAndLoadConfig(): Promise<configArg> {
 type configArg = {
   config: string,
   profile: string,
+  operation: string,
   network: string,
   maxGas: bigint,
   estimateMaxGas: boolean,
@@ -110,6 +109,7 @@ function getArguments(): configArg {
   return {
     config: cli.opts().config,
     profile: cli.opts().profile,
+    operation: cli.opts().operation,
     network: cli.opts().network,
     maxGas: cli.opts().maxGas,
     gasPrice: cli.opts().gasPrice,
@@ -120,6 +120,23 @@ function getArguments(): configArg {
     msafeDeployer: cli.opts().msafeDeployer.toLowerCase(),
     msafe: cli.opts().msafe.toLowerCase(),
   };
+}
+
+
+function fetchOperationData(operation: string | undefined): OperationData {
+  switch (operation) {
+    case "set_x":
+      return AdminOperationData.SETX;
+    case "set_y":
+      return AdminOperationData.SETY;
+    default:
+      // If operation is not supported, replace this operation data with custom entry function call params
+      return {
+        fnName: "0x57ddcbaeda7ba430dbd95641120ffccec86a7f896ec99e5eec85e985b11f522e::message::set_message",
+        typeArgs: [],
+        args: [BCS.bcsSerializeStr("Hello momentum safe")],
+      };
+  }
 }
 
 (async () => main())();
