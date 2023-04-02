@@ -79,6 +79,7 @@ Several scripts are provided as example to interact with SDK.
 
 1. `scripts/deploy.ts` Can be used to deploy a MOVE module with momentum safe.
 2. `scripts/entry-function.ts` An example script to interact with an entry function.
+3. `scripts/thala-admin-commands.ts` A script for interacting with common thala admin entry functions
 
 ### 3.1. `deploy.ts`
 
@@ -132,6 +133,16 @@ blockchain.
 Run an entry function using `scripts/entry-function.ts`.
 
 In the script, a function calling the test script is called.  
+
+### 3.3 Call a common thala admin entry function
+
+Run a common thala admin entry function using `scripts/thala-admin-commands.ts`.
+
+Before running this script, please add a new line item to `scripts/admin/history.ts` fetching the operation data for your intended call
+
+Please submit a PR to ThalaLabs/CLI-MSafe addition to any admin operations to amend and track history
+
+Supported method names can be found in `scripts/admin/entryPayloads.ts`
 
 ```aidl
 0x1908fe0d337d7bd718c8465030c5f306377ac396f3d7acce92f526ae41637cc0::message::set_message
