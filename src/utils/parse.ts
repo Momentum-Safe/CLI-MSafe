@@ -62,3 +62,13 @@ export function secToDate(sec: BCS.Uint64) {
   const ms = Number(sec) * 1000;
   return new Date(ms);
 }
+
+export function formatToFullType(coinType: string) {
+  const [
+    address,
+    module,
+    struct,
+  ] = coinType.split("::");
+  const shortAddr = address.startsWith("0x") ? address.slice(2) : address;
+  return `0x${shortAddr.padStart(ADDRESS_HEX_LENGTH, "0")}::${module}::${struct}`;
+}

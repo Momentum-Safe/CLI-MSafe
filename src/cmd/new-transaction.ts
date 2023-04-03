@@ -40,7 +40,7 @@ import {
   isStringHex,
   isStringTypeStruct
 } from "../utils/check";
-import {splitModuleComponents} from "../utils/parse";
+import {formatToFullType, splitModuleComponents} from "../utils/parse";
 import {BigNumber} from "bignumber.js";
 import {toDust} from "../utils/bignumber";
 
@@ -300,7 +300,7 @@ async function promptForTypeArgs() {
       "\tInvalid type arg:\t",
       isStringTypeStruct,
     );
-    tyArgs.push(ta);
+    tyArgs.push(formatToFullType(ta));
   }
   return tyArgs;
 }
