@@ -17,7 +17,7 @@ describe("parse config", () => {
       network: 'default',
       endpoint: 'default',
       faucet: 'default',
-      msafe: 'default',
+      msafeDeployer: 'default',
     };
     const parsed = await parseConfig(c);
 
@@ -37,7 +37,7 @@ describe("parse config", () => {
       network: 'mainnet',
       endpoint: 'default',
       faucet: 'default',
-      msafe: 'default',
+      msafeDeployer: 'default',
     };
     const parsed = await parseConfig(c);
 
@@ -54,7 +54,7 @@ describe("parse config", () => {
       network: 'testnet',
       endpoint: 'default',
       faucet: 'default',
-      msafe: 'default',
+      msafeDeployer: 'default',
     };
     const parsed = await parseConfig(c);
 
@@ -71,7 +71,7 @@ describe("parse config", () => {
       network: 'devnet',
       endpoint: 'default',
       faucet: 'default',
-      msafe: 'default',
+      msafeDeployer: 'default',
     };
     const parsed = await parseConfig(c);
 
@@ -88,7 +88,7 @@ describe("parse config", () => {
       network: 'testnet',
       endpoint: 'unknown endpoint',
       faucet: 'unknown faucet',
-      msafe: '0x123',
+      msafeDeployer: '0x123',
     };
     const parsed = await parseConfig(c);
 
@@ -105,7 +105,7 @@ describe("parse config", () => {
       network: 'testnet',
       endpoint: 'mainnet.aptos.fakeurl.org',
       faucet: 'default',
-      msafe: 'default',
+      msafeDeployer: 'default',
     };
 
     try {
@@ -124,7 +124,7 @@ describe("parse config", () => {
       network: 'testnet',
       endpoint: 'default',
       faucet: 'default',
-      msafe: '0x123',
+      msafeDeployer: '0x123',
     };
     const parsed = await parseConfig(c);
 
@@ -141,7 +141,7 @@ describe("parse config", () => {
       network: 'testnet',
       endpoint: 'unknown endpoint',
       faucet: 'unknown endpoint',
-      msafe: 'default',
+      msafeDeployer: 'default',
     };
     const parsed = await parseConfig(c);
 

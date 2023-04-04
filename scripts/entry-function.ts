@@ -40,16 +40,12 @@ async function main() {
   const msafeTxn = await makeEntryFunctionTx(
     msafe,
     {
-      fnName: "0x57ddcbaeda7ba430dbd95641120ffccec86a7f896ec99e5eec85e985b11f522e::message::set_message",
-      typeArgs: [],
-      args: [BCS.bcsSerializeStr("Hello momentum safe")],
+      fnName: "0x1::managed_coin::register",
+      typeArgs: ["0x1::aptos_coin::AptosCoin"],
+      args: [],
     },
     {
       sequenceNumber: sn,
-      gasPrice: args.gasPrice,
-      maxGas: args.maxGas,
-      estimateMaxGas: args.estimateMaxGas,
-      estimateGasPrice: args.estimateGasPrice,
     },
   );
 
