@@ -1,5 +1,6 @@
 import {HexString, TxnBuilderTypes} from "aptos";
 import {NUM_FUNCTION_COMPS, NUM_MODULE_COMPS, NUM_RESOURCE_COMPS} from "./const";
+import {formatToFullType} from "./parse";
 
 // TODO: add check for function names, module names, and resource name.
 
@@ -21,8 +22,9 @@ export function isStringAddress(s: string): boolean {
 
 export function isStringTypeStruct(s: string): boolean {
   try {
-    TxnBuilderTypes.StructTag.fromString(s);
+    formatToFullType(s);
   } catch (e) {
+    console.log(e);
     return false;
   }
   return true;

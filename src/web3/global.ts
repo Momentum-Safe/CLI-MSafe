@@ -50,7 +50,7 @@ export async function getSequenceNumber(address: HexString | string): Promise<bi
     const res = await APTOS.getAccount(address instanceof HexString ? address : HexString.ensure(address));
     return BigInt(res.sequence_number);
   } catch (e) {
-    if (e instanceof ApiError && e.message.includes("Resource not found")) {
+    if (e instanceof ApiError && e.message.includes("Account not found")) {
       return 0n;
     }
     throw e;
