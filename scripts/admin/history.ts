@@ -1,7 +1,12 @@
 import {
+    acceptManagerProposal,
+    borrow,
+    closeLBPOperationData,
     configurePythOperationData, configureSwitchboardOperationData,
-    configureTier1OracleOperationData, initializeCollateralOperationData,
-    setMinLiabilityAmountOperationData, setMintCapOperationData
+    configureTier1OracleOperationData, depositCollateral, initializeCollateralOperationData,
+    openVaultOperationData,
+    pancakeSwapExactIn,
+    setMinLiabilityAmountOperationData, setMintCapOperationData, stablePoolAddLiquidity, weightedPoolAddLiquidity
 } from "./entryPayloads";
 
 // apr 1, 8:40 UTC, txHash 0xc6c150c4fa78ac4902bd3c0b42074145f2e08295cb8a3b498cb67f8cb385bd85
@@ -153,3 +158,128 @@ export const ADMIN_OP_26 = configureTier1OracleOperationData(
     ["0x159df6b7689437016108a019fd5bef736bac692b6d4a1f10c941f6fbb9a74ca6::oft::CakeOFT"],
     { new_oracle: 3 }
 );
+
+// 
+export const ADMIN_OP_27 = closeLBPOperationData(
+    ["0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC", "0x7fd500c11216f0fe3095d0c4b8aa4d64a4e2e04f83758462f2b127255643615::thl_coin::THL"]
+);
+
+export const ADMIN_OP_28 = setMinLiabilityAmountOperationData(
+    {amount: 50000000000}
+);
+
+export const ADMIN_OP_29 = setMintCapOperationData(
+    ["0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC"],
+    {cap: 400000000000000}
+);
+
+export const ADMIN_OP_30 = openVaultOperationData(
+    ["0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC"],
+    {
+        collateral_amount: 768000_000000,
+        borrow_amount: 640000_00000000,
+        hint: []
+    }
+);
+
+export const ADMIN_OP_31 = weightedPoolAddLiquidity(
+    [
+        "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD",
+"0x7fd500c11216f0fe3095d0c4b8aa4d64a4e2e04f83758462f2b127255643615::thl_coin::THL",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::weighted_pool::Weight_20",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::weighted_pool::Weight_80",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null"
+    ],
+    {
+        in_0: 240_000_00000000,
+        in_1: 1_555_000_00000000,
+        in_2: 0,
+        in_3: 0,
+        min_amount_in_0: 240_000_00000000 * 0.9,
+        min_amount_in_1: 1_555_000_00000000 * 0.9,
+        min_amount_in_2: 0,
+        min_amount_in_3: 0,
+    }
+);
+
+export const ADMIN_OP_32 = stablePoolAddLiquidity(
+    [
+        "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD",
+        "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null"
+    ],
+    {
+        in_0: 300_000_00000000,
+        in_1: 300_000_000000,
+        in_2: 0,
+        in_3: 0,
+    }
+);
+
+export const ADMIN_OP_33 = weightedPoolAddLiquidity(
+    [
+        "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD",
+        "0x1::aptos_coin::AptosCoin",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::weighted_pool::Weight_50",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::weighted_pool::Weight_50",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+        "0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null"
+    ],
+    {
+        in_0: 100_000_00000000,
+        in_1: 8_500_00000000,
+        in_2: 0,
+        in_3: 0,
+        min_amount_in_0: 100_000_00000000 * 0.9,
+        min_amount_in_1: 8_500_00000000 * 0.9,
+        min_amount_in_2: 0,
+        min_amount_in_3: 0,
+    }
+);
+
+export const ADMIN_OP_34 = depositCollateral(
+    ["0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC"],
+    {
+        amount: 288_000_000000,
+        hint: []
+    }
+);
+
+export const ADMIN_OP_35 = borrow(
+    ["0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC"],
+    {
+        amount: 240_000_00000000,
+        hint: []
+    }
+);
+
+export const ADMIN_OP_36 = weightedPoolAddLiquidity(
+    [
+        "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD",
+"0x7fd500c11216f0fe3095d0c4b8aa4d64a4e2e04f83758462f2b127255643615::thl_coin::THL",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::weighted_pool::Weight_20",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::weighted_pool::Weight_80",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null",
+"0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null"
+    ],
+    {
+        in_0: 240_000_00000000,
+        in_1: 154_5893_00000000,
+        in_2: 0,
+        in_3: 0,
+        min_amount_in_0: 240_000_00000000 * 0.71,
+        min_amount_in_1: 154_5893_00000000 * 0.71,
+        min_amount_in_2: 0,
+        min_amount_in_3: 0,
+    }
+);
+
+export const ADMIN_OP_37 = acceptManagerProposal();

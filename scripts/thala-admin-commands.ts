@@ -4,7 +4,7 @@ import {HexString} from "aptos";
 import {makeEntryFunctionTx} from "../src/momentum-safe/msafe-txn";
 import {printSeparator, printTxDetails, promptForYN} from "../src/cmd/common";
 import * as Aptos from "../src/web3/global";
-import {ADMIN_OP_3} from "./admin/history";
+import {ADMIN_OP_27} from "./admin/history";
 
 const thalaManagerAddress = "0x4dcae85fc5559071906cd5c76b7420fcbb4b0a92f00ab40ffc394aadbbff5ee9";
 
@@ -16,7 +16,7 @@ async function main() {
     const sn = await msafe.getNextSN();
 
     // ** REQUIRED: Replace entryPayload with ADMIN_OP_X from ./admin/history.ts **
-    const entryPayload = ADMIN_OP_3;
+    const entryPayload = ADMIN_OP_27;
     console.log('making entry function call with data: ', entryPayload);
 
     // Apply your function call and arguments here

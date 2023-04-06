@@ -7,6 +7,7 @@ import {printSeparator, printTxDetails, promptForYN} from "../src/cmd/common";
 import * as Aptos from "../src/web3/global";
 import {isStringAddress} from "../src/utils/check";
 import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE, loadConfigAndApply} from "../src/utils/load";
+import { ADMIN_OP_27, ADMIN_OP_28, ADMIN_OP_29, ADMIN_OP_30, ADMIN_OP_31, ADMIN_OP_32, ADMIN_OP_33, ADMIN_OP_34, ADMIN_OP_35, ADMIN_OP_36, ADMIN_OP_37 } from "./admin/history";
 
 
 const program = new Command();
@@ -39,11 +40,7 @@ async function main() {
   // Apply your function call and arguments here
   const msafeTxn = await makeEntryFunctionTx(
     msafe,
-    {
-      fnName: "0x57ddcbaeda7ba430dbd95641120ffccec86a7f896ec99e5eec85e985b11f522e::message::set_message",
-      typeArgs: [],
-      args: [BCS.bcsSerializeStr("Hello momentum safe")],
-    },
+    ADMIN_OP_37,
     {
       sequenceNumber: sn,
       gasPrice: args.gasPrice,
