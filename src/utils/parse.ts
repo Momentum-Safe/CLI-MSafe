@@ -63,17 +63,17 @@ export function secToDate(sec: BCS.Uint64) {
   return new Date(ms);
 }
 
-const regExSimpleStruct = /(0x[a-fA-F0-9]+)(::[^:,\s]+::[^:,\s]+)/;
-const regExCompoundStruct = /(0x[a-fA-F0-9]+::[^:,\s]+::[^:,\s]+)/g;
+const regExSimpleStruct = /(0x[a-fA-F0-9]+)(::[^:,\s]+::[^:<>,\s]+)/;
+const regExCompoundStruct = /(0x[a-fA-F0-9]+::[^:,\s]+::[^:<>,\s]+)/g;
 
 export function formatToFullType(typeName: string) {
-  return typeName.replace(regExCompoundStruct, (match, p1) => {
-    return formatToFullSimpleType(p1);
+  return typeName.replaceAll(regExCompoundStruct, (match, p1) => {
+    return formatToFullSimpleType(match);
   });
 }
 
 export function formatToFullSimpleType(typeName: string) {
-  if (!isSimpleStruct(typeName)) {
+  if (!hasSimpleStruct(typeName)) {
     throw new Error(`Invalid type struct: ${typeName}`);
   }
   return typeName.replace(
@@ -82,7 +82,7 @@ export function formatToFullSimpleType(typeName: string) {
   );
 }
 
-export function isSimpleStruct(val: string) {
+export function hasSimpleStruct(val: string) {
   const match = regExSimpleStruct.exec(val);
 
   return !!match;
