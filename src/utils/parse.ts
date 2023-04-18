@@ -48,7 +48,7 @@ export function formatHexToShort(val: HexString | string): string {
 export function formatAddress(s: HexString | string): HexString {
   let hexStr = s instanceof HexString ? s.hex() : s.startsWith('0x') ? s.substring(2) : s;
   if (hexStr.length < ADDRESS_HEX_LENGTH) {
-    hexStr = ''.concat('0'.repeat(ADDRESS_HEX_LENGTH - hexStr.length), hexStr);
+    hexStr = `0x${hexStr.padStart(ADDRESS_HEX_LENGTH, "0")}`;
   }
   return HexString.ensure(hexStr);
 }
@@ -63,12 +63,27 @@ export function secToDate(sec: BCS.Uint64) {
   return new Date(ms);
 }
 
-export function formatToFullType(coinType: string) {
-  const [
-    address,
-    module,
-    struct,
-  ] = coinType.split("::");
-  const shortAddr = address.startsWith("0x") ? address.slice(2) : address;
-  return `0x${shortAddr.padStart(ADDRESS_HEX_LENGTH, "0")}::${module}::${struct}`;
+const regExSimpleStruct = /(0x[a-fA-F0-9]+)(::[^:,\s]+::[^:<>,\s]+)/;
+const regExCompoundStruct = /(0x[a-fA-F0-9]+::[^:,\s]+::[^:<>,\s]+)/g;
+
+export function formatToFullType(typeName: string) {
+  return typeName.replaceAll(regExCompoundStruct, (match, p1) => {
+    return formatToFullSimpleType(match);
+  });
+}
+
+export function formatToFullSimpleType(typeName: string) {
+  if (!hasSimpleStruct(typeName)) {
+    throw new Error(`Invalid type struct: ${typeName}`);
+  }
+  return typeName.replace(
+    regExSimpleStruct,
+    (match, p1, p2) => `${formatAddress(p1).toString()}${p2}`
+  );
+}
+
+export function hasSimpleStruct(val: string) {
+  const match = regExSimpleStruct.exec(val);
+
+  return !!match;
 }

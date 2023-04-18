@@ -40,7 +40,7 @@ import {
   isStringHex,
   isStringTypeStruct
 } from "../utils/check";
-import {formatToFullType, splitModuleComponents} from "../utils/parse";
+import {formatToFullSimpleType, formatToFullType, splitModuleComponents} from "../utils/parse";
 import {BigNumber} from "bignumber.js";
 import {toDust} from "../utils/bignumber";
 

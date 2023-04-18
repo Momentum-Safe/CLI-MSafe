@@ -20,7 +20,7 @@ import {toDust} from "../utils/bignumber";
 const MAX_OWNERS = 32;
 const MIN_OWNERS = 2;
 const MIN_CONFIRMATION = 1;
-const MIN_INITIAL_FUND = BigNumber(0.5);
+const MIN_INITIAL_FUND = BigNumber(0.1);
 
 
 export function registerCreation() {
