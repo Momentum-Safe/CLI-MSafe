@@ -21,13 +21,10 @@ export function isStringAddress(s: string): boolean {
 }
 
 export function isStringTypeStruct(s: string): boolean {
-  if (!hasSimpleStruct(s)) {
-    return false;
-  }
   try {
     formatToFullType(s);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return false;
   }
   return true;
