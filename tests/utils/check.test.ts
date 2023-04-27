@@ -36,7 +36,7 @@ describe('isStringTypeStruct', () => {
   });
 
   it('negative', () => {
-    expect(isStringTypeStruct('0x01::aptos_coin')).to.be.false;
+    expect(isStringTypeStruct('0x1::aptos_coin')).to.be.false;
     expect(isStringTypeStruct('aptos_coin::aptos_coin::AptosCoin')).to.be.false;
   });
 });
