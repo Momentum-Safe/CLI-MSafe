@@ -5,7 +5,7 @@ import {
   Options,
   Transaction, TxConfig
 } from "../web3/transaction";
-import {BCS, HexString, TransactionBuilder, TxnBuilderTypes} from "aptos";
+import {BCS, HexString, TransactionBuilder, TxnBuilderTypes, Types} from "aptos";
 import * as Aptos from '../web3/global';
 import {
   APTOS_FRAMEWORK_HS,
@@ -588,7 +588,12 @@ function parseTypeStructTag(typeTag: TxnBuilderTypes.TypeTagStruct) {
   const moduleName = typeTag.value.module_name.value;
   const structName = typeTag.value.name.value;
   const deployerDisplay = HexString.fromUint8Array(deployer);
-  return `${deployerDisplay}::${moduleName}::${structName}`;
+  if (typeTag.value.type_args.length === 0) {
+    return `${deployerDisplay}::${moduleName}::${structName}`;
+  }
+
+  const tArgsDisplay = typeTag.value.type_args.map(tArg => decodeTypeTag(tArg));
+  return `${deployerDisplay}::${moduleName}::${structName}<${tArgsDisplay.join(', ')}>`;
 }
 
 function decodeCoinTransferArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): [HexString, bigint] {
