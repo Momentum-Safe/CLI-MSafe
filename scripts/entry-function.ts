@@ -40,9 +40,11 @@ async function main() {
   const msafeTxn = await makeEntryFunctionTx(
     msafe,
     {
-      fnName: "0x1::managed_coin::register",
-      typeArgs: ["0x5a97986a9d031c4567e15b797be516910cfcb4156312482efc6a19c0a30c948::lp_coin::LP<0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC, 0x1::aptos_coin::AptosCoin, 0x190d44266241744264b964a37b8f09863167a12d3e70cda39376cfb4e3561e12::curves::Uncorrelated>"],
-      args: [],
+      fnName: "0x6b3720cd988adeaf721ed9d4730da4324d52364871a68eac62b46d21e4d2fa99::farming::add_pool",
+      typeArgs: ["0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::stable_pool::StablePoolToken<0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD, 0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC, 0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null, 0x48271d39d0b05bd6efca2278f22277d6fcc375504f9839fd73f74ace240861af::base_pool::Null>"],
+      args: [
+        BCS.bcsSerializeUint64(100),
+      ],
     },
     {
       sequenceNumber: sn,
