@@ -383,7 +383,7 @@ async function promptPublishTx(msafe: MomentumSafe,  sn: bigint) {
 }
 
 async function promptMoveScriptTx():Promise<any> {
-  await prompt("Please use 'scripts/moveScript.ts' to generate the transaction.");
+  await prompt("Please use 'scripts/move-script.ts' to generate the transaction.");
   exit(0);
 }
 

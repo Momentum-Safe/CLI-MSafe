@@ -89,7 +89,7 @@ export type MoveScriptArgs = {
 export type MoveScriptInfo = {
   code: Uint8Array,
   typeArgs: string[],
-  args: BCS.Bytes[], // encoded bytes
+  args: TxnBuilderTypes.TransactionArgument[], // encoded bytes
 }
 
 export enum MSafeTxnType {
