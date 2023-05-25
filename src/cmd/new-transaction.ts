@@ -43,6 +43,7 @@ import {
 import {formatToFullSimpleType, formatToFullType, splitModuleComponents} from "../utils/parse";
 import {BigNumber} from "bignumber.js";
 import {toDust} from "../utils/bignumber";
+import {exit} from "process";
 
 export function registerInitCoinTransfer() {
   registerState(State.InitCoinTransfer, newTransaction);
@@ -109,6 +110,7 @@ async function promptForNewTransaction(msafe: MomentumSafe, sn: bigint): Promise
       {shortage: 3, showText: MSafeTxnType.AnyCoinRegister, handleFunc: () => txType = MSafeTxnType.AnyCoinRegister},
       {shortage: 4, showText: MSafeTxnType.EntryFunction, handleFunc: () => txType = MSafeTxnType.EntryFunction},
       {shortage: 5, showText: MSafeTxnType.ModulePublish, handleFunc: () => txType = MSafeTxnType.ModulePublish},
+      {shortage: 6, showText: MSafeTxnType.MoveScript, handleFunc: () => txType = MSafeTxnType.MoveScript},
     ]
   );
 
@@ -136,6 +138,8 @@ async function promptAndBuildTx(
       return await promptAndBuildForEntryFnTx(msafe, sn);
     case MSafeTxnType.ModulePublish:
       return await promptPublishTx(msafe, sn);
+    case MSafeTxnType.MoveScript:
+      return promptMoveScriptTx();
     default:
       throw new Error("Invalid type");
   }
@@ -377,6 +381,12 @@ async function promptPublishTx(msafe: MomentumSafe,  sn: bigint) {
     return promptBuildModulePublishTx(msafe, sn);
   }
 }
+
+async function promptMoveScriptTx():Promise<any> {
+  await prompt("Please use 'scripts/moveScript.ts' to generate the transaction.");
+  exit(0);
+}
+
 
 async function promptBuildModulePublishTx(msafe: MomentumSafe, sn: bigint) {
   console.log("Publish move modules.");

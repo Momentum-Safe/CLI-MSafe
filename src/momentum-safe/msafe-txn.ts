@@ -1,9 +1,9 @@
 import {
-  AptosCoinTransferTxnBuilder,
-  AptosEntryTxnBuilder,
-  AptosTxnBuilder, IMultiSig,
-  Options,
-  Transaction, TxConfig
+    AptosCoinTransferTxnBuilder,
+    AptosEntryTxnBuilder, AptosScriptTxnBuilder,
+    AptosTxnBuilder, IMultiSig,
+    Options,
+    Transaction, TxConfig
 } from "../web3/transaction";
 import {BCS, HexString, TransactionBuilder, TxnBuilderTypes, Types} from "aptos";
 import * as Aptos from '../web3/global';
@@ -19,6 +19,7 @@ import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
 import {secToDate, splitFunctionComponents, typeTagStructFromName} from "../utils/parse";
 import {isHexEqual} from "../utils/check";
 import {DEPLOYER} from "../web3/global";
+import fs from "fs";
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = MINUTE_SECONDS * 60;
@@ -79,6 +80,18 @@ export type ModulePublishInfo = {
   byteCode: Buffer,
 }
 
+export type MoveScriptArgs = {
+  moveScriptFile: string,
+  typeArgs: string[],
+  args: TxnBuilderTypes.TransactionArgument[],
+}
+
+export type MoveScriptInfo = {
+  code: Uint8Array,
+  typeArgs: string[],
+  args: BCS.Bytes[], // encoded bytes
+}
+
 export enum MSafeTxnType {
   Unknown = "Unknown transaction",
   APTCoinTransfer = "Transfer APT",
@@ -87,11 +100,12 @@ export enum MSafeTxnType {
   Revert = "Revert transaction",
   EntryFunction = "Entry function",
   ModulePublish = "Module publish",
+  MoveScript = "Move script",
 }
 
 // TODO: add module publish payload info
 export type payloadInfo = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs
-  | RevertArgs | EntryFunctionArgs | ModulePublishInfo
+  | RevertArgs | EntryFunctionArgs | ModulePublishInfo | MoveScriptInfo;
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType,
@@ -262,6 +276,24 @@ export async function makeModulePublishTx(
   return new MSafeTransaction(tx.raw);
 }
 
+export async function makeMoveScriptTx(
+    sender: IMultiSig,
+    args: MoveScriptArgs,
+    opts?: Options
+) {
+  const config = await applyDefaultOptions(sender.address, opts);
+  const moveCode = fs.readFileSync(args.moveScriptFile);
+    const txBuilder = new AptosScriptTxnBuilder();
+    const tx = await txBuilder
+        .from(sender.address)
+        .withTxConfig(config)
+        .type_args(args.typeArgs)
+        .args(args.args)
+        .script(moveCode)
+        .build(sender);
+    return new MSafeTransaction(tx.raw);
+}
+
 export async function applyDefaultOptions(sender: HexString, opts?: Options): Promise<TxConfig> {
   if (!opts) {
     opts = {};
@@ -296,11 +328,11 @@ export async function applyDefaultOptions(sender: HexString, opts?: Options): Pr
 
 export class MSafeTransaction extends Transaction {
   txType: MSafeTxnType;
-  payload: TxnBuilderTypes.TransactionPayloadEntryFunction;
+  payload: TxnBuilderTypes.TransactionPayload;
 
   constructor(raw: TxnBuilderTypes.RawTransaction) {
     super(raw);
-    if (!(raw.payload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction)) {
+    if (!(raw.payload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction || raw.payload instanceof TxnBuilderTypes.TransactionPayloadScript)) {
       throw new Error("unknown transaction payload type");
     }
     this.payload = raw.payload;
@@ -328,27 +360,35 @@ export class MSafeTransaction extends Transaction {
     };
   }
 
-  private static getTxnType(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): MSafeTxnType {
-    if (isCoinTransferTxn(payload)) {
-      if (isAptosCoinType(payload)) {
-        return MSafeTxnType.APTCoinTransfer;
+  private static getTxnType(payload: TxnBuilderTypes.TransactionPayload): MSafeTxnType {
+    if(payload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction) {
+      if (isCoinTransferTxn(payload)) {
+        if (isAptosCoinType(payload)) {
+          return MSafeTxnType.APTCoinTransfer;
+        }
+        return MSafeTxnType.AnyCoinTransfer;
       }
-      return MSafeTxnType.AnyCoinTransfer;
+      if (isCoinRegisterTx(payload)) {
+        return MSafeTxnType.AnyCoinRegister;
+      }
+      if (isRevertTxn(payload)) {
+        return MSafeTxnType.Revert;
+      }
+      if (isModulePublishTxn(payload)) {
+        return MSafeTxnType.ModulePublish;
+      }
+      return MSafeTxnType.EntryFunction;
+    } else if (payload instanceof TxnBuilderTypes.TransactionPayloadScript) {
+      return MSafeTxnType.MoveScript;
     }
-    if (isCoinRegisterTx(payload)) {
-      return MSafeTxnType.AnyCoinRegister;
-    }
-    if (isRevertTxn(payload)) {
-      return MSafeTxnType.Revert;
-    }
-    if (isModulePublishTxn(payload)) {
-      return MSafeTxnType.ModulePublish;
-    }
-    return MSafeTxnType.EntryFunction;
+    return MSafeTxnType.Unknown;
   }
 
   private getTxnFuncArgs(): payloadInfo {
-    const payload = this.payload;
+    if(this.payload instanceof TxnBuilderTypes.TransactionPayloadScript) {
+      return decodeMoveScriptInfo(this.payload);
+    }
+    const payload = this.payload  as TxnBuilderTypes.TransactionPayloadEntryFunction;
 
     switch (this.txType) {
       case MSafeTxnType.APTCoinTransfer: {
@@ -609,6 +649,14 @@ function decodeCoinTransferArgs(payload: TxnBuilderTypes.TransactionPayloadEntry
   const amount = (new BCS.Deserializer(amountArg)).deserializeU64();
 
   return [toAddress, amount];
+}
+
+function decodeMoveScriptInfo(payload: TxnBuilderTypes.TransactionPayloadScript):MoveScriptInfo{
+  return {
+    code: payload.value.code,
+    typeArgs: payload.value.ty_args.map(tArg => decodeTypeTag(tArg)),
+    args: payload.value.args as any,
+  };
 }
 
 function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): ModulePublishInfo {

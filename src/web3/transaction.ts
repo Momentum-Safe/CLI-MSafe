@@ -259,6 +259,42 @@ export class AptosEntryTxnBuilder extends AptosTxnBuilder {
   }
 }
 
+export class AptosScriptTxnBuilder extends AptosTxnBuilder {
+  private _script!: Uint8Array;
+  private _type_args: string[] = [];
+  private _args: TxnBuilderTypes.TransactionArgument[] = [];
+
+  script(_script: Uint8Array): this {
+    this._script = _script;
+    return this;
+  }
+
+  args(_args: TxnBuilderTypes.TransactionArgument[]): this {
+    this._args = _args;
+    return this;
+  }
+
+  type_args(_type_args: string[]): this {
+    this._type_args = _type_args;
+    return this;
+  }
+  validateAndFix() {
+    if (this._script === undefined) {
+      throw new Error('When building transaction, script code must be specified');
+    }
+  }
+  payload(): TxnBuilderTypes.TransactionPayload {
+    const toTypeTag = (tagStr:string)=>new TxnBuilderTypes.TypeTagParser(tagStr).parseTypeTag();
+    return new TxnBuilderTypes.TransactionPayloadScript(
+        new TxnBuilderTypes.Script(
+            this._script,
+            this._type_args.map(toTypeTag),
+            this._args,
+        )
+    );
+  }
+}
+
 export type GasOption = {
   gasUnit: bigint,
   maxGas: bigint,
