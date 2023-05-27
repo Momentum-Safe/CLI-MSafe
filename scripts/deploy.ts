@@ -14,7 +14,7 @@ const cli = program
   .description("Momentum Safe move deployer script. Deploy the compiled MOVE package on blockchain.")
   .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
-  .option("-n --network <string>", "network (devnet, testnet), use deployed address", "devnet")
+  .option("-n --network <string>", "network (devnet, testnet), use deployed address", "mainnet")
   .requiredOption("--msafe <string>", "momentum safe address")
   .requiredOption("--move-dir <string>", "move directory contains Move.toml")
   .option("--max-gas <bigint>", "max gas to override the default settings")
