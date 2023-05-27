@@ -88,6 +88,7 @@ export type MoveScriptArgs = {
 
 export type MoveScriptInfo = {
   code: Uint8Array,
+  codeHash: Uint8Array,
   typeArgs: string[],
   args: TxnBuilderTypes.TransactionArgument[], // encoded bytes
 }
@@ -651,9 +652,10 @@ function decodeCoinTransferArgs(payload: TxnBuilderTypes.TransactionPayloadEntry
   return [toAddress, amount];
 }
 
-function decodeMoveScriptInfo(payload: TxnBuilderTypes.TransactionPayloadScript):MoveScriptInfo{
+function decodeMoveScriptInfo(payload: TxnBuilderTypes.TransactionPayloadScript): MoveScriptInfo {
   return {
     code: payload.value.code,
+    codeHash: sha3_256(payload.value.code).toUint8Array(),
     typeArgs: payload.value.ty_args.map(tArg => decodeTypeTag(tArg)),
     args: payload.value.args as any,
   };

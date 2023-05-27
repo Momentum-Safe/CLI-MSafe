@@ -364,6 +364,7 @@ function printModulePublishTxn(txInfo: MSafeTxnInfo) {
 function printMoveScriptTxn(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const cia = txInfo.args as MoveScriptInfo;
+  console.log(`Code Hash:\t\t${HexString.fromUint8Array(cia.codeHash)}`);
   // print type arguments
   for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
     console.log(`Type Arguments (${i+1}):\t${cia.typeArgs[i]}`);
