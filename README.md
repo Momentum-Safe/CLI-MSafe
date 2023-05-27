@@ -200,3 +200,31 @@ Do you confirm with the transaction? [Y/n]
 ```
 
 After confirm, the transaction to initiate the multi-sig move script transaction request will be confirmed on blockchain.
+
+### Try yourself with a script
+
+Compile the script from MSafe example script. 
+
+```
+aptos move compile-script --package-dir ./tests/script
+
+Compiling, may take a little while to download git dependencies...
+UPDATING GIT DEPENDENCY https://github.com/aptos-labs/aptos-core.git
+INCLUDING DEPENDENCY AptosFramework
+INCLUDING DEPENDENCY AptosStdlib
+INCLUDING DEPENDENCY MoveStdlib
+BUILDING Script-test
+{
+  "Result": {
+    "script_location": "./tests/script/script.mv",
+    "script_hash": "cc424c20c47a6a41730ddab4df2f96d63f642306386733fa43e80d4120cc1eda"
+  }
+}
+```
+
+Propose a transaction with the compiled script with MSafe. 
+
+```javascript
+yarn move-script --msafe ${MY_MSAFE} --move-script ./tests/script/script.mv --network mainnet
+```
+

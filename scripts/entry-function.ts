@@ -1,12 +1,9 @@
-import {DEF_ACCOUNT_CONF, MY_ACCOUNT} from "../src/web3/global";
+import {DEF_ACCOUNT_CONF} from "../src/web3/global";
 import {Command} from "commander";
 import {BCS, HexString} from "aptos";
-import {loadMomentumSafe} from "./common";
+import {loadMomentumSafe, parseAndLoadTxnConfig, printTxnAndConfirm, proposeTransaction} from "./common";
 import {makeEntryFunctionTx} from "../src/momentum-safe/msafe-txn";
-import {printSeparator, printTxDetails, promptForYN} from "../src/cmd/common";
-import * as Aptos from "../src/web3/global";
-import {isStringAddress} from "../src/utils/check";
-import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE, loadConfigAndApply} from "../src/utils/load";
+import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE} from "../src/utils/load";
 
 
 const program = new Command();
@@ -16,7 +13,7 @@ const cli = program
   .description("Momentum Safe entry function caller. Call an entry function.")
   .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
   .option("-p --profile <string>", "profile to use in aptos config", "default")
-  .option("-n --network <string>", "network (devnet, testnet), use deployed address", "auto")
+  .option("-n --network <string>", "network (devnet, testnet), use deployed address", "mainnet")
   .requiredOption("--msafe <string>", "momentum safe address")
   .option("--max-gas <bigint>", "max gas to override the default settings")
   .option("--gas-price <bigint>", "gas price that override the default settings")
@@ -28,7 +25,7 @@ const cli = program
 
 
 async function main() {
-  const args = await parseAndLoadConfig();
+  const args = await parseAndLoadTxnConfig(cli);
 
   // load msafe
   const msafe = await loadMomentumSafe(HexString.ensure(args.msafe));
@@ -52,72 +49,9 @@ async function main() {
   );
 
   // Confirm transaction details
-  await printTxDetails(msafeTxn.getTxnInfo());
-  printSeparator();
-  const userConfirm = await promptForYN("Do you confirm with the transaction?", true);
-  if (!userConfirm) {
-    console.error("User canceled operation");
-    process.exit(1);
-  }
-
+  await printTxnAndConfirm(msafeTxn);
   // Submit transaction
-  const res = await msafe.initTransaction(MY_ACCOUNT, msafeTxn, {
-    gasPrice: args.gasPrice,
-    maxGas: args.maxGas,
-    estimateMaxGas: args.estimateMaxGas,
-    estimateGasPrice: args.estimateGasPrice,
-  });
-  const myHash = (res.pendingTx as any).hash;
-  console.log(`\tTransaction ${myHash} submitted to blockchain`);
-  await Aptos.waitForTransaction(myHash);
-  console.log(`\tTransaction confirmed on chain.`);
-}
-
-async function parseAndLoadConfig(): Promise<configArg> {
-  const args = getArguments();
-
-  await loadConfigAndApply({
-    configFilePath: args.config,
-    profile: args.profile,
-    network: args.network,
-    endpoint: args.endpoint,
-    faucet: args.faucet,
-    msafeDeployer: args.msafeDeployer,
-  });
-  return args;
-}
-
-type configArg = {
-  config: string,
-  profile: string,
-  network: string,
-  maxGas: bigint,
-  estimateMaxGas: boolean,
-  gasPrice: bigint,
-  estimateGasPrice: boolean,
-  endpoint: string,
-  faucet: string,
-  msafeDeployer: string,
-  msafe: string,
-}
-
-function getArguments(): configArg {
-  const estimateGasPrice = cli.opts().gasPrice === undefined;
-  const estimateMaxGas = cli.opts().maxGas === undefined;
-
-  return {
-    config: cli.opts().config,
-    profile: cli.opts().profile,
-    network: cli.opts().network,
-    maxGas: cli.opts().maxGas,
-    gasPrice: cli.opts().gasPrice,
-    estimateGasPrice,
-    estimateMaxGas,
-    endpoint: cli.opts().endpoint,
-    faucet: cli.opts().faucet,
-    msafeDeployer: cli.opts().msafeDeployer.toLowerCase(),
-    msafe: cli.opts().msafe.toLowerCase(),
-  };
+  await proposeTransaction(msafe, msafeTxn, args);
 }
 
 (async () => main())();
