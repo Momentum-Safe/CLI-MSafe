@@ -172,8 +172,10 @@ This script will run a move script with the given compiled move script.
 Example move script
 ```move
 script {
-    fun main() {
-        //...
+    use aptos_framework::coin;
+
+    fun main<T>(s: &signer, to: address, amount: u64) {
+        coin::transfer<T>(s, to, amount);
     }
 }
 ```
@@ -188,11 +190,15 @@ yarn move-script --msafe ${MSAFE_ADDR} --move-script ${SCRIPT_PATH}
 
 ```
 Action:                 Move script
+Code Hash:              0xcc424c20c47a6a41730ddab4df2f96d63f642306386733fa43e80d4120cc1eda
+Type Arguments (1):     0x0000000000000000000000000000000000000000000000000000000000000001::aptos_coin::AptosCoin
+Arguments (1):          bcs (031a8d1e3580c7a1c495283e07c49553a9f72250d016efc9f5268aa7a80daf9d91)
+Arguments (2):          bcs (010100000000000000)
 Sender:                 0x1a8d1e3580c7a1c495283e07c49553a9f72250d016efc9f5268aa7a80daf9d91
 Sequence Number:        2
-Expiration:             Thu Jun 01 2023 21:20:57 GMT+0800 (China Standard Time)
+Expiration:             Mon Jun 05 2023 15:19:14 GMT+0800 (China Standard Time)
 Gas Price:              120
-Max Gas:                1000
+Max Gas:                50000
 
 --------------------
 
