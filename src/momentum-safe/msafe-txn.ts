@@ -657,7 +657,7 @@ function decodeMoveScriptInfo(payload: TxnBuilderTypes.TransactionPayloadScript)
     code: payload.value.code,
     codeHash: sha3_256(payload.value.code).toUint8Array(),
     typeArgs: payload.value.ty_args.map(tArg => decodeTypeTag(tArg)),
-    args: payload.value.args as any,
+    args: payload.value.args,
   };
 }
 

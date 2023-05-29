@@ -284,7 +284,7 @@ export class AptosScriptTxnBuilder extends AptosTxnBuilder {
     }
   }
   payload(): TxnBuilderTypes.TransactionPayload {
-    const toTypeTag = (tagStr:string)=>new TxnBuilderTypes.TypeTagParser(tagStr).parseTypeTag();
+    const toTypeTag = (tagStr: string)=>new TxnBuilderTypes.TypeTagParser(tagStr).parseTypeTag();
     return new TxnBuilderTypes.TransactionPayloadScript(
         new TxnBuilderTypes.Script(
             this._script,
