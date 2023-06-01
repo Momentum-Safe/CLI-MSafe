@@ -16,6 +16,7 @@
       {
         "omitLastInOneLineBlock": true
       }
-    ]
+    ],
+    "@typescript-eslint/type-annotation-spacing": "error"
   }
 }

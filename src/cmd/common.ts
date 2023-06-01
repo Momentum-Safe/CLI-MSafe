@@ -1,6 +1,6 @@
 import readline from "readline-sync";
 import * as Aptos from "../web3/global";
-import {HexString} from "aptos";
+import {BCS, HexString} from "aptos";
 import {BigNumber} from 'bignumber.js';
 import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
 import {
@@ -12,7 +12,7 @@ import {
   ModulePublishInfo,
   MSafeTxnInfo,
   MSafeTxnType,
-  RevertArgs,
+  RevertArgs, MoveScriptArgs, MoveScriptInfo,
 } from "../momentum-safe/msafe-txn";
 import {fromDust} from "../utils/bignumber";
 import {APT_COIN_INFO} from "../web3/global";
@@ -286,6 +286,9 @@ export async function printTxDetails(txData: MSafeTxnInfo) {
     case (MSafeTxnType.ModulePublish):
       printModulePublishTxn(txData);
       break;
+    case (MSafeTxnType.MoveScript):
+      printMoveScriptTxn(txData);
+      break;
   }
   printTxCommonData(txData);
 }
@@ -356,6 +359,21 @@ function printModulePublishTxn(txInfo: MSafeTxnInfo) {
   console.log(`Dependency:\t\t${mpi.metadata.deps.map(
     dep => `${HexString.fromUint8Array(dep.account.address)}::${dep.package_name}`
   ).join('\n\t\t\t')}`);
+}
+
+function printMoveScriptTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
+  const cia = txInfo.args as MoveScriptInfo;
+  console.log(`Code Hash:\t\t${HexString.fromUint8Array(cia.codeHash)}`);
+  // print type arguments
+  for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
+    console.log(`Type Arguments (${i+1}):\t${cia.typeArgs[i]}`);
+  }
+  // print arguments
+  for (let i = 0; i != cia.args.length; i = i + 1) {
+    const arg = cia.args[i];
+    console.log(`Arguments (${i+1}):\t\tbcs (${HexString.fromUint8Array(BCS.bcsToBytes(arg)).noPrefix()})`);
+  }
 }
 
 async function getBCSArgValue(cia: EntryFunctionArgs) {
