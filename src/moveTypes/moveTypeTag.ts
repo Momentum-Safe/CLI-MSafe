@@ -8,7 +8,7 @@ export class MoveVectorTypeTag {
     constructor(public readonly element: MoveTypeTag) {
 
     }
-    toString():string {
+    toString(): string {
         return this.element.toString();
     }
 }

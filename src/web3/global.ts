@@ -115,7 +115,7 @@ export async function getAccountModule(addr: HexString, moduleName: string) {
   return await APTOS.getAccountModule(addr, moduleName);
 }
 
-export async function filterEvent<T>(handle: EventHandle<T>, option?: PaginationArgs):Promise<Event<T>[]> {
+export async function filterEvent<T>(handle: EventHandle<T>, option?: PaginationArgs): Promise<Event<T>[]> {
   return await APTOS.getEventsByCreationNumber(handle.guid.id.addr, handle.guid.id.creation_num, option) as any;
 }
 

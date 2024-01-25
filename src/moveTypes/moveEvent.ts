@@ -24,6 +24,6 @@ export type PaginationArgs = {
     limit?: number;
 }
 
-export type Event<T> = Omit<Types.VersionedEvent, 'data'> & {data:T};
+export type Event<T> = Omit<Types.VersionedEvent, 'data'> & {data: T};
 
 

@@ -37,6 +37,7 @@
     "deploy": "ts-node scripts/deploy.ts",
     "move-script": "ts-node scripts/move-script.ts",
     "entry-function": "ts-node scripts/entry-function.ts",
+    "migrate": "ts-node scripts/migrate.ts",
     "run-test-coin": "ts-node tests/test-coin/test-coin.ts",
     "run-test-coin-compile": "aptos tests/move compile --package-dir move",
     "run-test-coin-publish": "aptos tests/move publish --package-dir move"
