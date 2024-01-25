@@ -1,5 +1,6 @@
 import { BCS, HexString, TxnBuilderTypes, Types } from "aptos";
 import { getMSafeStatus } from "../cmd/common";
+import { toMigrateTx } from "../cmd/migration";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
 import {
   SimpleMap,
@@ -8,6 +9,8 @@ import {
   TableWithLength,
   Vector,
 } from "../moveTypes/moveTypes";
+import { MigrationProofMessage } from "../types/MigrationMessage";
+import { TypeMessage } from "../types/Transaction";
 import { HexBuffer } from "../utils/buffer";
 import { isHexEqual } from "../utils/check";
 import { computeMultiSigAddress, sha3_256 } from "../utils/crypto";
@@ -220,9 +223,15 @@ export class MomentumSafe {
     if (!MomentumSafe.isTxValid(txType, curSN)) {
       throw new Error("Transaction is no longer valid: low sequence number.");
     }
-    const msafeTx = MSafeTransaction.deserialize(HexBuffer(txType.payload));
-    const msafeTxInfo = msafeTx.getTxnInfo();
-    return [txType, msafeTxInfo];
+    const payload = HexBuffer(txType.payload);
+
+    if (MigrationProofMessage.isMigrationProofMessage(payload)) {
+      return [txType, toMigrateTx(txType)];
+    } else {
+      const msafeTx = MSafeTransaction.deserialize(HexBuffer(txType.payload));
+      const msafeTxInfo = msafeTx.getTxnInfo();
+      return [txType, msafeTxInfo];
+    }
   }
 
   private async makeInitTxTx(
@@ -314,8 +323,13 @@ export class MomentumSafe {
       txs
         .filter((tx) => MomentumSafe.isTxValid(tx, sn))
         .forEach((tx) => {
-          const msafeTx = MSafeTransaction.deserialize(HexBuffer(tx.payload));
-          pendings.push(msafeTx.getTxnInfo(tx.signatures.data.length));
+          const payload = HexBuffer(tx.payload);
+          if (MigrationProofMessage.isMigrationProofMessage(payload)) {
+            pendings.push(toMigrateTx(tx));
+          } else {
+            const msafeTx = MSafeTransaction.deserialize(payload);
+            pendings.push(msafeTx.getTxnInfo(tx.signatures.data.length));
+          }
         });
     }
     const nextSN = this.getNextSequenceNumberFromResourceData(data);
@@ -342,7 +356,12 @@ export class MomentumSafe {
   }
 
   private static isTxValid(txType: TransactionType, curSN: bigint): boolean {
-    // Add expiration
+    const payload = HexBuffer(txType.payload);
+    if (TypeMessage.isTypeMessage(payload)) {
+      return (
+        TypeMessage.deserialize(payload).raw.inner.sequence_number >= curSN
+      );
+    }
     const tx = Transaction.deserialize(HexBuffer(txType.payload));
     return (
       tx.raw.sequence_number >= curSN &&

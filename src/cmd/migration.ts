@@ -1,11 +1,20 @@
 import colors from "ansicolor";
 import { BCS, HexString, TxnBuilderTypes } from "aptos";
 import { FUNCTIONS, MODULES } from "../momentum-safe/common";
-import { MomentumSafeInfo } from "../momentum-safe/momentum-safe";
-import { applyDefaultOptions } from "../momentum-safe/msafe-txn";
+import {
+  MomentumSafeInfo,
+  TransactionType,
+} from "../momentum-safe/momentum-safe";
+import {
+  MSafeTxnInfo,
+  MSafeTxnType,
+  applyDefaultOptions,
+} from "../momentum-safe/msafe-txn";
 import { MigrationProofMessage } from "../types/MigrationMessage";
 import { TypeMessage } from "../types/Transaction";
+import { HexBuffer } from "../utils/buffer";
 import { isAscii, isHexEqual } from "../utils/check";
+import { sha3_256 } from "../utils/crypto";
 import * as Aptos from "../web3/global";
 import { AptosEntryTxnBuilder } from "../web3/transaction";
 import {
@@ -132,4 +141,22 @@ async function makeMigrationTxBuilder(
       BCS.serializeVectorWithFunc(Object.keys(metadata), "serializeStr"),
       BCS.serializeVectorWithFunc(Object.values(metadata), "serializeStr"),
     ]);
+}
+
+export function toMigrateTx(tx: TransactionType): MSafeTxnInfo {
+  const payload = HexBuffer(tx.payload);
+  const message = TypeMessage.deserialize(payload);
+  const migrationMessage = message.raw.inner;
+  return {
+    txType: MSafeTxnType.Migrate,
+    sn: migrationMessage.sequence_number,
+    hash: sha3_256(message.raw.toBytes()),
+    chainID: migrationMessage.chain_id.value,
+    expiration: new Date(),
+    sender: HexString.ensure(migrationMessage.account_address.toHexString()),
+    gasPrice: 0n,
+    maxGas: 0n,
+    args: {},
+    numSigs: tx.signatures.data.length,
+  };
 }

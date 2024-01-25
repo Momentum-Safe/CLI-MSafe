@@ -319,7 +319,7 @@ export async function printTxDetails(txData: MSafeTxnInfo) {
       printMoveScriptTxn(txData);
       break;
     case MSafeTxnType.Migrate:
-      await printCustomTxn(txData);
+      await printMigrateTxn(txData);
       break;
   }
   printTxCommonData(txData);
@@ -421,6 +421,10 @@ function printMoveScriptTxn(txInfo: MSafeTxnInfo) {
       ).noPrefix()})`
     );
   }
+}
+
+async function printMigrateTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
 }
 
 async function getBCSArgValue(cia: EntryFunctionArgs) {

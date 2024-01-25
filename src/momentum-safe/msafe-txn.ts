@@ -97,6 +97,14 @@ export type MoveScriptInfo = {
   args: TxnBuilderTypes.TransactionArgument[]; // encoded bytes
 };
 
+export type MigrateArgs = {
+  moveScriptFile: string;
+  typeArgs: string[];
+  args: TxnBuilderTypes.TransactionArgument[];
+};
+
+export type MigrateInfo = {};
+
 export enum MSafeTxnType {
   Unknown = "Unknown transaction",
   APTCoinTransfer = "Transfer APT",
@@ -117,7 +125,8 @@ export type payloadInfo =
   | RevertArgs
   | EntryFunctionArgs
   | ModulePublishInfo
-  | MoveScriptInfo;
+  | MoveScriptInfo
+  | MigrateInfo;
 
 export type MSafeTxnInfo = {
   txType: MSafeTxnType;
