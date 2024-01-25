@@ -1,8 +1,6 @@
 import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
 import { BCS, HexString, TransactionBuilder, TxnBuilderTypes } from "aptos";
 import fs from "fs";
-import { MigrationProofMessage } from "../types/MigrationMessage";
-import { TypeMessage } from "../types/Transaction";
 import { isHexEqual } from "../utils/check";
 import { sha3_256 } from "../utils/crypto";
 import {
@@ -22,7 +20,6 @@ import {
   TxConfig,
 } from "../web3/transaction";
 import { APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES, STRUCTS } from "./common";
-import { MomentumSafe } from "./momentum-safe";
 import {
   IncludedArtifacts,
   MovePublisher,
@@ -109,6 +106,7 @@ export enum MSafeTxnType {
   EntryFunction = "Entry function",
   ModulePublish = "Module publish",
   MoveScript = "Move script",
+  Migrate = "Migrate MSafe",
 }
 
 // TODO: add module publish payload info
@@ -277,57 +275,6 @@ export async function compileAndMakeModulePublishTx(
   const mp = await MovePublisher.fromMoveDir(args.moveDir);
   const tx = await mp.getDeployTransaction(sender, config);
   return new MSafeTransaction(tx.raw);
-}
-
-export async function executeInitMigration(
-  sender: MomentumSafe,
-  opts?: Options
-) {
-  const config = await applyDefaultOptions(sender.address, opts);
-  const [status] = await Aptos.client().view({
-    function: `${DEPLOYER}::momentum_safe::msafe_status`,
-    type_arguments: [],
-    arguments: [sender.address.hex()],
-  });
-
-  if (status !== 0) {
-    throw new Error("MultiSig already migrated.");
-  }
-
-  /**
-   * Init migration message
-   */
-  const metadata = {
-    m_source: "MSafe",
-    m_name: "Wallet Name",
-    m_desc: "Wallet Desc",
-  };
-  const migrationMessage = new MigrationProofMessage(
-    config.chainID,
-    sender.address,
-    config.sequenceNumber,
-    sender.owners,
-    BigInt(sender.threshold)
-  );
-  const typeMessage = new TypeMessage(migrationMessage);
-  const signMessage = typeMessage.getSigningMessage();
-  const signature = Aptos.MY_ACCOUNT.account.signBuffer(signMessage);
-
-  const transactionBuilder = await makeMigrationTxBuilder(
-    typeMessage.raw.inner.sequence_number,
-    new TxnBuilderTypes.Ed25519Signature(signature.toUint8Array()),
-    metadata,
-    sender,
-    opts
-  );
-
-  const transaction = await transactionBuilder.build(Aptos.MY_ACCOUNT.account);
-  const signedTransaction = Aptos.MY_ACCOUNT.sign(transaction);
-  const hash = await Aptos.client().submitSignedBCSTransaction(
-    signedTransaction
-  );
-  await Aptos.waitForTransaction(hash.hash);
-  console.log("🚀 ~ hash:", hash);
 }
 
 export async function makeModulePublishTx(
@@ -813,33 +760,4 @@ function getModulePublishHash(
   hash.update(metadataRaw);
   hash.update(codes);
   return HexString.fromUint8Array(hash.digest());
-}
-
-async function makeMigrationTxBuilder(
-  sn: BCS.AnyNumber,
-  signature: TxnBuilderTypes.Ed25519Signature,
-  metadata: { [key: string]: string } = {},
-  sender: MomentumSafe,
-  opts?: Options
-) {
-  const txBuilder = new AptosEntryTxnBuilder();
-  const pkIndex = sender.ownersPublicKeys.findIndex((it) =>
-    isHexEqual(it, Aptos.MY_ACCOUNT.publicKey())
-  );
-  const config = await applyDefaultOptions(Aptos.MY_ACCOUNT.address(), opts);
-
-  return txBuilder
-    .addr(DEPLOYER)
-    .module(MODULES.MOMENTUM_SAFE)
-    .method(FUNCTIONS.MSAFE_INIT_MIGRATION)
-    .from(Aptos.MY_ACCOUNT.address())
-    .withTxConfig(config)
-    .args([
-      BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(sender.address)),
-      BCS.bcsSerializeU8(pkIndex),
-      BCS.bcsSerializeUint64(sn),
-      BCS.bcsToBytes(signature),
-      BCS.serializeVectorWithFunc(Object.keys(metadata), "serializeStr"),
-      BCS.serializeVectorWithFunc(Object.values(metadata), "serializeStr"),
-    ]);
 }

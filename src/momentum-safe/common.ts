@@ -25,7 +25,6 @@ export const MODULES = {
 export const FUNCTIONS = {
   MSAFE_REGISTER: "register",
   MSAFE_INIT_TRANSACTION: "init_transaction",
-  MSAFE_INIT_MIGRATION: "init_migration",
   MSAFE_SUBMIT_SIGNATURE: "submit_signature",
   MSAFE_REVERT: "do_nothing",
 
@@ -39,6 +38,9 @@ export const FUNCTIONS = {
   REGISTRY_REGISTER: "register",
 
   PUBLISH_PACKAGE: "publish_package_txn",
+
+  MSAFE_INIT_MIGRATION: "init_migration",
+  MSAFE_GET_STATUS: "msafe_status",
 } as const;
 
 export const STRUCTS = {
