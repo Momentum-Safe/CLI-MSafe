@@ -1,6 +1,6 @@
 import { BCS, HexString, TxnBuilderTypes, Types } from "aptos";
 import { getMSafeStatus } from "../cmd/common";
-import { toMigrateTx } from "../cmd/migration";
+import { makeMigrateTxBuilder, toMigrateTx } from "../cmd/migration";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
 import {
   SimpleMap,
@@ -183,27 +183,36 @@ export class MomentumSafe {
 
   async assembleAndSubmitTx(signer: Account, txHash: HexString | string) {
     const txType = await this.findTx(txHash);
-    const signatures = txType.signatures;
     const payload = txType.payload;
-
+    const signatures = txType.signatures;
     const selfSignature = this.signTx(signer, txType);
-
     const multiSignature = assembleMultiSig(
       this.ownersPublicKeys,
       signatures,
       signer,
       selfSignature
     );
-    const bcsTxn = assembleMultiSigTxn(
-      payload,
-      this.rawPublicKey,
-      multiSignature
-    );
-    return await Aptos.sendSignedTransactionAsync(bcsTxn);
+
+    if (MigrationProofMessage.isMigrationProofMessage(HexBuffer(payload))) {
+      const signingTx = await makeMigrateTxBuilder(multiSignature, this);
+      const transaction = await signingTx.build(Aptos.MY_ACCOUNT.account);
+      const signedTransaction = Aptos.MY_ACCOUNT.sign(transaction);
+      return await Aptos.sendSignedTransactionAsync(signedTransaction);
+    } else {
+      const bcsTxn = assembleMultiSigTxn(
+        payload,
+        this.rawPublicKey,
+        multiSignature
+      );
+      return await Aptos.sendSignedTransactionAsync(bcsTxn);
+    }
   }
 
   signTx(signer: Account, txType: TransactionType) {
-    const tx = Transaction.deserialize(HexBuffer(txType.payload));
+    const payload = HexBuffer(txType.payload);
+    const tx = TypeMessage.isTypeMessage(payload)
+      ? TypeMessage.deserialize(payload)
+      : Transaction.deserialize(payload);
     const [, sig] = signer.getSigData(tx);
     return sig;
   }

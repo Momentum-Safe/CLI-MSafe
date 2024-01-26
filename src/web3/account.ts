@@ -1,19 +1,23 @@
 import {
   AptosAccount,
+  BCS,
   HexString,
   MaybeHexString,
   TransactionBuilderEd25519,
   TxnBuilderTypes,
 } from "aptos";
-import {BCS} from 'aptos';
-import {Transaction} from "./transaction";
+import { TypeMessage } from "../types/Transaction";
+import * as Aptos from "../web3/global";
+import { Transaction } from "./transaction";
 
 // SingleWallet is a single-signed wallet account
 export class Account {
-
   account: AptosAccount;
 
-  constructor(privateKeyBytes?: Uint8Array | undefined, address?: MaybeHexString) {
+  constructor(
+    privateKeyBytes?: Uint8Array | undefined,
+    address?: MaybeHexString
+  ) {
     this.account = new AptosAccount(privateKeyBytes, address);
   }
 
@@ -30,9 +34,12 @@ export class Account {
   }
 
   sign(txn: Transaction): BCS.Bytes {
-    const txnBuilder = new TransactionBuilderEd25519((message: TxnBuilderTypes.SigningMessage) => {
-      return this.signFn(message);
-    }, this.publicKey().toUint8Array());
+    const txnBuilder = new TransactionBuilderEd25519(
+      (message: TxnBuilderTypes.SigningMessage) => {
+        return this.signFn(message);
+      },
+      this.publicKey().toUint8Array()
+    );
     return txnBuilder.sign(txn.raw);
   }
 
@@ -41,9 +48,23 @@ export class Account {
     return new TxnBuilderTypes.Ed25519Signature(sig.toUint8Array());
   }
 
-  getSigData(txn: Transaction): [signing: TxnBuilderTypes.SigningMessage, signature: TxnBuilderTypes.Ed25519Signature] {
-    const signingMessage = txn.getSigningMessage();
-    const sig = this.signFn(signingMessage);
-    return [signingMessage, sig];
+  getSigData(
+    txn: Transaction | TypeMessage
+  ): [
+    signing: TxnBuilderTypes.SigningMessage,
+    signature: TxnBuilderTypes.Ed25519Signature
+  ] {
+    if (txn instanceof TypeMessage) {
+      const signingMessage = txn.getSigningMessage();
+      const signature = Aptos.MY_ACCOUNT.account.signBuffer(signingMessage);
+      return [
+        signingMessage,
+        new TxnBuilderTypes.Ed25519Signature(signature.toUint8Array()),
+      ];
+    } else {
+      const signingMessage = txn.getSigningMessage();
+      const sig = this.signFn(signingMessage);
+      return [signingMessage, sig];
+    }
   }
 }

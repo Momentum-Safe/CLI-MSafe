@@ -1,8 +1,10 @@
 import { BCS, HexString, TxnBuilderTypes } from "aptos";
-import { APTOS_TOKEN as APTOS_COIN, Transaction } from "../web3/transaction";
-import { HexBuffer } from "../utils/buffer";
-import { DEPLOYER } from "../web3/global";
 import { MoveStructTypeTag } from "../moveTypes/moveTypeTag";
+import { TypeMessage } from "../types/Transaction";
+import { HexBuffer } from "../utils/buffer";
+import * as Aptos from "../web3/global";
+import { DEPLOYER } from "../web3/global";
+import { APTOS_TOKEN as APTOS_COIN, Transaction } from "../web3/transaction";
 
 export const APTOS_FRAMEWORK =
   "0x0000000000000000000000000000000000000000000000000000000000000001";
@@ -41,6 +43,7 @@ export const FUNCTIONS = {
 
   MSAFE_INIT_MIGRATION: "init_migration",
   MSAFE_GET_STATUS: "msafe_status",
+  MSAFE_MIGRATE: "migrate",
 } as const;
 
 export const STRUCTS = {
@@ -134,12 +137,21 @@ export function assembleMultiSigTxn(
     new TxnBuilderTypes.TransactionAuthenticatorMultiEd25519(pubKey, sig);
   const hb =
     typeof payload === "string" ? HexBuffer(payload) : Buffer.from(payload);
-  const signingTx = Transaction.deserialize(hb);
-  const signedTx = new TxnBuilderTypes.SignedTransaction(
-    signingTx.raw,
-    authenticator
-  );
-  return BCS.bcsToBytes(signedTx);
+
+  if (TypeMessage.isTypeMessage(hb)) {
+    const typeMessage = TypeMessage.deserialize(hb);
+    const signMessage = typeMessage.getSigningMessage();
+
+    const signature = Aptos.MY_ACCOUNT.account.signBuffer(signMessage);
+    return signature.toUint8Array();
+  } else {
+    const signingTx = Transaction.deserialize(hb);
+    const signedTx = new TxnBuilderTypes.SignedTransaction(
+      signingTx.raw,
+      authenticator
+    );
+    return BCS.bcsToBytes(signedTx);
+  }
 }
 
 export function hasDuplicateAddresses(addrs: HexString[]): boolean {

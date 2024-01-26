@@ -2,6 +2,7 @@ import colors from "ansicolor";
 import { BCS, HexString, TxnBuilderTypes } from "aptos";
 import { FUNCTIONS, MODULES } from "../momentum-safe/common";
 import {
+  MomentumSafe,
   MomentumSafeInfo,
   TransactionType,
 } from "../momentum-safe/momentum-safe";
@@ -140,6 +141,26 @@ async function makeMigrationTxBuilder(
       BCS.bcsToBytes(signature),
       BCS.serializeVectorWithFunc(Object.keys(metadata), "serializeStr"),
       BCS.serializeVectorWithFunc(Object.values(metadata), "serializeStr"),
+    ]);
+}
+
+export async function makeMigrateTxBuilder(
+  multiSignature: TxnBuilderTypes.MultiEd25519Signature,
+  msafe: MomentumSafe
+) {
+  const txBuilder = new AptosEntryTxnBuilder();
+  const config = await applyDefaultOptions(Aptos.MY_ACCOUNT.address());
+
+  return txBuilder
+    .addr(Aptos.DEPLOYER)
+    .module(MODULES.MOMENTUM_SAFE)
+    .method(FUNCTIONS.MSAFE_MIGRATE)
+    .from(Aptos.MY_ACCOUNT.address())
+    .withTxConfig(config)
+    .args([
+      BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(msafe.address)),
+      BCS.bcsToBytes(msafe.rawPublicKey),
+      BCS.bcsToBytes(multiSignature),
     ]);
 }
 
