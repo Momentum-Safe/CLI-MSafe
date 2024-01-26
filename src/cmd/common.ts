@@ -241,23 +241,21 @@ class CmdOptionHelper {
     this.options = options;
     this.pmp = pmp;
     this.m = new Map();
-    options
-      .filter((opt) => !opt.visible || opt.visible())
-      .forEach((opt) => {
-        if (this.m.has(opt.shortage)) {
-          throw new Error("duplicate option");
-        }
-        this.m.set(opt.shortage, opt);
+    options.forEach((opt) => {
+      if (this.m.has(opt.shortage)) {
+        throw new Error("duplicate option");
+      }
+      this.m.set(opt.shortage, opt);
 
-        if (opt.alternatives) {
-          opt.alternatives.forEach((alt) => {
-            if (this.m.has(alt)) {
-              throw new Error("duplicate alternatives");
-            }
-            this.m.set(alt, opt);
-          });
-        }
-      });
+      if (opt.alternatives) {
+        opt.alternatives.forEach((alt) => {
+          if (this.m.has(alt)) {
+            throw new Error("duplicate alternatives");
+          }
+          this.m.set(alt, opt);
+        });
+      }
+    });
   }
 
   async execute() {
@@ -269,9 +267,11 @@ class CmdOptionHelper {
   private printOptions() {
     console.log(this.pmp);
     console.log();
-    this.options.forEach((opt) => {
-      console.log(`\t${opt.shortage})\t${opt.showText}`);
-    });
+    this.options
+      .filter((opt) => !opt.visible || opt.visible())
+      .forEach((opt) => {
+        console.log(`\t${opt.shortage})\t${opt.showText}`);
+      });
     console.log();
   }
 
