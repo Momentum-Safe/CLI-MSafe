@@ -61,6 +61,7 @@ async function showMSafeDetails(c: { address: HexString }) {
         shortage: "m",
         showText: "Migrate",
         handleFunc: () => setState(State.Migrate, { address: c.address }),
+        visible: () => info.status === MSafeStatus.NORMAL,
       },
       {
         shortage: "r",
