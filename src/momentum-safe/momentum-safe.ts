@@ -1,69 +1,95 @@
-import * as Aptos from "../web3/global";
-import {HexString, TxnBuilderTypes, BCS, Types, TransactionBuilder} from 'aptos';
-import {AptosEntryTxnBuilder, Options, Transaction} from '../web3/transaction';
-import { Account } from '../web3/account';
-import {
-  MODULES,
-  FUNCTIONS,
-  assembleMultiSigTxn, getStructType,
-} from './common';
-import { assembleMultiSig } from './sig-helper';
-import { computeMultiSigAddress, sha3_256 } from "../utils/crypto";
-import {applyDefaultOptions, MSafeTransaction, MSafeTxnInfo} from "./msafe-txn";
-import { formatAddress } from "../utils/parse";
-import { isHexEqual } from "../utils/check";
-import { HexBuffer } from "../utils/buffer";
-import {DEPLOYER} from "../web3/global";
+import { BCS, HexString, TxnBuilderTypes, Types } from "aptos";
+import { getMSafeStatus } from "../cmd/common";
+import { makeMigrateTxBuilder, toMigrateTx } from "../cmd/migration";
 import { EventHandle, PaginationArgs } from "../moveTypes/moveEvent";
-import { SimpleMap, TableWithLength, TEd25519PublicKey, TEd25519Signature, Vector } from "../moveTypes/moveTypes";
-
+import {
+  SimpleMap,
+  TEd25519PublicKey,
+  TEd25519Signature,
+  TableWithLength,
+  Vector,
+} from "../moveTypes/moveTypes";
+import { MigrationProofMessage } from "../types/MigrationMessage";
+import { TypeMessage } from "../types/Transaction";
+import { HexBuffer } from "../utils/buffer";
+import { isHexEqual } from "../utils/check";
+import { computeMultiSigAddress, sha3_256 } from "../utils/crypto";
+import { formatAddress } from "../utils/parse";
+import { Account } from "../web3/account";
+import * as Aptos from "../web3/global";
+import { DEPLOYER } from "../web3/global";
+import {
+  AptosEntryTxnBuilder,
+  Options,
+  Transaction,
+} from "../web3/transaction";
+import {
+  FUNCTIONS,
+  MODULES,
+  assembleMultiSigTxn,
+  getStructType,
+} from "./common";
+import {
+  MSafeTransaction,
+  MSafeTxnInfo,
+  applyDefaultOptions,
+} from "./msafe-txn";
+import { assembleMultiSig } from "./sig-helper";
 
 // Data stored in MomentumSafe.move
 
 export type Info = {
-  owners: Vector<Types.Address>,
-  public_keys: Vector<TEd25519PublicKey>, // Vector of public_keys
-  nonce: Types.U64,
-  threshold: number,
-  metadata: Types.HexEncodedBytes, // plain text / json / uri
-}
+  owners: Vector<Types.Address>;
+  public_keys: Vector<TEd25519PublicKey>; // Vector of public_keys
+  nonce: Types.U64;
+  threshold: number;
+  metadata: Types.HexEncodedBytes; // plain text / json / uri
+};
 
 export type Momentum = {
-  info: Info,
-  txn_book: TxnBook,
-}
+  info: Info;
+  txn_book: TxnBook;
+};
 
 export type TxnBook = {
   // minimum nonce in the txn_book
-  min_sequence_number: Types.U64,
+  min_sequence_number: Types.U64;
   // maximum nonce in the txn_book
-  max_sequence_number: Types.U64,
-  tx_hashes: TableWithLength<Types.U64, Vector<Types.HashValue>>, // nonce => Vector<tx hash>
+  max_sequence_number: Types.U64;
+  tx_hashes: TableWithLength<Types.U64, Vector<Types.HashValue>>; // nonce => Vector<tx hash>
   // sequence number => a list of transactions (with the same sequence number)
-  pendings: TableWithLength<Types.U64, TransactionType>, // Hash => Tx
-}
+  pendings: TableWithLength<Types.U64, TransactionType>; // Hash => Tx
+};
 
 export type TransactionType = {
-  payload: Types.HexEncodedBytes,
-  metadata: Types.HexEncodedBytes, // json or uri
-  signatures: SimpleMap<TEd25519PublicKey, TEd25519Signature>, // public_key => signature
-}
+  payload: Types.HexEncodedBytes;
+  metadata: Types.HexEncodedBytes; // json or uri
+  signatures: SimpleMap<TEd25519PublicKey, TEd25519Signature>; // public_key => signature
+};
 
 export type MomentumSafeEvent = {
-  register_events: EventHandle<Info>,
-  transaction_events: EventHandle<TransactionType>
-}
+  register_events: EventHandle<Info>;
+  transaction_events: EventHandle<TransactionType>;
+};
 
 export type MomentumSafeInfo = {
-  owners: HexString[],
-  pubKeys: HexString[],
-  creationNonce: number,
-  threshold: number,
-  curSN: bigint,
-  nextSN: bigint,
-  metadata: string,
-  balance: bigint,
-  pendingTxs: MSafeTxnInfo[],
+  owners: HexString[];
+  pubKeys: HexString[];
+  creationNonce: number;
+  threshold: number;
+  curSN: bigint;
+  nextSN: bigint;
+  metadata: string;
+  balance: bigint;
+  pendingTxs: MSafeTxnInfo[];
+  address: HexString;
+  status: MSafeStatus;
+};
+
+export enum MSafeStatus {
+  NORMAL = 0,
+  MIGRATING = 1,
+  MIGRATED = 2,
 }
 
 export class MomentumSafe {
@@ -87,7 +113,11 @@ export class MomentumSafe {
     this.ownersPublicKeys = ownerPKs;
     this.threshold = threshold;
     this.creationNonce = nonce;
-    const [pk, , computedAddress] = computeMultiSigAddress(ownerPKs, threshold, nonce);
+    const [pk, , computedAddress] = computeMultiSigAddress(
+      ownerPKs,
+      threshold,
+      nonce
+    );
     this.rawPublicKey = pk;
     if (address) {
       this.address = address;
@@ -99,10 +129,14 @@ export class MomentumSafe {
   static async fromMomentumSafe(address: HexString): Promise<MomentumSafe> {
     address = formatAddress(address);
     const msafeData = await MomentumSafe.queryMSafeResource(address);
-    const owners = msafeData.info.owners.map(ownerStr => HexString.ensure(ownerStr));
+    const owners = msafeData.info.owners.map((ownerStr) =>
+      HexString.ensure(ownerStr)
+    );
     const threshold = msafeData.info.threshold;
     const nonce = BigInt(msafeData.info.nonce);
-    const ownerPubKeys = msafeData.info.public_keys.map(pk => HexString.ensure(pk));
+    const ownerPubKeys = msafeData.info.public_keys.map((pk) =>
+      HexString.ensure(pk)
+    );
     return new MomentumSafe(owners, ownerPubKeys, threshold, nonce, address);
   }
 
@@ -123,7 +157,8 @@ export class MomentumSafe {
     let collectedSigs = sigs.length;
 
     if (extraPubKey) {
-      const found = sigs.find(entry => isHexEqual(entry.key, extraPubKey)) !== undefined;
+      const found =
+        sigs.find((entry) => isHexEqual(entry.key, extraPubKey)) !== undefined;
       if (!found) {
         collectedSigs = collectedSigs + 1;
       }
@@ -135,25 +170,49 @@ export class MomentumSafe {
     const txType = await this.findTx(txHash);
     const sig = this.signTx(signer, txType);
 
-    const tx = await this.makeSubmitSignatureTxn(signer, txHash, txType, sig, opts);
+    const tx = await this.makeSubmitSignatureTxn(
+      signer,
+      txHash,
+      txType,
+      sig,
+      opts
+    );
     const signedTx = signer.sign(tx);
     return await Aptos.sendSignedTransactionAsync(signedTx);
   }
 
   async assembleAndSubmitTx(signer: Account, txHash: HexString | string) {
     const txType = await this.findTx(txHash);
-    const signatures = txType.signatures;
     const payload = txType.payload;
-
+    const signatures = txType.signatures;
     const selfSignature = this.signTx(signer, txType);
+    const multiSignature = assembleMultiSig(
+      this.ownersPublicKeys,
+      signatures,
+      signer,
+      selfSignature
+    );
 
-    const multiSignature = assembleMultiSig(this.ownersPublicKeys, signatures, signer, selfSignature);
-    const bcsTxn = assembleMultiSigTxn(payload, this.rawPublicKey, multiSignature);
-    return await Aptos.sendSignedTransactionAsync(bcsTxn);
+    if (MigrationProofMessage.isMigrationProofMessage(HexBuffer(payload))) {
+      const signingTx = await makeMigrateTxBuilder(multiSignature, this);
+      const transaction = await signingTx.build(Aptos.MY_ACCOUNT.account);
+      const signedTransaction = Aptos.MY_ACCOUNT.sign(transaction);
+      return await Aptos.sendSignedTransactionAsync(signedTransaction);
+    } else {
+      const bcsTxn = assembleMultiSigTxn(
+        payload,
+        this.rawPublicKey,
+        multiSignature
+      );
+      return await Aptos.sendSignedTransactionAsync(bcsTxn);
+    }
   }
 
   signTx(signer: Account, txType: TransactionType) {
-    const tx = Transaction.deserialize(HexBuffer(txType.payload));
+    const payload = HexBuffer(txType.payload);
+    const tx = TypeMessage.isTypeMessage(payload)
+      ? TypeMessage.deserialize(payload)
+      : Transaction.deserialize(payload);
     const [, sig] = signer.getSigData(tx);
     return sig;
   }
@@ -173,16 +232,22 @@ export class MomentumSafe {
     if (!MomentumSafe.isTxValid(txType, curSN)) {
       throw new Error("Transaction is no longer valid: low sequence number.");
     }
-    const msafeTx = MSafeTransaction.deserialize(HexBuffer(txType.payload));
-    const msafeTxInfo = msafeTx.getTxnInfo();
-    return [txType, msafeTxInfo];
+    const payload = HexBuffer(txType.payload);
+
+    if (MigrationProofMessage.isMigrationProofMessage(payload)) {
+      return [txType, toMigrateTx(txType)];
+    } else {
+      const msafeTx = MSafeTransaction.deserialize(HexBuffer(txType.payload));
+      const msafeTxInfo = msafeTx.getTxnInfo();
+      return [txType, msafeTxInfo];
+    }
   }
 
   private async makeInitTxTx(
     signer: Account,
     payload: TxnBuilderTypes.SigningMessage,
     signature: TxnBuilderTypes.Ed25519Signature,
-    opts: Options,
+    opts: Options
   ) {
     // TODO: do not query for resource again;
     const txBuilder = new AptosEntryTxnBuilder();
@@ -209,7 +274,7 @@ export class MomentumSafe {
     txHash: string,
     tx: TransactionType,
     sig: TxnBuilderTypes.Ed25519Signature,
-    opts: Options,
+    opts: Options
   ) {
     const pkIndex = this.getIndex(signer.publicKey());
     const txBuilder = new AptosEntryTxnBuilder();
@@ -230,8 +295,13 @@ export class MomentumSafe {
       .build(signer.account);
   }
 
-  private static async queryMSafeResource(address: HexString): Promise<Momentum> {
-    const res = await Aptos.getAccountResource(address, getStructType('MOMENTUM').toMoveStructTag());
+  private static async queryMSafeResource(
+    address: HexString
+  ): Promise<Momentum> {
+    const res = await Aptos.getAccountResource(
+      address,
+      getStructType("MOMENTUM").toMoveStructTag()
+    );
     return res.data as Momentum;
   }
 
@@ -244,13 +314,32 @@ export class MomentumSafe {
     const balance = await Aptos.getBalance(this.address);
     const sn = await Aptos.getSequenceNumber(this.address);
     const pendings: MSafeTxnInfo[] = [];
-    for (let nonce = sn; nonce <= BigInt(data.txn_book.max_sequence_number); nonce++) {
-      const nonce_hashes = await MomentumSafe.queryPendingTxHashBySN(data, nonce);
-      const txs = await Promise.all(nonce_hashes.map(hash => MomentumSafe.queryPendingTxByHash(data, hash)));
-      txs.filter(tx => MomentumSafe.isTxValid(tx, sn)).forEach(tx => {
-        const msafeTx = MSafeTransaction.deserialize(HexBuffer(tx.payload));
-        pendings.push(msafeTx.getTxnInfo(tx.signatures.data.length));
-      });
+    const status = await getMSafeStatus(this.address);
+    for (
+      let nonce = sn;
+      nonce <= BigInt(data.txn_book.max_sequence_number);
+      nonce++
+    ) {
+      const nonce_hashes = await MomentumSafe.queryPendingTxHashBySN(
+        data,
+        nonce
+      );
+      const txs = await Promise.all(
+        nonce_hashes.map((hash) =>
+          MomentumSafe.queryPendingTxByHash(data, hash)
+        )
+      );
+      txs
+        .filter((tx) => MomentumSafe.isTxValid(tx, sn))
+        .forEach((tx) => {
+          const payload = HexBuffer(tx.payload);
+          if (MigrationProofMessage.isMigrationProofMessage(payload)) {
+            pendings.push(toMigrateTx(tx));
+          } else {
+            const msafeTx = MSafeTransaction.deserialize(payload);
+            pendings.push(msafeTx.getTxnInfo(tx.signatures.data.length));
+          }
+        });
     }
     const nextSN = this.getNextSequenceNumberFromResourceData(data);
     pendings.sort((a, b) => {
@@ -261,8 +350,8 @@ export class MomentumSafe {
       }
     });
     return {
-      owners: data.info.owners.map(owner => formatAddress(owner)),
-      pubKeys: data.info.public_keys.map(pk => HexString.ensure(pk)),
+      owners: data.info.owners.map((owner) => formatAddress(owner)),
+      pubKeys: data.info.public_keys.map((pk) => HexString.ensure(pk)),
       creationNonce: Number(data.info.nonce),
       threshold: data.info.threshold,
       curSN: sn,
@@ -270,18 +359,27 @@ export class MomentumSafe {
       metadata: data.info.metadata as string,
       balance: balance,
       pendingTxs: pendings,
+      address: this.address,
+      status,
     };
   }
 
   private static isTxValid(txType: TransactionType, curSN: bigint): boolean {
-    // Add expiration
+    const payload = HexBuffer(txType.payload);
+    if (TypeMessage.isTypeMessage(payload)) {
+      return (
+        TypeMessage.deserialize(payload).raw.inner.sequence_number >= curSN
+      );
+    }
     const tx = Transaction.deserialize(HexBuffer(txType.payload));
-    return tx.raw.sequence_number >= curSN
-      && tx.raw.expiration_timestamp_secs >= new Date().getUTCSeconds();
+    return (
+      tx.raw.sequence_number >= curSN &&
+      tx.raw.expiration_timestamp_secs >= new Date().getUTCSeconds()
+    );
   }
 
   private getIndex(target: HexString): number {
-    const i = this.ownersPublicKeys.findIndex(pk => {
+    const i = this.ownersPublicKeys.findIndex((pk) => {
       return isHexEqual(pk, target);
     });
     if (i == -1) {
@@ -299,32 +397,55 @@ export class MomentumSafe {
     return BigInt(momentum.txn_book.max_sequence_number) + 1n;
   }
 
-  static async getMomentumSafeEvent(owner: HexString): Promise<MomentumSafeEvent> {
-    const eventStruct = await Aptos.getAccountResource(owner, getStructType('MOMENTUM_EVENT').toMoveStructTag());
+  static async getMomentumSafeEvent(
+    owner: HexString
+  ): Promise<MomentumSafeEvent> {
+    const eventStruct = await Aptos.getAccountResource(
+      owner,
+      getStructType("MOMENTUM_EVENT").toMoveStructTag()
+    );
     return eventStruct.data as any;
   }
 
-  static async filterRegisterEvent(eventStruct: MomentumSafeEvent, option: PaginationArgs) {
+  static async filterRegisterEvent(
+    eventStruct: MomentumSafeEvent,
+    option: PaginationArgs
+  ) {
     return Aptos.filterEvent(eventStruct.register_events, option);
   }
 
-  static async filterTransactionEvent(eventStruct: MomentumSafeEvent, option: PaginationArgs) {
+  static async filterTransactionEvent(
+    eventStruct: MomentumSafeEvent,
+    option: PaginationArgs
+  ) {
     return Aptos.filterEvent(eventStruct.transaction_events, option);
   }
 
-  static async queryPendingTxHashBySN(momentum: Momentum, sn: bigint): Promise<Vector<string>> {
-    return Aptos.client().getTableItem(momentum.txn_book.tx_hashes.inner.handle, {
-      key_type: 'u64',
-      value_type: 'vector<vector<u8>>',
-      key: sn.toString()
-    });
+  static async queryPendingTxHashBySN(
+    momentum: Momentum,
+    sn: bigint
+  ): Promise<Vector<string>> {
+    return Aptos.client().getTableItem(
+      momentum.txn_book.tx_hashes.inner.handle,
+      {
+        key_type: "u64",
+        value_type: "vector<vector<u8>>",
+        key: sn.toString(),
+      }
+    );
   }
 
-  static async queryPendingTxByHash(momentum: Momentum, txID: string | HexString): Promise<TransactionType> {
-    return Aptos.client().getTableItem(momentum.txn_book.pendings.inner.handle, {
-      key_type: 'vector<u8>',
-      value_type: getStructType('MOMENTUM_TRANSACTION').toMoveStructTag(),
-      key: txID.toString()
-    });
+  static async queryPendingTxByHash(
+    momentum: Momentum,
+    txID: string | HexString
+  ): Promise<TransactionType> {
+    return Aptos.client().getTableItem(
+      momentum.txn_book.pendings.inner.handle,
+      {
+        key_type: "vector<u8>",
+        value_type: getStructType("MOMENTUM_TRANSACTION").toMoveStructTag(),
+        key: txID.toString(),
+      }
+    );
   }
 }

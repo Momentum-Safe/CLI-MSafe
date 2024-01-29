@@ -1,31 +1,35 @@
-import {HexString} from "aptos";
+import { HexString } from "aptos";
+import * as Gen from "aptos/src/generated";
+import { MomentumSafe, TransactionType } from "../momentum-safe/momentum-safe";
+import { MSafeTxnInfo, MSafeTxnType } from "../momentum-safe/msafe-txn";
+import * as Aptos from "../web3/global";
+import { MY_ACCOUNT } from "../web3/global";
 import {
   CmdOption,
   executeCmdOptions,
+  getMSafeInfo,
+  printMsafeDetails,
   printMyMessage,
   printSeparator,
   printTxDetails,
   promptForYN,
   registerState,
   setState,
-  State
+  State,
 } from "./common";
-import {MomentumSafe, TransactionType} from "../momentum-safe/momentum-safe";
-import * as Aptos from "../web3/global";
-import {MY_ACCOUNT} from "../web3/global";
-import * as Gen from 'aptos/src/generated';
-import {MSafeTxnInfo, MSafeTxnType} from "../momentum-safe/msafe-txn";
 
 export function registerTxDetails() {
   registerState(State.PendingCoinTransfer, txDetails);
 }
 
-async function txDetails(c: {address: HexString, txHash: string}) {
+async function txDetails(c: { address: HexString; txHash: string }) {
   const addr = c.address;
   const txHash = c.txHash;
 
   console.clear();
   await printMyMessage();
+  const info = await getMSafeInfo(c.address);
+  await printMsafeDetails(info);
 
   const msafe = await MomentumSafe.fromMomentumSafe(addr);
 
@@ -35,14 +39,17 @@ async function txDetails(c: {address: HexString, txHash: string}) {
   try {
     [txType, txData] = await msafe.getTxDetails(txHash);
   } catch (e) {
-    if (e instanceof Error
-        && (
-          e.message.includes("Transaction is no longer valid")
-          || e.message.includes("Table Item not found by Table handle")
-        )
-    ){
-      await executeCmdOptions(e.message + 'Is transaction already executed?', [
-        {shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}
+    if (
+      e instanceof Error &&
+      (e.message.includes("Transaction is no longer valid") ||
+        e.message.includes("Table Item not found by Table handle"))
+    ) {
+      await executeCmdOptions(e.message + "Is transaction already executed?", [
+        {
+          shortage: "b",
+          showText: "Back",
+          handleFunc: () => setState(State.MSafeDetails, { address: addr }),
+        },
       ]);
       return;
     }
@@ -56,54 +63,80 @@ async function txDetails(c: {address: HexString, txHash: string}) {
 
   const userBreak = await checkTxnEnoughSigsAndAssemble(msafe, txHash);
   if (userBreak) {
-    await executeCmdOptions(
-      "User break the signature submission",
-      [{shortage: 'b', showText: 'Back', handleFunc: () => setState(State.MSafeDetails, {address: addr})}],
-    );
+    await executeCmdOptions("User break the signature submission", [
+      {
+        shortage: "b",
+        showText: "Back",
+        handleFunc: () => setState(State.MSafeDetails, { address: addr }),
+      },
+    ]);
     return;
   }
 
   const collectedSigs = txType.signatures.data;
-  console.log(`Collected signatures from public keys: ${collectedSigs.length} / ${msafe.threshold}`);
-  collectedSigs.forEach ( (pk, i) => {
+  console.log(
+    `Collected signatures from public keys: ${collectedSigs.length} / ${msafe.threshold}`
+  );
+  collectedSigs.forEach((pk, i) => {
     console.log(`\tpk ${i}:\t${HexString.ensure(pk.key)}`);
   });
-  const isMeSigned = collectedSigs.find( e => e.key === MY_ACCOUNT.publicKey().hex()) != undefined;
+  const isMeSigned =
+    collectedSigs.find((e) => e.key === MY_ACCOUNT.publicKey().hex()) !=
+    undefined;
 
   // TODO: Extract and refactor
   printSeparator();
   let optionPromptStr: string;
   if (isMeSigned) {
-    optionPromptStr = 'Already signed. Waiting for other confirmations.';
+    optionPromptStr = "Already signed. Waiting for other confirmations.";
   } else {
-    optionPromptStr = 'Waiting for my signature. Sign?';
+    optionPromptStr = "Waiting for my signature. Sign?";
   }
   let isReturn = true;
   const opts: CmdOption[] = [];
   if (!isMeSigned) {
-    opts.push({shortage: 's', showText: 'Sign', handleFunc: () => { isReturn = false }});
+    opts.push({
+      shortage: "s",
+      showText: "Sign",
+      handleFunc: () => {
+        isReturn = false;
+      },
+    });
   }
   if (txData.txType !== MSafeTxnType.Revert) {
     opts.push({
-      shortage: 'v',
-      showText: 'reVert',
-      handleFunc: () => setState(State.RevertTransaction, {address: addr, txHash: txHash})
+      shortage: "v",
+      showText: "reVert",
+      handleFunc: () =>
+        setState(State.RevertTransaction, { address: addr, txHash: txHash }),
     });
   }
 
   opts.push(
-    {shortage: 'r', showText: 'Refresh', handleFunc: () =>
-        setState(State.PendingCoinTransfer, {address: addr, txHash: txHash})},
-    {shortage: 'b', showText: 'Back', handleFunc: () =>
-        setState(State.MSafeDetails, {address: addr})},
+    {
+      shortage: "r",
+      showText: "Refresh",
+      handleFunc: () =>
+        setState(State.PendingCoinTransfer, { address: addr, txHash: txHash }),
+    },
+    {
+      shortage: "b",
+      showText: "Back",
+      handleFunc: () => setState(State.MSafeDetails, { address: addr }),
+    }
   );
 
   await executeCmdOptions(optionPromptStr, opts);
-  if (isReturn) {return}
+  if (isReturn) {
+    return;
+  }
 
   console.log();
 
-  const isReadyExecute = await msafe.isReadyToSubmit(txHash, MY_ACCOUNT.publicKey());
+  const isReadyExecute = await msafe.isReadyToSubmit(
+    txHash,
+    MY_ACCOUNT.publicKey()
+  );
   let tx: Gen.PendingTransaction;
   if (isReadyExecute) {
     tx = await msafe.assembleAndSubmitTx(MY_ACCOUNT, txHash);
@@ -119,23 +152,33 @@ async function txDetails(c: {address: HexString, txHash: string}) {
 
   printSeparator();
 
-  await executeCmdOptions(
-    'Choose your next step',
-    [
-      {shortage: 'r', showText: 'Refresh', handleFunc: () =>
-        setState(State.PendingCoinTransfer, {address: addr, txHash: txHash})},
-      {shortage: 'b', showText: 'Back', handleFunc: () =>
-        setState(State.MSafeDetails, {address: addr})},
-    ]
-  );
+  await executeCmdOptions("Choose your next step", [
+    {
+      shortage: "r",
+      showText: "Refresh",
+      handleFunc: () =>
+        setState(State.PendingCoinTransfer, { address: addr, txHash: txHash }),
+    },
+    {
+      shortage: "b",
+      showText: "Back",
+      handleFunc: () => setState(State.MSafeDetails, { address: addr }),
+    },
+  ]);
 }
 
-export async function checkTxnEnoughSigsAndAssemble(msafe: MomentumSafe, txHash: string | HexString) {
+export async function checkTxnEnoughSigsAndAssemble(
+  msafe: MomentumSafe,
+  txHash: string | HexString
+) {
   const hasEnoughSigs = await msafe.isReadyToSubmit(txHash);
   if (!hasEnoughSigs) {
     return false;
   }
-  const opt = await promptForYN("Already collected enough signature. Submit?", true);
+  const opt = await promptForYN(
+    "Already collected enough signature. Submit?",
+    true
+  );
   if (!opt) {
     return true;
   }
@@ -147,4 +190,3 @@ export async function checkTxnEnoughSigsAndAssemble(msafe: MomentumSafe, txHash:
   printSeparator();
   return false;
 }
-

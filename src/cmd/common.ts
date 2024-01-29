@@ -1,22 +1,29 @@
+import colors from "ansicolor";
+import { BCS, HexString } from "aptos";
+import { BigNumber } from "bignumber.js";
 import readline from "readline-sync";
-import * as Aptos from "../web3/global";
-import {BCS, HexString} from "aptos";
-import {BigNumber} from 'bignumber.js';
-import {MomentumSafeInfo} from "../momentum-safe/momentum-safe";
+import { FUNCTIONS, MODULES } from "../momentum-safe/common";
+import {
+  MSafeStatus,
+  MomentumSafe,
+  MomentumSafeInfo,
+} from "../momentum-safe/momentum-safe";
 import {
   APTTransferArgs,
   CoinRegisterArgs,
   CoinTransferArgs,
   EntryFunctionArgs,
-  decodeEntryFunctionArgs,
-  ModulePublishInfo,
   MSafeTxnInfo,
   MSafeTxnType,
-  RevertArgs, MoveScriptArgs, MoveScriptInfo,
+  ModulePublishInfo,
+  MoveScriptInfo,
+  RevertArgs,
+  decodeEntryFunctionArgs,
 } from "../momentum-safe/msafe-txn";
-import {fromDust} from "../utils/bignumber";
-import {APT_COIN_INFO} from "../web3/global";
-import {splitFunctionComponents} from "../utils/parse";
+import { fromDust } from "../utils/bignumber";
+import { splitFunctionComponents } from "../utils/parse";
+import * as Aptos from "../web3/global";
+import { APT_COIN_INFO } from "../web3/global";
 
 const SEPARATOR_LENGTH = 20;
 
@@ -30,6 +37,7 @@ export enum State {
   InitCoinTransfer,
   PendingCoinTransfer,
   RevertTransaction,
+  Migrate,
 }
 
 export function registerState(state: State, cb: (arg?: any) => void) {
@@ -46,11 +54,15 @@ export function setState(state: State, arg?: any) {
 
 export async function prompt(s: string): Promise<string> {
   return new Promise((resolve) => {
-    return resolve(readline.question(s+'\t'));
+    return resolve(readline.question(s + "\t"));
   });
 }
 
-export async function promptUntilNumber(pmp: string, npmp: string, validate: (v: number) => boolean): Promise<number> {
+export async function promptUntilNumber(
+  pmp: string,
+  npmp: string,
+  validate: (v: number) => boolean
+): Promise<number> {
   let res = await promptForNumber(pmp);
   while (!validate(res)) {
     res = await promptForNumber(npmp);
@@ -69,7 +81,7 @@ export async function promptForNumber(s: string): Promise<number> {
 export async function promptUntilBigInt(
   pmp: string,
   npmp: string,
-  validate: (v: bigint) => boolean,
+  validate: (v: bigint) => boolean
 ): Promise<bigint> {
   let res = await promptForBigInt(pmp);
   while (!validate(res)) {
@@ -86,7 +98,11 @@ export async function promptForBigInt(s: string): Promise<bigint> {
   return BigInt(valStr);
 }
 
-export async function promptUntilString(pmp: string, npmp: string, validate: (s: string) => boolean): Promise<string> {
+export async function promptUntilString(
+  pmp: string,
+  npmp: string,
+  validate: (s: string) => boolean
+): Promise<string> {
   let res = await prompt(pmp);
   while (!validate(res)) {
     res = await prompt(npmp);
@@ -94,7 +110,10 @@ export async function promptUntilString(pmp: string, npmp: string, validate: (s:
   return res;
 }
 
-export async function promptForYN(s: string, defVal: boolean): Promise<boolean> {
+export async function promptForYN(
+  s: string,
+  defVal: boolean
+): Promise<boolean> {
   const clause = ynClause(defVal);
   let res = await prompt(`${s} ${clause}\t`);
   while (!validateYN(res)) {
@@ -106,7 +125,7 @@ export async function promptForYN(s: string, defVal: boolean): Promise<boolean> 
 export async function promptUntilBigNumber(
   pmp: string,
   npmp: string,
-  validate: (v: BigNumber) => boolean,
+  validate: (v: BigNumber) => boolean
 ) {
   let res = await promptForBigNumber(pmp);
   while (!validate(res)) {
@@ -133,29 +152,30 @@ function ynClause(defVal: boolean): string {
 
 function validateYN(s: string): boolean {
   const sl = s.toLowerCase();
-  return sl === '' || sl === 'y' || sl === 'n' || sl === 'yes' || sl === 'no';
+  return sl === "" || sl === "y" || sl === "n" || sl === "yes" || sl === "no";
 }
 
 export async function promptUntilTrueFalse(s: string) {
-  let res = await prompt(s + 'true/false:\t');
+  let res = await prompt(s + "true/false:\t");
   let resLower = res.toLowerCase();
-  const validate = (val: string) => val === 'true' || val === 'false' || val === 't' || val === 'f';
+  const validate = (val: string) =>
+    val === "true" || val === "false" || val === "t" || val === "f";
   while (!validate(resLower)) {
     res = await prompt(s);
     resLower = res.toLowerCase();
   }
-  return resLower === 'true' || resLower === 't';
+  return resLower === "true" || resLower === "t";
 }
 
 function getValueYN(s: string, defVal: boolean): boolean {
   switch (s.toLowerCase()) {
-    case 'y':
-    case 'yes':
+    case "y":
+    case "yes":
       return true;
-    case 'n':
-    case 'no':
+    case "n":
+    case "no":
       return false;
-    case '':
+    case "":
       return defVal;
   }
   return false;
@@ -168,24 +188,31 @@ export function printSeparator() {
 }
 
 export async function printMyMessage() {
-  console.log('='.repeat(process.stdout.columns));
+  console.log("=".repeat(process.stdout.columns));
   console.log("My Aptos account");
   console.log();
   console.log(`My Address: \t${Aptos.MY_ACCOUNT.address()}`);
   console.log(`My PubKey: \t${Aptos.MY_ACCOUNT.publicKey()}`);
-  console.log(`My Balance: \t${await Aptos.getBalanceAPT(Aptos.MY_ACCOUNT.address())} APT`);
+  console.log(
+    `My Balance: \t${await Aptos.getBalanceAPT(Aptos.MY_ACCOUNT.address())} APT`
+  );
   console.log("-".repeat(process.stdout.columns));
   console.log();
 }
 
-export function printMSafeMessage(address: HexString, info: MomentumSafeInfo, balance: BigNumber) {
-  console.log(`Momentum Safe Info:`);
+export function printMSafeMessage(
+  address: HexString,
+  info: MomentumSafeInfo,
+  balance: BigNumber,
+  status: MSafeStatus
+) {
+  console.log(`Momentum Safe (${getMSafeStatusText(status)}):`);
   console.log();
   console.log(`Address:\t${address}`);
   console.log(`Threshold:\t${info.threshold}`);
   console.log(`Owners:\t\t${info.owners.length}`);
-  info.owners.forEach( (owner, i) => {
-    console.log(`\t\t(${i+1}/${info.owners.length}) ${owner}`);
+  info.owners.forEach((owner, i) => {
+    console.log(`\t\t(${i + 1}/${info.owners.length}) ${owner}`);
   });
   console.log(`Balance:\t${balance} APT`);
   console.log("-".repeat(process.stdout.columns));
@@ -197,6 +224,7 @@ export interface CmdOption {
   alternatives?: string[]; // Alternative selection
   showText: string;
   handleFunc: () => void;
+  visible?: () => boolean;
 }
 
 export async function executeCmdOptions(pmp: string, options: CmdOption[]) {
@@ -205,23 +233,22 @@ export async function executeCmdOptions(pmp: string, options: CmdOption[]) {
 }
 
 class CmdOptionHelper {
-
   pmp: string;
-  m: Map<number|string, CmdOption>;
+  m: Map<number | string, CmdOption>;
   options: CmdOption[];
 
   constructor(pmp: string, options: CmdOption[]) {
     this.options = options;
     this.pmp = pmp;
     this.m = new Map();
-    options.forEach( opt => {
+    options.forEach((opt) => {
       if (this.m.has(opt.shortage)) {
         throw new Error("duplicate option");
       }
       this.m.set(opt.shortage, opt);
 
       if (opt.alternatives) {
-        opt.alternatives.forEach(alt => {
+        opt.alternatives.forEach((alt) => {
           if (this.m.has(alt)) {
             throw new Error("duplicate alternatives");
           }
@@ -240,19 +267,21 @@ class CmdOptionHelper {
   private printOptions() {
     console.log(this.pmp);
     console.log();
-    this.options.forEach( opt => {
-      console.log(`\t${opt.shortage})\t${opt.showText}`);
-    });
+    this.options
+      .filter((opt) => !opt.visible || opt.visible())
+      .forEach((opt) => {
+        console.log(`\t${opt.shortage})\t${opt.showText}`);
+      });
     console.log();
   }
 
   private async prompt(): Promise<CmdOption> {
     let res: CmdOption;
     await promptUntilString(
-      'Please input your option:\t',
-      'Please input a valid option:\t',
-      s => {
-        if (this.m.has(s)){
+      "Please input your option:\t",
+      "Please input a valid option:\t",
+      (s) => {
+        if (this.m.has(s)) {
           res = this.m.get(s)!;
           return true;
         } else if (this.m.has(Number(s))) {
@@ -268,26 +297,29 @@ class CmdOptionHelper {
 
 export async function printTxDetails(txData: MSafeTxnInfo) {
   switch (txData.txType) {
-    case (MSafeTxnType.APTCoinTransfer):
+    case MSafeTxnType.APTCoinTransfer:
       printAPTCoinTransfer(txData);
       break;
-    case (MSafeTxnType.AnyCoinTransfer):
+    case MSafeTxnType.AnyCoinTransfer:
       printAnyCoinTransfer(txData);
       break;
-    case (MSafeTxnType.AnyCoinRegister):
+    case MSafeTxnType.AnyCoinRegister:
       printAnyCoinRegister(txData);
       break;
-    case (MSafeTxnType.Revert):
+    case MSafeTxnType.Revert:
       printRevertTxn(txData);
       break;
-    case (MSafeTxnType.EntryFunction):
+    case MSafeTxnType.EntryFunction:
       await printCustomTxn(txData);
       break;
-    case (MSafeTxnType.ModulePublish):
+    case MSafeTxnType.ModulePublish:
       printModulePublishTxn(txData);
       break;
-    case (MSafeTxnType.MoveScript):
+    case MSafeTxnType.MoveScript:
       printMoveScriptTxn(txData);
+      break;
+    case MSafeTxnType.Migrate:
+      await printMigrateTxn(txData);
       break;
   }
   printTxCommonData(txData);
@@ -305,7 +337,9 @@ function printAPTCoinTransfer(txInfo: MSafeTxnInfo) {
   console.log(`Action:\t\t\t${txInfo.txType}`);
   const args = txInfo.args as APTTransferArgs;
   console.log(`To:\t\t\t${args.to}`);
-  console.log(`Amount:\t\t\t${fromDust(args.amount, APT_COIN_INFO.decimals)} APT`);
+  console.log(
+    `Amount:\t\t\t${fromDust(args.amount, APT_COIN_INFO.decimals)} APT`
+  );
 }
 
 function printAnyCoinTransfer(txInfo: MSafeTxnInfo) {
@@ -334,13 +368,13 @@ async function printCustomTxn(txInfo: MSafeTxnInfo) {
   console.log(`Call function:\t\t${cia.fnName}`);
   // print type arguments
   for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
-    console.log(`Type Arguments (${i+1}):\t${cia.typeArgs[i]}`);
+    console.log(`Type Arguments (${i + 1}):\t${cia.typeArgs[i]}`);
   }
   // print arguments
   const args = await getBCSArgValue(cia);
   for (let i = 0; i != args.length; i = i + 1) {
     const [argType, argValue] = args[i];
-    console.log(`Arguments (${i+1}):\t\t[${argType}]\t${argValue}`);
+    console.log(`Arguments (${i + 1}):\t\t[${argType}]\t${argValue}`);
   }
 }
 
@@ -353,12 +387,21 @@ function printModulePublishTxn(txInfo: MSafeTxnInfo) {
   console.log(`Upgrade Policy:\t\t${mpi.metadata.upgrade_policy.name()}`);
   console.log(`Upgrade Number:\t\t${mpi.metadata.upgrade_number}`);
   console.log(`Source Digest:\t\t${mpi.metadata.source_digest}`);
-  console.log(`Modules:\t\t${mpi.metadata.modules.map(
-    module => `${txInfo.sender}::${module.name}`
-  ).join('\n\t\t\t')}`);
-  console.log(`Dependency:\t\t${mpi.metadata.deps.map(
-    dep => `${HexString.fromUint8Array(dep.account.address)}::${dep.package_name}`
-  ).join('\n\t\t\t')}`);
+  console.log(
+    `Modules:\t\t${mpi.metadata.modules
+      .map((module) => `${txInfo.sender}::${module.name}`)
+      .join("\n\t\t\t")}`
+  );
+  console.log(
+    `Dependency:\t\t${mpi.metadata.deps
+      .map(
+        (dep) =>
+          `${HexString.fromUint8Array(dep.account.address)}::${
+            dep.package_name
+          }`
+      )
+      .join("\n\t\t\t")}`
+  );
 }
 
 function printMoveScriptTxn(txInfo: MSafeTxnInfo) {
@@ -367,17 +410,65 @@ function printMoveScriptTxn(txInfo: MSafeTxnInfo) {
   console.log(`Code Hash:\t\t${HexString.fromUint8Array(cia.codeHash)}`);
   // print type arguments
   for (let i = 0; i != cia.typeArgs.length; i = i + 1) {
-    console.log(`Type Arguments (${i+1}):\t${cia.typeArgs[i]}`);
+    console.log(`Type Arguments (${i + 1}):\t${cia.typeArgs[i]}`);
   }
   // print arguments
   for (let i = 0; i != cia.args.length; i = i + 1) {
     const arg = cia.args[i];
-    console.log(`Arguments (${i+1}):\t\tbcs (${HexString.fromUint8Array(BCS.bcsToBytes(arg)).noPrefix()})`);
+    console.log(
+      `Arguments (${i + 1}):\t\tbcs (${HexString.fromUint8Array(
+        BCS.bcsToBytes(arg)
+      ).noPrefix()})`
+    );
   }
+}
+
+async function printMigrateTxn(txInfo: MSafeTxnInfo) {
+  console.log(`Action:\t\t\t${txInfo.txType}`);
 }
 
 async function getBCSArgValue(cia: EntryFunctionArgs) {
   const [deployer, moduleName, fnName] = splitFunctionComponents(cia.fnName);
 
   return decodeEntryFunctionArgs(deployer, moduleName, fnName, cia.args);
+}
+
+export async function getMSafeInfo(address: HexString) {
+  const msafe = await MomentumSafe.fromMomentumSafe(address);
+  const info = await msafe.getMomentumSafeInfo();
+  return info;
+}
+
+export async function printMsafeDetails(msafeInfo: MomentumSafeInfo) {
+  const balance = await Aptos.getBalanceAPT(msafeInfo.address);
+  printMSafeMessage(msafeInfo.address, msafeInfo, balance, msafeInfo.status);
+}
+
+export async function getMSafeStatus(address: HexString) {
+  const migrationStatus = await Aptos.client().view({
+    function: `${Aptos.DEPLOYER.hex()}::${MODULES.MOMENTUM_SAFE}::${
+      FUNCTIONS.MSAFE_GET_STATUS
+    }`,
+    type_arguments: [],
+    arguments: [address.hex()],
+  });
+
+  try {
+    return migrationStatus[0] as MSafeStatus;
+  } catch {
+    return MSafeStatus.NORMAL;
+  }
+}
+
+function getMSafeStatusText(status: MSafeStatus) {
+  switch (status) {
+    case MSafeStatus.NORMAL:
+      return colors.blue("Ready to migrate");
+    case MSafeStatus.MIGRATING:
+      return colors.yellow("Migrating");
+    case MSafeStatus.MIGRATED:
+      return colors.green("Migrated");
+    default:
+      return colors.dim("-");
+  }
 }

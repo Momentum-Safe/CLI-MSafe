@@ -10,41 +10,67 @@
 // TODO: (Need to update smart contract first) Key rotation
 // TODO: Replace data query interface with indexer
 
-import * as Aptos from '../web3/global';
-import {registerCreation} from "./create";
-import {Command} from "commander";
+import { ApiError } from "aptos";
+import { Command } from "commander";
+import { Registry } from "../momentum-safe/registry";
 import {
+  DEFAULT_ENDPOINT,
+  DEFAULT_FAUCET,
+  DEFAULT_MSAFE,
+  DEFAULT_NETWORK,
+  loadConfigAndApply,
+} from "../utils/load";
+import * as Aptos from "../web3/global";
+import { DEF_ACCOUNT_CONF, MY_ACCOUNT } from "../web3/global";
+import {
+  State,
+  printMyMessage,
   printSeparator,
   prompt,
   promptForYN,
-  printMyMessage,
   setState,
-  State,
 } from "./common";
-import {Registry} from "../momentum-safe/registry";
-import {DEF_ACCOUNT_CONF, MY_ACCOUNT} from "../web3/global";
-import {registerList} from "./list";
-import {registerCreationDetails} from "./creation-details";
-import {ApiError} from "aptos";
-import {registerMSafeDetails} from "./msafe-details";
-import {registerInitCoinTransfer} from "./new-transaction";
-import {registerTxDetails} from "./tx-details";
-import {registerRevertTransaction} from "./revert-transaction";
-import {DEFAULT_ENDPOINT, DEFAULT_FAUCET, DEFAULT_MSAFE, DEFAULT_NETWORK, loadConfigAndApply} from "../utils/load";
+import { registerCreation } from "./create";
+import { registerCreationDetails } from "./creation-details";
+import { registerList } from "./list";
+import { registerMigration } from "./migration";
+import { registerMSafeDetails } from "./msafe-details";
+import { registerInitCoinTransfer } from "./new-transaction";
+import { registerRevertTransaction } from "./revert-transaction";
+import { registerTxDetails } from "./tx-details";
 
 const program = new Command();
 
 const cli = program
   .version("0.0.1")
   .description("Momentum Safe CLI")
-  .option("-c, --config <string>", "config file of aptos profile", DEF_ACCOUNT_CONF)
+  .option(
+    "-c, --config <string>",
+    "config file of aptos profile",
+    DEF_ACCOUNT_CONF
+  )
   .option("-p --profile <string>", "profile to use in aptos config", "default")
-  .requiredOption("-n --network <string>", "network (auto, devnet, testnet, mainnet)", DEFAULT_NETWORK)
-  .option("-e --endpoint <string>", "full node endpoint (default to use the endpoint in config.yaml)", DEFAULT_ENDPOINT)
-  .option("-f --faucet <string>", "faucet address (default to use the endpoint in config.yaml)", DEFAULT_FAUCET)
-  .option("-d --msafe-deployer <string>", "address of msafe deployer", DEFAULT_MSAFE)
+  .requiredOption(
+    "-n --network <string>",
+    "network (auto, devnet, testnet, mainnet)",
+    DEFAULT_NETWORK
+  )
+  .option(
+    "-e --endpoint <string>",
+    "full node endpoint (default to use the endpoint in config.yaml)",
+    DEFAULT_ENDPOINT
+  )
+  .option(
+    "-f --faucet <string>",
+    "faucet address (default to use the endpoint in config.yaml)",
+    DEFAULT_FAUCET
+  )
+  .option(
+    "-d --msafe-deployer <string>",
+    "address of msafe deployer",
+    DEFAULT_MSAFE
+  )
   .parse(process.argv);
-
 
 async function main() {
   registerAllStates();
@@ -60,8 +86,8 @@ async function main() {
       msafeDeployer: cli.opts().msafeDeployer,
     });
   } catch (e) {
-    if ((e as ApiError).message.includes('Account not found by Address')) {
-      console.log('Wallet must have some initial fund to interact with');
+    if ((e as ApiError).message.includes("Account not found by Address")) {
+      console.log("Wallet must have some initial fund to interact with");
       process.exit(1);
     }
     throw e;
@@ -71,7 +97,6 @@ async function main() {
   setState(State.List);
 }
 
-
 function registerAllStates() {
   registerList();
   registerCreation();
@@ -80,6 +105,7 @@ function registerAllStates() {
   registerInitCoinTransfer();
   registerTxDetails();
   registerRevertTransaction();
+  registerMigration();
 }
 
 async function fundWithFaucetIfNotSetup() {
@@ -88,7 +114,10 @@ async function fundWithFaucetIfNotSetup() {
   } catch (e) {
     if (e instanceof ApiError && e.message.includes("Resource not found")) {
       // Set up the aptos account and give some initial funding
-      const opt = promptForYN("Account not exist.\nGet some funding with faucet?", true);
+      const opt = promptForYN(
+        "Account not exist.\nGet some funding with faucet?",
+        true
+      );
       if (!opt) {
         process.exit(1);
       }
@@ -104,7 +133,10 @@ async function registerIfNotRegistered() {
   if (!isRegistered) {
     await printMyMessage();
 
-    const register = await promptForYN("The wallet hasn't been registered yet. Register now?", true);
+    const register = await promptForYN(
+      "The wallet hasn't been registered yet. Register now?",
+      true
+    );
     if (!register) {
       console.log();
       console.log("To use momentum safe, you must register first.");
@@ -118,7 +150,7 @@ async function registerIfNotRegistered() {
     console.log(`\tTransaction confirmed. Registration succeeds.`);
 
     printSeparator();
-    await prompt('continue');
+    await prompt("continue");
   }
 }
 

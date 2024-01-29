@@ -1,12 +1,12 @@
-import {loadAptosYaml, setGlobal} from "../web3/global";
-import {HexString} from "aptos";
+import { loadAptosYaml, setGlobal } from "../web3/global";
+import { HexString } from "aptos";
 
 export enum Network {
-  Custom = 'custom',
-  Mainnet = 'mainnet',
-  Testnet = 'testnet',
-  Devnet = 'devnet',
-  Localnet = 'localnet',
+  Custom = "custom",
+  Mainnet = "mainnet",
+  Testnet = "testnet",
+  Devnet = "devnet",
+  Localnet = "localnet",
 }
 
 export const DEFAULT_ENDPOINT = "default"; // Default to read the endpoint from the yaml file
@@ -16,32 +16,40 @@ export const DEFAULT_NETWORK = "default"; // Default to mainnet
 export const DEFAULT_MSAFE = "default"; // Automatically get from network
 
 export const DEPLOYED_MSAFE = new Map<string, string>([
-  ["testnet", "0x74f14286e43d27ed0acc0c4548a5be99a7c2af3cf17a1344c87b7f026b2fcc23"],
-  ["devnet", "0x74f14286e43d27ed0acc0c4548a5be99a7c2af3cf17a1344c87b7f026b2fcc23"],
-  ["mainnet", "0xaa90e0d9d16b63ba4a289fb0dc8d1b454058b21c9b5c76864f825d5c1f32582e"],
+  [
+    "testnet",
+    "0x19b22765f1733b21bd6207e283e56b0425d415c0b7938c016bef218d9f9a6616",
+  ],
+  [
+    "devnet",
+    "0x74f14286e43d27ed0acc0c4548a5be99a7c2af3cf17a1344c87b7f026b2fcc23",
+  ],
+  [
+    "mainnet",
+    "0xaa90e0d9d16b63ba4a289fb0dc8d1b454058b21c9b5c76864f825d5c1f32582e",
+  ],
 ]);
 
-export const DEVNET_NODE_URL = 'https://rpc.devnet.aptos.fernlabs.xyz/v1';
-export const DEVNET_FAUCET_URL = 'https://faucet.devnet.aptoslabs.com';
+export const DEVNET_NODE_URL = "https://rpc.devnet.aptos.fernlabs.xyz/v1";
+export const DEVNET_FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
-export const TESTNET_NODE_URL = 'https://rpc.testnet.aptos.fernlabs.xyz/v1';
-export const TESTNET_FAUCET_URL = 'https://faucet.testnet.aptoslabs.com';
+export const TESTNET_NODE_URL = "https://rpc.testnet.aptos.fernlabs.xyz/v1";
+export const TESTNET_FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
 export const MAINNET_NODE_URL = "https://rpc.mainnet.aptos.fernlabs.xyz/v1";
 export const MAINNET_FAUCET_URL = "_";
 
-export const LOCAL_NODE_URL = 'http://127.0.0.1:8080';
-export const LOCAL_FAUCET_URL = 'http://127.0.0.1:8081';
-
+export const LOCAL_NODE_URL = "http://127.0.0.1:8080";
+export const LOCAL_FAUCET_URL = "http://127.0.0.1:8081";
 
 type loadConfig = {
-  configFilePath: string,
-  profile: string,
-  network: string,
-  endpoint: string,
-  faucet: string,
-  msafeDeployer: string,
-}
+  configFilePath: string;
+  profile: string;
+  network: string;
+  endpoint: string;
+  faucet: string;
+  msafeDeployer: string;
+};
 
 export async function loadConfigAndApply(c: loadConfig) {
   const config = await parseConfig(c);
@@ -123,7 +131,7 @@ function getFaucet(c: loadConfig, network: string) {
     return getFaucetFromNetwork(network);
   } else {
     let faucet: string;
-    if (c.faucet.endsWith('/')) {
+    if (c.faucet.endsWith("/")) {
       faucet = c.faucet.substring(0, c.faucet.length - 1);
     } else {
       faucet = c.faucet;
@@ -170,19 +178,25 @@ function inferNetworkFromURL(nodeURL: string) {
 }
 
 function isDevnet(nodeURL: string) {
-  return nodeURL === DEVNET_NODE_URL || nodeURL.toLowerCase().includes('devnet');
+  return (
+    nodeURL === DEVNET_NODE_URL || nodeURL.toLowerCase().includes("devnet")
+  );
 }
 
 function isTestnet(nodeURL: string) {
-  return nodeURL === TESTNET_NODE_URL || nodeURL.toLowerCase().includes('testnet');
+  return (
+    nodeURL === TESTNET_NODE_URL || nodeURL.toLowerCase().includes("testnet")
+  );
 }
 
 function isLocalnet(nodeURL: string) {
-  return nodeURL === LOCAL_NODE_URL || nodeURL.toLowerCase().includes('localnet');
+  return (
+    nodeURL === LOCAL_NODE_URL || nodeURL.toLowerCase().includes("localnet")
+  );
 }
 
 function isMainnet(nodeURL: string) {
-  return nodeURL.toLowerCase().includes('mainnet');
+  return nodeURL.toLowerCase().includes("mainnet");
 }
 
 function getMSafeAddress(c: loadConfig, network: string) {
@@ -199,12 +213,11 @@ function getDefaultMSafeAddr(network: Network): HexString {
   return HexString.ensure(DEPLOYED_MSAFE.get(network) as string);
 }
 
-
 function printSetupWalletMsg() {
-  console.log('');
-  console.log("Have you set up your Aptos address? Run the following command to setup your wallet\n");
+  console.log("");
+  console.log(
+    "Have you set up your Aptos address? Run the following command to setup your wallet\n"
+  );
   console.log("\taptos init\n");
   process.exit(1001);
 }
-
-

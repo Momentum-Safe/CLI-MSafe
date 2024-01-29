@@ -1,25 +1,30 @@
-import {
-    AptosCoinTransferTxnBuilder,
-    AptosEntryTxnBuilder, AptosScriptTxnBuilder,
-    AptosTxnBuilder, IMultiSig,
-    Options,
-    Transaction, TxConfig
-} from "../web3/transaction";
-import {BCS, HexString, TransactionBuilder, TxnBuilderTypes, Types} from "aptos";
-import * as Aptos from '../web3/global';
-import {
-  APTOS_FRAMEWORK_HS,
-  FUNCTIONS,
-  MODULES,
-  STRUCTS
-} from "./common";
-import {IncludedArtifacts, MovePublisher, PackageMetadata} from "./move-publisher";
-import {sha3_256} from "../utils/crypto";
 import { sha3_256 as sha3Hash } from "@noble/hashes/sha3";
-import {secToDate, splitFunctionComponents, typeTagStructFromName} from "../utils/parse";
-import {isHexEqual} from "../utils/check";
-import {DEPLOYER} from "../web3/global";
+import { BCS, HexString, TransactionBuilder, TxnBuilderTypes } from "aptos";
 import fs from "fs";
+import { isHexEqual } from "../utils/check";
+import { sha3_256 } from "../utils/crypto";
+import {
+  secToDate,
+  splitFunctionComponents,
+  typeTagStructFromName,
+} from "../utils/parse";
+import * as Aptos from "../web3/global";
+import { DEPLOYER } from "../web3/global";
+import {
+  AptosCoinTransferTxnBuilder,
+  AptosEntryTxnBuilder,
+  AptosScriptTxnBuilder,
+  IMultiSig,
+  Options,
+  Transaction,
+  TxConfig,
+} from "../web3/transaction";
+import { APTOS_FRAMEWORK_HS, FUNCTIONS, MODULES, STRUCTS } from "./common";
+import {
+  IncludedArtifacts,
+  MovePublisher,
+  PackageMetadata,
+} from "./move-publisher";
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = MINUTE_SECONDS * 60;
@@ -34,64 +39,71 @@ const DEFAULT_UNIT_PRICE = 1000n;
 const DEFAULT_REGISTER_MAX_GAS = 50000n;
 const DEFAULT_EXPIRATION = WEEK_SECONDS;
 
-
 export type MSafeRegisterArgs = {
-  metadata: string,
-}
+  metadata: string;
+};
 
 export type CoinTransferArgs = {
-  coinType: string,
-  to: HexString,
-  amount: bigint
-}
+  coinType: string;
+  to: HexString;
+  amount: bigint;
+};
 
 export type CoinRegisterArgs = {
-  coinType: string,
-}
+  coinType: string;
+};
 
 export type APTTransferArgs = {
-  to: HexString,
-  amount: bigint,
-}
+  to: HexString;
+  amount: bigint;
+};
 
 export type RevertArgs = {
-  sn: bigint, // The sn will override option.sequenceNumber
-}
+  sn: bigint; // The sn will override option.sequenceNumber
+};
 
 export type EntryFunctionArgs = {
-  fnName: string,
-  typeArgs: string[],
-  args: BCS.Bytes[], // encoded bytes
-}
+  fnName: string;
+  typeArgs: string[];
+  args: BCS.Bytes[]; // encoded bytes
+};
 
 export type ModuleCompilePublishArgs = {
-  moveDir: string,
-  artifacts: IncludedArtifacts,
-  deployerAddressName: string, // address name in Move.toml
-}
+  moveDir: string;
+  artifacts: IncludedArtifacts;
+  deployerAddressName: string; // address name in Move.toml
+};
 
 export type ModulePublishArgs = {
-  moveDir: string,
-}
+  moveDir: string;
+};
 
 export type ModulePublishInfo = {
-  hash: HexString,
-  metadata: PackageMetadata,
-  byteCode: Buffer,
-}
+  hash: HexString;
+  metadata: PackageMetadata;
+  byteCode: Buffer;
+};
 
 export type MoveScriptArgs = {
-  moveScriptFile: string,
-  typeArgs: string[],
-  args: TxnBuilderTypes.TransactionArgument[],
-}
+  moveScriptFile: string;
+  typeArgs: string[];
+  args: TxnBuilderTypes.TransactionArgument[];
+};
 
 export type MoveScriptInfo = {
-  code: Uint8Array,
-  codeHash: Uint8Array,
-  typeArgs: string[],
-  args: TxnBuilderTypes.TransactionArgument[], // encoded bytes
-}
+  code: Uint8Array;
+  codeHash: Uint8Array;
+  typeArgs: string[];
+  args: TxnBuilderTypes.TransactionArgument[]; // encoded bytes
+};
+
+export type MigrateArgs = {
+  moveScriptFile: string;
+  typeArgs: string[];
+  args: TxnBuilderTypes.TransactionArgument[];
+};
+
+export type MigrateInfo = {};
 
 export enum MSafeTxnType {
   Unknown = "Unknown transaction",
@@ -102,30 +114,38 @@ export enum MSafeTxnType {
   EntryFunction = "Entry function",
   ModulePublish = "Module publish",
   MoveScript = "Move script",
+  Migrate = "Migrate MSafe",
 }
 
 // TODO: add module publish payload info
-export type payloadInfo = CoinTransferArgs | CoinRegisterArgs | APTTransferArgs
-  | RevertArgs | EntryFunctionArgs | ModulePublishInfo | MoveScriptInfo;
+export type payloadInfo =
+  | CoinTransferArgs
+  | CoinRegisterArgs
+  | APTTransferArgs
+  | RevertArgs
+  | EntryFunctionArgs
+  | ModulePublishInfo
+  | MoveScriptInfo
+  | MigrateInfo;
 
 export type MSafeTxnInfo = {
-  txType: MSafeTxnType,
-  hash: HexString,
-  sender: HexString,
-  sn: bigint,
-  expiration: Date,
-  chainID: number,
-  gasPrice: bigint,
-  maxGas: bigint,
-  args: payloadInfo,
-  numSigs?: number,
-}
+  txType: MSafeTxnType;
+  hash: HexString;
+  sender: HexString;
+  sn: bigint;
+  expiration: Date;
+  chainID: number;
+  gasPrice: bigint;
+  maxGas: bigint;
+  args: payloadInfo;
+  numSigs?: number;
+};
 
 // call momentum_safe::register
 export async function makeMSafeRegisterTx(
   sender: IMultiSig,
   args: MSafeRegisterArgs,
-  opts: Options,
+  opts: Options
 ): Promise<MSafeTransaction> {
   opts.estimateMaxGas = false; // Special use case for register transaction
   if (!opts.maxGas) {
@@ -148,7 +168,7 @@ export async function makeMSafeRegisterTx(
 export async function makeMSafeAPTTransferTx(
   sender: IMultiSig,
   args: APTTransferArgs,
-  opts?: Options,
+  opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender.address, opts);
   const txBuilder = new AptosCoinTransferTxnBuilder();
@@ -166,7 +186,7 @@ export async function makeMSafeAPTTransferTx(
 export async function makeMSafeAnyCoinRegisterTx(
   sender: IMultiSig,
   args: CoinRegisterArgs,
-  opts?: Options,
+  opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender.address, opts);
   const txBuilder = new AptosEntryTxnBuilder();
@@ -187,7 +207,7 @@ export async function makeMSafeAnyCoinRegisterTx(
 export async function makeMSafeAnyCoinTransferTx(
   sender: IMultiSig,
   args: CoinTransferArgs,
-  opts?: Options,
+  opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender.address, opts);
   const txBuilder = new AptosEntryTxnBuilder();
@@ -212,7 +232,7 @@ export async function makeMSafeAnyCoinTransferTx(
 export async function makeMSafeRevertTx(
   sender: IMultiSig,
   args: RevertArgs,
-  opts?: Options,
+  opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender.address, opts);
   // sequence number will override option sn
@@ -243,7 +263,7 @@ export async function makeEntryFunctionTx(
     .method(fnName)
     .from(sender.address)
     .withTxConfig(config)
-    .type_args(args.typeArgs.map(ta => typeTagStructFromName(ta)))
+    .type_args(args.typeArgs.map((ta) => typeTagStructFromName(ta)))
     .args(args.args)
     .build(sender);
 
@@ -253,7 +273,7 @@ export async function makeEntryFunctionTx(
 export async function compileAndMakeModulePublishTx(
   sender: IMultiSig,
   args: ModuleCompilePublishArgs,
-  opts?: Options,
+  opts?: Options
 ): Promise<MSafeTransaction> {
   const config = await applyDefaultOptions(sender.address, opts);
   const namedAddress = {
@@ -278,30 +298,35 @@ export async function makeModulePublishTx(
 }
 
 export async function makeMoveScriptTx(
-    sender: IMultiSig,
-    args: MoveScriptArgs,
-    opts?: Options
+  sender: IMultiSig,
+  args: MoveScriptArgs,
+  opts?: Options
 ) {
   const config = await applyDefaultOptions(sender.address, opts);
   const moveCode = fs.readFileSync(args.moveScriptFile);
-    const txBuilder = new AptosScriptTxnBuilder();
-    const tx = await txBuilder
-        .from(sender.address)
-        .withTxConfig(config)
-        .type_args(args.typeArgs)
-        .args(args.args)
-        .script(moveCode)
-        .build(sender);
-    return new MSafeTransaction(tx.raw);
+  const txBuilder = new AptosScriptTxnBuilder();
+  const tx = await txBuilder
+    .from(sender.address)
+    .withTxConfig(config)
+    .type_args(args.typeArgs)
+    .args(args.args)
+    .script(moveCode)
+    .build(sender);
+  return new MSafeTransaction(tx.raw);
 }
 
-export async function applyDefaultOptions(sender: HexString, opts?: Options): Promise<TxConfig> {
+export async function applyDefaultOptions(
+  sender: HexString,
+  opts?: Options
+): Promise<TxConfig> {
   if (!opts) {
     opts = {};
   }
-  const maxGas = opts.maxGas? opts.maxGas: DEFAULT_REGISTER_MAX_GAS;
-  const gasPrice = opts.gasPrice? opts.gasPrice: DEFAULT_UNIT_PRICE;
-  const expirationSec = opts.expirationSec? opts.expirationSec: DEFAULT_EXPIRATION;
+  const maxGas = opts.maxGas ? opts.maxGas : DEFAULT_REGISTER_MAX_GAS;
+  const gasPrice = opts.gasPrice ? opts.gasPrice : DEFAULT_UNIT_PRICE;
+  const expirationSec = opts.expirationSec
+    ? opts.expirationSec
+    : DEFAULT_EXPIRATION;
 
   let sequenceNumber: bigint;
   if (opts.sequenceNumber !== undefined) {
@@ -322,8 +347,8 @@ export async function applyDefaultOptions(sender: HexString, opts?: Options): Pr
     expirationSec: expirationSec,
     sequenceNumber: sequenceNumber,
     chainID: chainID,
-    estimateGasPrice: !!(opts.estimateGasPrice),
-    estimateMaxGas: !!(opts.estimateMaxGas),
+    estimateGasPrice: !!opts.estimateGasPrice,
+    estimateMaxGas: !!opts.estimateMaxGas,
   };
 }
 
@@ -333,7 +358,13 @@ export class MSafeTransaction extends Transaction {
 
   constructor(raw: TxnBuilderTypes.RawTransaction) {
     super(raw);
-    if (!(raw.payload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction || raw.payload instanceof TxnBuilderTypes.TransactionPayloadScript)) {
+    if (
+      !(
+        raw.payload instanceof
+          TxnBuilderTypes.TransactionPayloadEntryFunction ||
+        raw.payload instanceof TxnBuilderTypes.TransactionPayloadScript
+      )
+    ) {
       throw new Error("unknown transaction payload type");
     }
     this.payload = raw.payload;
@@ -347,7 +378,7 @@ export class MSafeTransaction extends Transaction {
 
   getTxnInfo(numSigs?: number): MSafeTxnInfo {
     const tx = this.raw;
-    return{
+    return {
       txType: this.txType,
       hash: sha3_256(TransactionBuilder.getSigningMessage(tx)),
       sender: HexString.fromUint8Array(tx.sender.address),
@@ -361,8 +392,10 @@ export class MSafeTransaction extends Transaction {
     };
   }
 
-  private static getTxnType(payload: TxnBuilderTypes.TransactionPayload): MSafeTxnType {
-    if(payload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction) {
+  private static getTxnType(
+    payload: TxnBuilderTypes.TransactionPayload
+  ): MSafeTxnType {
+    if (payload instanceof TxnBuilderTypes.TransactionPayloadEntryFunction) {
       if (isCoinTransferTxn(payload)) {
         if (isAptosCoinType(payload)) {
           return MSafeTxnType.APTCoinTransfer;
@@ -386,10 +419,11 @@ export class MSafeTransaction extends Transaction {
   }
 
   private getTxnFuncArgs(): payloadInfo {
-    if(this.payload instanceof TxnBuilderTypes.TransactionPayloadScript) {
+    if (this.payload instanceof TxnBuilderTypes.TransactionPayloadScript) {
       return decodeMoveScriptInfo(this.payload);
     }
-    const payload = this.payload  as TxnBuilderTypes.TransactionPayloadEntryFunction;
+    const payload = this
+      .payload as TxnBuilderTypes.TransactionPayloadEntryFunction;
 
     switch (this.txType) {
       case MSafeTxnType.APTCoinTransfer: {
@@ -419,7 +453,7 @@ export class MSafeTransaction extends Transaction {
 
       case MSafeTxnType.Revert: {
         const sn = this.raw.sequence_number;
-        return {sn: BigInt(sn)};
+        return { sn: BigInt(sn) };
       }
 
       case MSafeTxnType.EntryFunction: {
@@ -443,23 +477,33 @@ export class MSafeTransaction extends Transaction {
   }
 }
 
-function isCoinTransferTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
+function isCoinTransferTxn(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+) {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
-  return isHexEqual(deployer, APTOS_FRAMEWORK_HS)
-    && module === MODULES.COIN
-    && fnName === FUNCTIONS.COIN_TRANSFER;
+  return (
+    isHexEqual(deployer, APTOS_FRAMEWORK_HS) &&
+    module === MODULES.COIN &&
+    fnName === FUNCTIONS.COIN_TRANSFER
+  );
 }
 
-function isCoinRegisterTx(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): boolean {
+function isCoinRegisterTx(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+): boolean {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
-  return isHexEqual(deployer, APTOS_FRAMEWORK_HS)
-    && module === MODULES.MANAGED_COIN
-    && fnName === FUNCTIONS.COIN_REGISTER;
+  return (
+    isHexEqual(deployer, APTOS_FRAMEWORK_HS) &&
+    module === MODULES.MANAGED_COIN &&
+    fnName === FUNCTIONS.COIN_REGISTER
+  );
 }
 
-function isAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): boolean {
+function isAptosCoinType(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+): boolean {
   const tArgs = payload.value.ty_args;
   if (tArgs.length !== 1) {
     return false;
@@ -469,43 +513,51 @@ function isAptosCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunctio
     return false;
   }
   const coinTypeAddr = HexString.fromUint8Array(coinType.value.address.address);
-  return isHexEqual(coinTypeAddr, APTOS_FRAMEWORK_HS)
-    && coinType.value.module_name.value === MODULES.APTOS_COIN
-    && coinType.value.name.value === STRUCTS.APTOS_COIN;
+  return (
+    isHexEqual(coinTypeAddr, APTOS_FRAMEWORK_HS) &&
+    coinType.value.module_name.value === MODULES.APTOS_COIN &&
+    coinType.value.name.value === STRUCTS.APTOS_COIN
+  );
 }
 
 function isRevertTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
-  return isHexEqual(deployer, DEPLOYER)
-    && module === MODULES.MOMENTUM_SAFE
-    && fnName === FUNCTIONS.MSAFE_REVERT;
+  return (
+    isHexEqual(deployer, DEPLOYER) &&
+    module === MODULES.MOMENTUM_SAFE &&
+    fnName === FUNCTIONS.MSAFE_REVERT
+  );
 }
 
-function isModulePublishTxn(payload: TxnBuilderTypes.TransactionPayloadEntryFunction) {
+function isModulePublishTxn(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+) {
   const [deployer, module, fnName] = getModuleComponents(payload);
 
-  return isHexEqual(deployer, APTOS_FRAMEWORK_HS)
-    && module === MODULES.CODE
-    && fnName === FUNCTIONS.PUBLISH_PACKAGE;
+  return (
+    isHexEqual(deployer, APTOS_FRAMEWORK_HS) &&
+    module === MODULES.CODE &&
+    fnName === FUNCTIONS.PUBLISH_PACKAGE
+  );
 }
 
 // Return address, module, and function name
-function getModuleComponents(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): [HexString, string, string] {
+function getModuleComponents(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+): [HexString, string, string] {
   const moduleName = payload.value.module_name;
   const deployer = moduleName.address.address;
   const module = moduleName.name.value;
   const fnName = payload.value.function_name.value;
-  return [
-    HexString.fromUint8Array(deployer),
-    module,
-    fnName,
-  ];
+  return [HexString.fromUint8Array(deployer), module, fnName];
 }
 
-function decodeTypeArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): string[] {
+function decodeTypeArgs(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+): string[] {
   const tArgs = payload.value.ty_args;
-  return tArgs.map( tArg => decodeTypeTag(tArg) );
+  return tArgs.map((tArg) => decodeTypeTag(tArg));
 }
 
 function decodeTypeTag(tArg: TxnBuilderTypes.TypeTag): string {
@@ -544,7 +596,9 @@ export async function decodeEntryFunctionArgs(
   args: BCS.Bytes[]
 ) {
   const params = await getFunctionABI(deployer, moduleName, fnName);
-  const filteredParams = params.filter(param => param != 'signer' && param != '&signer');
+  const filteredParams = params.filter(
+    (param) => param != "signer" && param != "&signer"
+  );
   if (filteredParams.length != args.length) {
     throw new Error("argument size does not match param size");
   }
@@ -563,32 +617,41 @@ function decodeEntryFunctionArg(data: Uint8Array, paramType: string) {
     case "signer": {
       return ["signer", "signer"];
     }
-    case ("u128"): {
+    case "u128": {
       return ["u128", deserializer.deserializeU128()];
     }
-    case ("u64"): {
+    case "u64": {
       return ["u64", deserializer.deserializeU64()];
     }
-    case ("u32"): {
+    case "u32": {
       return ["u32", deserializer.deserializeU32()];
     }
-    case ("u16"): {
+    case "u16": {
       return ["u16", deserializer.deserializeU16()];
     }
-    case ("u8"): {
+    case "u8": {
       return ["u8", deserializer.deserializeU8()];
     }
-    case ("bool"): {
+    case "bool": {
       return ["bool", deserializer.deserializeBool()];
     }
-    case ("address"): {
-      return ["address", HexString.fromUint8Array(
-        deserializer.deserializeFixedBytes(TxnBuilderTypes.AccountAddress.LENGTH))];
+    case "address": {
+      return [
+        "address",
+        HexString.fromUint8Array(
+          deserializer.deserializeFixedBytes(
+            TxnBuilderTypes.AccountAddress.LENGTH
+          )
+        ),
+      ];
     }
-    case ("vector<u8>"): {
-      return ["vector<u8>", HexString.fromUint8Array(deserializer.deserializeBytes())];
+    case "vector<u8>": {
+      return [
+        "vector<u8>",
+        HexString.fromUint8Array(deserializer.deserializeBytes()),
+      ];
     }
-    case ("0x1::string::String"): {
+    case "0x1::string::String": {
       return ["string", deserializer.deserializeStr()];
     }
     default:
@@ -596,7 +659,11 @@ function decodeEntryFunctionArg(data: Uint8Array, paramType: string) {
   }
 }
 
-export async function getFunctionABI(contract: HexString, moduleName: string, fnName: string){
+export async function getFunctionABI(
+  contract: HexString,
+  moduleName: string,
+  fnName: string
+) {
   const moduleData = await Aptos.getAccountModule(contract, moduleName);
   if (!moduleData.abi) {
     throw new Error(`${contract}::${moduleName} has no ABI exposed`);
@@ -604,14 +671,16 @@ export async function getFunctionABI(contract: HexString, moduleName: string, fn
   if (!moduleData.abi.exposed_functions) {
     throw new Error(`${contract}::${moduleName} has no exposed function`);
   }
-  const abi = moduleData.abi.exposed_functions.find(fn => fn.name === fnName);
+  const abi = moduleData.abi.exposed_functions.find((fn) => fn.name === fnName);
   if (!abi) {
     throw new Error(`${contract}::${moduleName}::${fnName} not found`);
   }
-  return abi.params.map(param => String(param));
+  return abi.params.map((param) => String(param));
 }
 
-function decodeCoinType(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): string {
+function decodeCoinType(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+): string {
   const tArgs = payload.value.ty_args;
   if (tArgs.length !== 1) {
     throw new Error("length is not 1");
@@ -633,42 +702,58 @@ function parseTypeStructTag(typeTag: TxnBuilderTypes.TypeTagStruct) {
     return `${deployerDisplay}::${moduleName}::${structName}`;
   }
 
-  const tArgsDisplay = typeTag.value.type_args.map(tArg => decodeTypeTag(tArg));
-  return `${deployerDisplay}::${moduleName}::${structName}<${tArgsDisplay.join(', ')}>`;
+  const tArgsDisplay = typeTag.value.type_args.map((tArg) =>
+    decodeTypeTag(tArg)
+  );
+  return `${deployerDisplay}::${moduleName}::${structName}<${tArgsDisplay.join(
+    ", "
+  )}>`;
 }
 
-function decodeCoinTransferArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): [HexString, bigint] {
+function decodeCoinTransferArgs(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+): [HexString, bigint] {
   const args = payload.value.args;
   if (args.length != 2) {
-    throw new Error(`Number arguments not expected: ${payload.value.args.length}/2`);
+    throw new Error(
+      `Number arguments not expected: ${payload.value.args.length}/2`
+    );
   }
   const toArg = args[0];
-  const aptosAddress = TxnBuilderTypes.AccountAddress.deserialize(new BCS.Deserializer(toArg));
+  const aptosAddress = TxnBuilderTypes.AccountAddress.deserialize(
+    new BCS.Deserializer(toArg)
+  );
   const toAddress = HexString.fromBuffer(aptosAddress.address);
 
   const amountArg = args[1];
-  const amount = (new BCS.Deserializer(amountArg)).deserializeU64();
+  const amount = new BCS.Deserializer(amountArg).deserializeU64();
 
   return [toAddress, amount];
 }
 
-function decodeMoveScriptInfo(payload: TxnBuilderTypes.TransactionPayloadScript): MoveScriptInfo {
+function decodeMoveScriptInfo(
+  payload: TxnBuilderTypes.TransactionPayloadScript
+): MoveScriptInfo {
   return {
     code: payload.value.code,
     codeHash: sha3_256(payload.value.code).toUint8Array(),
-    typeArgs: payload.value.ty_args.map(tArg => decodeTypeTag(tArg)),
+    typeArgs: payload.value.ty_args.map((tArg) => decodeTypeTag(tArg)),
     args: payload.value.args,
   };
 }
 
-function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntryFunction): ModulePublishInfo {
+function decodeModulePublishArgs(
+  payload: TxnBuilderTypes.TransactionPayloadEntryFunction
+): ModulePublishInfo {
   const args = payload.value.args;
   if (args.length != 2) {
     throw new Error("unexpected argument size for publish_module_tx");
   }
-  const bcsMetadata = (new BCS.Deserializer(args[0])).deserializeBytes();
+  const bcsMetadata = new BCS.Deserializer(args[0]).deserializeBytes();
   const codes = Buffer.from(args[1]);
-  const metadata = PackageMetadata.deserialize(new BCS.Deserializer(bcsMetadata));
+  const metadata = PackageMetadata.deserialize(
+    new BCS.Deserializer(bcsMetadata)
+  );
   return {
     hash: getModulePublishHash(bcsMetadata, codes),
     metadata: metadata,
@@ -676,7 +761,10 @@ function decodeModulePublishArgs(payload: TxnBuilderTypes.TransactionPayloadEntr
   };
 }
 
-function getModulePublishHash(metadataRaw: Uint8Array, codes: Uint8Array): HexString {
+function getModulePublishHash(
+  metadataRaw: Uint8Array,
+  codes: Uint8Array
+): HexString {
   const hash = sha3Hash.create();
   hash.update(metadataRaw);
   hash.update(codes);
