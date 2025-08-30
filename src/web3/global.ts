@@ -97,9 +97,12 @@ export async function getAccountResource(addr: HexString, resourceTag: string) {
 
 export async function getBalance(addr: string | HexString): Promise<bigint> {
   const address = addr instanceof HexString ? addr : HexString.ensure(addr);
-  const resources = await APTOS.getAccountResources(address);
-  const coinResource = resources.find((r) => r.type == APTOS_COIN_RESOURCE_TYPE);
-  return BigInt((coinResource?.data as any).coin.value);
+  const balance = await APTOS.view({
+    function: "0x1::coin::balance",
+    type_arguments: ['0x1::aptos_coin::AptosCoin'],
+    arguments: [address.toString()]
+  });
+  return BigInt(balance[0] as string || 0n);
 }
 
 export async function getBalanceAPT(addr: string | HexString): Promise<BigNumber> {
